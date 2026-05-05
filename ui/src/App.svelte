@@ -17,6 +17,16 @@
   import AlgoSection from './components/AlgoSection.svelte';
   import OssSection from './components/OssSection.svelte';
 
+  function uuid(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0;
+      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+  }
+
   let settings: Settings = DEFAULT_SETTINGS;
   let assets: Asset[] = [];
   let lastResult: RebalanceResponse | null = null;
@@ -40,7 +50,7 @@
   }
 
   function addAsset() {
-    const id = crypto.randomUUID();
+    const id = uuid();
     assets = [...assets, { id, ticker: '', desiredPercentage: 0, shares: 0, fees: 0, percentageFee: false }];
     saveAssets(assets);
   }
@@ -184,7 +194,7 @@
     };
 
     const newAssets: Asset[] = (d.assets as Array<Record<string, unknown>>).map(a => ({
-      id: crypto.randomUUID(),
+      id: uuid(),
       ticker: a.ticker as string,
       desiredPercentage: a.desiredPercentage as number,
       shares: a.shares as number,
