@@ -1,4 +1,4 @@
-"""GET /v1/health liveness probe and GET /v1/ready readiness probe."""
+"""GET|HEAD /v1/health liveness probe and GET|HEAD /v1/ready readiness probe."""
 
 import logging
 
@@ -11,12 +11,12 @@ router = APIRouter(tags=["health"])
 logger = logging.getLogger(__name__)
 
 
-@router.get("/health", include_in_schema=False)
+@router.api_route("/health", methods=["GET", "HEAD"], include_in_schema=False)
 async def health() -> JSONResponse:
     return JSONResponse(content={"status": "ok"})
 
 
-@router.get("/ready", include_in_schema=False)
+@router.api_route("/ready", methods=["GET", "HEAD"], include_in_schema=False)
 def ready() -> JSONResponse:
     settings = get_settings()
     if settings.cache_backend == "redis":

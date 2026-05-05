@@ -1,5 +1,5 @@
 # app/api/v1/routes/tickers.py
-"""GET /v1/tickers/search endpoint."""
+"""GET|HEAD /v1/tickers/search endpoint."""
 
 import asyncio
 import logging
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 _ALLOWED_TYPES = {"EQUITY", "ETF", "MUTUALFUND", "CRYPTOCURRENCY", "CURRENCY"}
 
 
-@router.get("/tickers/search", response_model=TickerSearchResponse)
+@router.api_route("/tickers/search", methods=["GET", "HEAD"], response_model=TickerSearchResponse)
 async def search_tickers(
     q: str = Query(..., min_length=2),
     search_provider: AbstractTickerSearchProvider = Depends(get_ticker_search_provider),
