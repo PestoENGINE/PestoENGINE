@@ -9,6 +9,9 @@ You know your allocation. Now know exactly what to buy.
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688.svg)](https://fastapi.tiangolo.com/)
+[![Svelte](https://img.shields.io/badge/Svelte-4-FF3E00.svg)](https://svelte.dev/)
+
+**[Live Demo → pestoengine.onrender.com](https://pestoengine.onrender.com)**
 
 </div>
 
