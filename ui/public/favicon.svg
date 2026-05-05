@@ -1,0 +1,15 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(100, 95) scale(1.15)">
+    <path d="M 0,-38 L -25,-38 Q -42,-38 -42,-20 L -42,55 Q -42,75 -20,75 L 0,75 Z" fill="#34D399"/>
+    <path d="M 0,-38 L 25,-38 Q 42,-38 42,-20 L 42,55 Q 42,75 20,75 L 0,75 Z" fill="#10B981"/>
+    <path d="M 0,-48 L -25,-48 L -25,-38 L 0,-38 Z" fill="#6EE7B7"/>
+    <path d="M 0,-48 L 25,-48 L 25,-38 L 0,-38 Z" fill="#059669"/>
+    <path d="M 0,-5 L -42,-5 L -42,35 L 0,35 Z" fill="#FFFFFF"/>
+    <path d="M 0,-5 L 42,-5 L 42,35 L 0,35 Z" fill="#F1F5F9"/>
+    <path d="M 0,7 L -10,16 L 0,27 Z" fill="#10B981"/>
+    <path d="M 0,7 L 10,16 L 0,27 Z" fill="#047857"/>
+    <path d="M 0,-70 L -28,-70 Q -32,-70 -32,-66 L -32,-48 L 0,-48 Z" fill="#475569"/>
+    <path d="M 0,-70 L 28,-70 Q 32,-70 32,-66 L 32,-48 L 0,-48 Z" fill="#0F172A"/>
+    <path d="M -26,-66 L -20,-66 L -20,-52 L -26,-52 Z" fill="#94A3B8" opacity="0.3"/>
+  </g>
+</svg>

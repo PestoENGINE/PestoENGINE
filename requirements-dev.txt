@@ -1,0 +1,9 @@
+fastapi>=0.111
+uvicorn[standard]>=0.29
+pydantic>=2.7
+pydantic-settings>=2.3
+httpx>=0.28
+redis>=5
+# yfinance>=0.2  # emergency fallback provider, see app/market_data/yfinance_provider.py
+# pandas>=2.2    # required by yfinance fallback
+pytest>=9.0

@@ -1,0 +1,8 @@
+<svg viewBox="0 0 800 150" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(10, 110)">
+    <text x="0" y="0" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+          font-size="120" font-weight="900" fill="#F0EDE8" letter-spacing="-3">PESTO</text>
+    <text x="375" y="0" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+          font-size="120" font-weight="300" fill="#10B981" letter-spacing="-2">ENGINE</text>
+  </g>
+</svg>
