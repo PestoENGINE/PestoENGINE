@@ -11,20 +11,38 @@ from app.schemas.result import RebalanceResponse
 def _apply_fee(
     rebalance_amount: float, fee: float, percentage_fee: bool
 ) -> tuple[float, float]:
-    """Return (net_amount, effective_fee) for a single transaction.
+    """Return (qty_target, effective_fee) for a single transaction.
 
-    Fee is always deducted from the gross transaction value regardless of direction:
-    - buy  (r > 0): net = r - fee  (fee reduces purchasing power)
-    - sell (r < 0): net = r + fee  (fee reduces sale proceeds)
+    qty_target is divided by price (floor) to obtain the share count.
+    effective_fee is 0 for percentage-fee transactions - it is recomputed after
+    the share count is known, because the fee must apply to the actual transaction value.
+
+    - buy  flat fee (r > 0):   qty_target = r - fee          (fee reduces budget; 0 if fee >= r)
+    - buy  pct fee  (r > 0):   qty_target = r / (1 + fee%)   (deflated so that
+                                qty * price * (1 + fee%) ≈ r, total spend ≈ target)
+    - sell flat fee (r < 0):   qty_target = r + fee          (flat cost reduces net proceeds)
+    - sell pct fee  (r < 0):   qty_target = r / (1 - fee%)   (inflated so that
+                                qty * price * (1 - fee%) ≈ r, net proceeds ≈ target)
     """
     if rebalance_amount == 0:
         return 0.0, 0.0
-    gross = abs(rebalance_amount)
-    effective_fee = gross * fee / 100.0 if percentage_fee else fee
+
     if rebalance_amount > 0:
-        return max(0.0, rebalance_amount - effective_fee), effective_fee
+        if not percentage_fee:
+            net = rebalance_amount - fee
+            return (0.0, 0.0) if net <= 0 else (net, fee)
+        # pct buy: deflate target so qty * price * (1 + fee%) ≈ r
+        return rebalance_amount / (1.0 + fee / 100.0), 0.0  # fee recomputed after qty
+
+    # sell
+    if percentage_fee:
+        factor = 1.0 - fee / 100.0
+        if factor <= 0:
+            return 0.0, 0.0
+        return rebalance_amount / factor, 0.0  # fee recomputed after qty
     else:
-        return rebalance_amount + effective_fee, effective_fee
+        net = rebalance_amount + fee
+        return (0.0, 0.0) if net >= 0 else (net, fee)
 
 
 def run_rebalance(
@@ -64,26 +82,54 @@ def run_rebalance(
         request.only_buy, request.increment, values, desired_pcts
     )
 
-    net_amounts, effective_fees = zip(
+    qty_targets, effective_fees_raw = zip(
         *[_apply_fee(r, a.fees, a.percentage_fee) for a, r in zip(request.assets, rebalance_amounts)]
     )
 
-    buy_quantities: list[int] = [int(r // p) for r, p in zip(net_amounts, ticker_prices)]
+    buy_quantities: list[int] = [int(t // p) for t, p in zip(qty_targets, ticker_prices)]
 
-    spent = sum(b * p for b, p in zip(buy_quantities, ticker_prices))
-    total_fees = sum(ef for ef, b in zip(effective_fees, buy_quantities) if b > 0)
-    change = truncate2(request.increment - spent - total_fees)
+    # First pass: compute fees and change budget to feed into redistribution.
+    effective_fees = [
+        abs(b * p) * a.fees / 100.0 if (b != 0 and a.percentage_fee) else ef
+        for ef, a, b, p in zip(effective_fees_raw, request.assets, buy_quantities, ticker_prices)
+    ]
+
+    buy_costs     = sum( b * p for b, p in zip(buy_quantities, ticker_prices) if b > 0)
+    sell_proceeds = sum(-b * p for b, p in zip(buy_quantities, ticker_prices) if b < 0)
+    buy_fees      = sum(ef for ef, b in zip(effective_fees, buy_quantities) if b > 0)
+    sell_fees     = sum(ef for ef, b in zip(effective_fees, buy_quantities) if b < 0)
+    change = truncate2((request.increment + sell_proceeds - sell_fees) - (buy_costs + buy_fees))
+
+    # Pct-fee assets are repriced to include the per-share fee so that redistribute
+    # sees the true cash cost of each extra share and does not overspend the budget.
+    redistribute_prices = [
+        p * (1.0 + a.fees / 100.0) if a.percentage_fee else p
+        for p, a in zip(ticker_prices, request.assets)
+    ]
 
     if request.optimal_redistribute:
-        buy_quantities, change = rebalance.redistribute_change_optimal(
+        buy_quantities, _ = rebalance.redistribute_change_optimal(
             request.only_buy,
-            buy_quantities, ticker_prices,
+            buy_quantities, redistribute_prices,
             current_pcts, desired_pcts, change,
         )
     else:
-        buy_quantities, change = rebalance.redistribute_change(
-            buy_quantities, ticker_prices, current_pcts, desired_pcts, change
+        buy_quantities, _ = rebalance.redistribute_change(
+            buy_quantities, redistribute_prices,
+            current_pcts, desired_pcts, change
         )
+
+    # Second pass: recompute fees and change on final quantities.
+    # Redistribution may have changed buy_quantities; percentage fees scale with actual shares.
+    effective_fees = [
+        abs(b * p) * a.fees / 100.0 if (b != 0 and a.percentage_fee) else ef
+        for ef, a, b, p in zip(effective_fees_raw, request.assets, buy_quantities, ticker_prices)
+    ]
+    buy_costs  = sum( b * p for b, p in zip(buy_quantities, ticker_prices) if b > 0)
+    buy_fees   = sum(ef     for ef, b in zip(effective_fees, buy_quantities) if b > 0)
+    sell_fees  = sum(ef     for ef, b in zip(effective_fees, buy_quantities) if b < 0)
+    total_fees = buy_fees + sell_fees
+    change     = truncate2((request.increment + sell_proceeds - sell_fees) - (buy_costs + buy_fees))
 
     results = [
         {
@@ -92,14 +138,14 @@ def run_rebalance(
             "current_percentage": cur_pct,
             "desired_percentage": des_pct,
             "shares": share,
-            "allocated": alloc,
+            "allocated": qty * price,
             "ticker_price": price,
-            "fees": ef if qty > 0 else 0.0,
+            "fees": ef if qty != 0 else 0.0,
             "buy": qty,
         }
-        for i, (ticker, cur_pct, des_pct, share, alloc, price, ef, qty) in enumerate(
+        for i, (ticker, cur_pct, des_pct, share, price, ef, qty) in enumerate(
             zip(tickers, current_pcts, desired_pcts, shares,
-                net_amounts, ticker_prices, effective_fees, buy_quantities)
+                ticker_prices, effective_fees, buy_quantities)
         )
     ]
 

@@ -56,7 +56,7 @@ def test_fee_deducted_from_allocated_and_change():
     out = _run(req, {"A": 100.0})
     r = out.results[0]
     assert r.buy == 4
-    assert r.allocated == pytest.approx(490.0, abs=0.01)
+    assert r.allocated == pytest.approx(400.0, abs=0.01)
     assert out.total_fees == 10.0
     assert out.change == 90.0
 
@@ -77,6 +77,22 @@ def test_fee_larger_than_allocation_buy_zero_fee_excluded():
     assert by_ticker["B"].buy == 5
     assert out.total_fees == 0.0
     assert out.change == 0.0
+
+
+def test_flat_fee_exceeds_budget_no_shares_no_fee():
+    """When flat fee >= gross allocation, buy=0 and fee is not charged.
+
+    increment=50, price=100, fee=100 (fee > budget)
+        net = 50 - 100 = -50 ≤ 0 → qty_target=0, ef=0
+        buy=0, total_fees=0, change=50
+    """
+    req = _request(True, 50.0, [
+        {"ticker": "A", "desired_percentage": 100.0, "shares": 0, "fees": 100.0},
+    ])
+    out = _run(req, {"A": 100.0})
+    assert out.results[0].buy == 0
+    assert out.total_fees == 0.0
+    assert out.change == 50.0
 
 
 def test_fees_both_assets_summed_in_total_fees():
@@ -269,9 +285,10 @@ def test_flag_on_allow_sell_exact_fit():
 # ---------------------------------------------------------------------------
 
 def test_percentage_fee_deducted_correctly():
-    """1 % fee on 1000 increment → effective fee = 10.
+    """1 % fee on 1000 increment → effective fee computed on actual spend.
 
-    net=990, buy=floor(990/100)=9, spent=900, total_fees=10, change=90
+    qty_target=1000/1.01≈990.1, buy=floor(990.1/100)=9, spent=900
+    effective_fee = 9*100 * 1% = 9, total_fees=9, change=91
     """
     req = _request(True, 1000.0, [
         {"ticker": "A", "desired_percentage": 100.0, "shares": 0,
@@ -280,9 +297,31 @@ def test_percentage_fee_deducted_correctly():
     out = _run(req, {"A": 100.0})
     r = out.results[0]
     assert r.buy == 9
-    assert r.allocated == pytest.approx(990.0, abs=0.01)
-    assert out.total_fees == pytest.approx(10.0, abs=0.01)
-    assert out.change == pytest.approx(90.0, abs=0.01)
+    assert r.allocated == pytest.approx(900.0, abs=0.01)
+    assert out.total_fees == pytest.approx(9.0, abs=0.01)
+    assert out.change == pytest.approx(91.0, abs=0.01)
+
+
+def test_percentage_fee_recomputed_after_redistribution():
+    """Percentage fee is recomputed on final qty when redistribution adds shares.
+
+    A: 80%, price=100, fee=0; B: 20%, price=50, fee=1% pct; increment=600
+        First pass: A.buy=4, B.buy=2, ef_B=2*50*1%=1, change=99
+        redistribute: B gets +1 → B.buy=3
+        Second pass: ef_B=3*50*1%=1.5, total_fees=1.5, change=48.5
+        Budget check: 600 - 400 - 150 - 1.5 - 48.5 = 0
+    """
+    req = _request(True, 600.0, [
+        {"ticker": "A", "desired_percentage": 80.0, "shares": 0, "fees": 0.0},
+        {"ticker": "B", "desired_percentage": 20.0, "shares": 0,
+         "fees": 1.0, "percentage_fee": True},
+    ])
+    out = _run(req, {"A": 100.0, "B": 50.0})
+    by_ticker = {r.ticker: r for r in out.results}
+    assert by_ticker["B"].buy == 3
+    assert by_ticker["B"].fees == pytest.approx(1.5, abs=0.01)
+    assert out.total_fees == pytest.approx(1.5, abs=0.01)
+    assert out.change == pytest.approx(48.5, abs=0.01)
 
 
 def test_percentage_fee_not_counted_when_buy_is_zero():
@@ -302,9 +341,9 @@ def test_mixed_fee_types():
     """One fixed-fee and one percentage-fee asset - correct totals.
 
     A: 60 %, price=50, fee=3 (fixed) → ef=3, net=597, buy=11
-    B: 40 %, price=100, fee=1 % → ef=4, net=396, buy=3
-    spent=850, total_fees=7, change=143
-    Redistribute: A gets 2 extra → buy_A=13, change=43
+    B: 40 %, price=100, fee=1 % → qty_target≈396, buy=3, ef=3*100*1%=3
+    spent=850, total_fees=6, change=144
+    Redistribute: A gets 2 extra → buy_A=13, change=44
     """
     req = _request(True, 1000.0, [
         {"ticker": "A", "desired_percentage": 60.0, "shares": 0,
@@ -316,15 +355,16 @@ def test_mixed_fee_types():
     by_ticker = {r.ticker: r for r in out.results}
     assert by_ticker["A"].buy == 13
     assert by_ticker["B"].buy == 3
-    assert out.total_fees == pytest.approx(7.0, abs=0.01)
-    assert out.change == pytest.approx(43.0, abs=0.01)
+    assert out.total_fees == pytest.approx(6.0, abs=0.01)
+    assert out.change == pytest.approx(44.0, abs=0.01)
 
 
 def test_percentage_fee_allow_sell():
     """Percentage fee works correctly in allow-sell mode.
 
     only_buy=False, increment=100, A: 100 %, shares=5, price=20, fee=2 %
-        ef=2, net=98, buy=4, spent=80, total_fees=2, change=18
+        qty_target=100/1.02≈98.04, buy=4, spent=80
+        ef=4*20*2%=1.6, total_fees=1.6, change=18.4
     """
     req = _request(False, 100.0, [
         {"ticker": "A", "desired_percentage": 100.0, "shares": 5.0,
@@ -332,8 +372,8 @@ def test_percentage_fee_allow_sell():
     ])
     out = _run(req, {"A": 20.0})
     assert out.results[0].buy == 4
-    assert out.total_fees == pytest.approx(2.0, abs=0.01)
-    assert out.change == pytest.approx(18.0, abs=0.01)
+    assert out.total_fees == pytest.approx(1.6, abs=0.01)
+    assert out.change == pytest.approx(18.4, abs=0.01)
 
 
 # ---------------------------------------------------------------------------
