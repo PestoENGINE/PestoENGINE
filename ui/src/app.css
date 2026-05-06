@@ -637,9 +637,10 @@ input[type='checkbox']:checked::after {
 }
 .qs-body { padding: 1rem 1.125rem; }
 .qs-comment { color: rgba(240,237,232,0.2); display: block; }
-.qs-prompt { color: rgba(1,180,188,0.5); margin-right: 0.5rem; }
-.qs-cmd { color: #7dd3d6; }
-.qs-line { display: block; }
+.qs-prompt { color: rgba(1,180,188,0.5); display: inline-block; width: 1.25rem; user-select: none; }
+.qs-cmd { color: #7dd3d6; white-space: pre; }
+.qs-line { display: block; padding-left: 1.25rem; }
+.qs-line:has(.qs-prompt) { padding-left: 0; }
 
 .error-box {
   background: var(--error-bg);

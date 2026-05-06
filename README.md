@@ -50,10 +50,10 @@ The algorithm is not proprietary. The source is in [`app/rebalance/rebalance.py`
 ### Docker
 
 ```bash
-git clone https://github.com/PestoENGINE/PestoENGINE
-cd PestoENGINE
-docker build -t pestoengine .
-docker run -d -p 8000:8000 pestoengine
+docker run -d \
+  --name pestoengine \
+  -p 8000:8000 \
+  ghcr.io/pestoengine/pestoengine:latest
 ```
 
 ### Manual

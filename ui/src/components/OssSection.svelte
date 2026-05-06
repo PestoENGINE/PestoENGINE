@@ -15,10 +15,10 @@
       <div class="quickstart">
         <div class="qs-header">Quick start</div>
         <div class="qs-body">
-          <span class="qs-line"><span class="qs-prompt">$</span><span class="qs-cmd">git clone https://github.com/PestoENGINE/PestoENGINE</span></span>
-          <span class="qs-line"><span class="qs-prompt">$</span><span class="qs-cmd">cd PestoENGINE</span></span>
-          <span class="qs-line"><span class="qs-prompt">$</span><span class="qs-cmd">docker build -t pestoengine .</span></span>
-          <span class="qs-line"><span class="qs-prompt">$</span><span class="qs-cmd">docker run -d -p 8000:8000 pestoengine</span></span>
+          <span class="qs-line"><span class="qs-prompt">$</span><span class="qs-cmd">docker run -d \</span></span>
+          <span class="qs-line"><span class="qs-cmd">  --name pestoengine \</span></span>
+          <span class="qs-line"><span class="qs-cmd">  -p 8000:8000 \</span></span>
+          <span class="qs-line"><span class="qs-cmd">  ghcr.io/pestoengine/pestoengine:latest</span></span>
         </div>
       </div>
     </div>
