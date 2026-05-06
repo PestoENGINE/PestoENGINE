@@ -16,9 +16,9 @@
         <div class="qs-header">Quick start</div>
         <div class="qs-body">
           <span class="qs-line"><span class="qs-prompt">$</span><span class="qs-cmd">docker run -d \</span></span>
-          <span class="qs-line"><span class="qs-cmd">  --name pestoengine \</span></span>
-          <span class="qs-line"><span class="qs-cmd">  -p 8000:8000 \</span></span>
-          <span class="qs-line"><span class="qs-cmd">  ghcr.io/pestoengine/pestoengine:latest</span></span>
+          <span class="qs-line"><span class="qs-cmd">{'   '}--name pestoengine \</span></span>
+          <span class="qs-line"><span class="qs-cmd">{'   '}-p 8000:8000 \</span></span>
+          <span class="qs-line"><span class="qs-cmd">{'   '}ghcr.io/pestoengine/pestoengine:latest</span></span>
         </div>
       </div>
     </div>
