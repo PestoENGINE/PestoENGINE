@@ -8,11 +8,23 @@ from app.schemas.request import RebalanceRequest
 from app.schemas.result import RebalanceResponse
 
 
-def _effective_fee(fee: float, percentage_fee: bool, rebalance_amount: float) -> float:
-    """Return the absolute fee for a single transaction."""
-    if percentage_fee:
-        return rebalance_amount * fee / 100.0
-    return fee
+def _apply_fee(
+    rebalance_amount: float, fee: float, percentage_fee: bool
+) -> tuple[float, float]:
+    """Return (net_amount, effective_fee) for a single transaction.
+
+    Fee is always deducted from the gross transaction value regardless of direction:
+    - buy  (r > 0): net = r - fee  (fee reduces purchasing power)
+    - sell (r < 0): net = r + fee  (fee reduces sale proceeds)
+    """
+    if rebalance_amount == 0:
+        return 0.0, 0.0
+    gross = abs(rebalance_amount)
+    effective_fee = gross * fee / 100.0 if percentage_fee else fee
+    if rebalance_amount > 0:
+        return max(0.0, rebalance_amount - effective_fee), effective_fee
+    else:
+        return rebalance_amount + effective_fee, effective_fee
 
 
 def run_rebalance(
@@ -52,14 +64,9 @@ def run_rebalance(
         request.only_buy, request.increment, values, desired_pcts
     )
 
-    effective_fees = [
-        _effective_fee(a.fees, a.percentage_fee, r) if r > 0 else 0.0
-        for a, r in zip(request.assets, rebalance_amounts)
-    ]
-    net_amounts = [
-        max(0.0, r - ef) if r > 0 else r
-        for r, ef in zip(rebalance_amounts, effective_fees)
-    ]
+    net_amounts, effective_fees = zip(
+        *[_apply_fee(r, a.fees, a.percentage_fee) for a, r in zip(request.assets, rebalance_amounts)]
+    )
 
     buy_quantities: list[int] = [int(r // p) for r, p in zip(net_amounts, ticker_prices)]
 
