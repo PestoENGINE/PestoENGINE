@@ -1,5 +1,5 @@
 # Stage 1: UI builder
-FROM node:22-alpine AS ui-builder
+FROM --platform=linux/amd64 node:22-alpine AS ui-builder
 WORKDIR /ui
 COPY ui/package*.json ./
 RUN npm ci
