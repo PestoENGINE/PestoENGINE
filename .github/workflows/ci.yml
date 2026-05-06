@@ -21,9 +21,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dev dependencies
-        run: |
-          uv venv
-          uv pip install -r requirements-dev.txt
+        run: uv pip install -r requirements-dev.txt
 
       - name: Run tests
         run: uv run pytest --tb=short -q
