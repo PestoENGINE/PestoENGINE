@@ -8,6 +8,9 @@
 }
 
 :root {
+  --nav-height: 64px;
+  --panel-gap: 1rem;
+
   --bg:         #f5f4f1;
   --surface:    #ffffff;
   --surface-2:  #f8f7f4;
@@ -124,7 +127,7 @@ body {
   gap: 1rem;
   align-items: stretch;
 }
-.result-panel { grid-column: 1 / -1; scroll-margin-top: 64px; }
+.result-panel { grid-column: 1 / -1; scroll-margin-top: calc(var(--nav-height) + var(--panel-gap)); }
 @media (max-width: 620px) {
   .tool-grid { grid-template-columns: 1fr; }
   .result-panel { grid-column: auto; }
@@ -149,7 +152,7 @@ body {
 
 input[type='number']::-webkit-inner-spin-button,
 input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-input[type='number'] { -moz-appearance: textfield; }
+input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
 
 .field-group { margin-bottom: 1rem; }
 .field-label {

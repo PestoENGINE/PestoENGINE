@@ -84,6 +84,7 @@
       padding-bottom: 0.625rem;
       gap: 0.375rem;
     }
+    :global(:root) { --nav-height: 102px; }
     .nav-actions { padding-left: 5px; }
   }
   .nav-btn {
