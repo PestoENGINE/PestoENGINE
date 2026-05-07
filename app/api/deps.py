@@ -23,6 +23,7 @@ from app.core.config import get_settings
 from app.market_data.base import AbstractMarketDataProvider, AbstractTickerSearchProvider
 from app.market_data.cache import AbstractCache, LocalCache
 from app.market_data.cached_provider import CachedMarketDataProvider
+from app.market_data.instrumented_provider import InstrumentedMarketDataProvider
 from app.market_data.yahoo_finance_provider import YahooFinanceProvider
 from app.market_data.yahoo_search_provider import YahooTickerSearchProvider
 
@@ -43,7 +44,10 @@ def _build_cache() -> AbstractCache:
 
 @lru_cache(maxsize=1)
 def _build_provider() -> AbstractMarketDataProvider:
-    return CachedMarketDataProvider(YahooFinanceProvider(), _build_cache())
+    return CachedMarketDataProvider(
+        InstrumentedMarketDataProvider(YahooFinanceProvider()),
+        _build_cache(),
+    )
 
 
 def get_market_provider() -> AbstractMarketDataProvider:

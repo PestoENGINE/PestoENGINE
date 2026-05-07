@@ -2,6 +2,8 @@
 
 import logging
 
+from opentelemetry import metrics as _metrics
+
 from app.market_data.base import AbstractMarketDataProvider
 from app.market_data.cache import AbstractCache
 
@@ -25,9 +27,19 @@ class CachedMarketDataProvider(AbstractMarketDataProvider):
         self,
         provider: AbstractMarketDataProvider,
         cache: AbstractCache,
+        *,
+        meter_provider: _metrics.MeterProvider | None = None,
     ) -> None:
         self._provider = provider
         self._cache = cache
+        backend = type(cache).__name__.removesuffix("Cache").lower()
+        mp = meter_provider if meter_provider is not None else _metrics.get_meter_provider()
+        meter = mp.get_meter("pestoengine.cache")
+        self._cache_ops = meter.create_counter(
+            "pestoengine_cache_ops_total",
+            description="Cache lookup outcomes per ticker",
+        )
+        self._backend = backend
 
     def get_prices(self, tickers: list[str]) -> dict[str, float]:
         prices: dict[str, float] = {}
@@ -38,9 +50,11 @@ class CachedMarketDataProvider(AbstractMarketDataProvider):
             if cached is not None:
                 logger.debug("Cache HIT for %s", ticker)
                 prices[ticker] = cached
+                self._cache_ops.add(1, {"backend": self._backend, "result": "hit"})
             else:
                 logger.debug("Cache MISS for %s", ticker)
                 misses.append(ticker)
+                self._cache_ops.add(1, {"backend": self._backend, "result": "miss"})
 
         if misses:
             fresh = self._provider.get_prices(misses)

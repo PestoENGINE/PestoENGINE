@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     cache_ttl_seconds: int = 300
     redis_url: str | None = None
     cors_origins: str | None = None
+    otel_enabled: bool = False
+    otel_exporter_otlp_endpoint: str = "http://localhost:4318"  # docker/k8s: use http://alloy:4318
+    otel_service_name: str = "pestoengine"
+    otel_export_interval_ms: int = 60_000
 
     @model_validator(mode="after")
     def _check_redis_url(self) -> "Settings":

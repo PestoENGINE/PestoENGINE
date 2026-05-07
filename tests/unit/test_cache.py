@@ -2,9 +2,13 @@
 
 from unittest.mock import MagicMock
 
+from opentelemetry.sdk.metrics import MeterProvider
+
 from app.market_data.cache import LocalCache
 from app.market_data.cached_provider import CachedMarketDataProvider, _KEY_PREFIX
 from app.market_data.base import AbstractMarketDataProvider
+
+_NOOP_MP = MeterProvider()
 
 
 # ---------------------------------------------------------------------------
@@ -72,7 +76,7 @@ def _make_provider(prices: dict) -> tuple[CachedMarketDataProvider, MagicMock, L
     mock = MagicMock(spec=AbstractMarketDataProvider)
     mock.get_prices.return_value = prices
     cache = LocalCache(ttl_seconds=300)
-    provider = CachedMarketDataProvider(mock, cache)
+    provider = CachedMarketDataProvider(mock, cache, meter_provider=_NOOP_MP)
     return provider, mock, cache
 
 
