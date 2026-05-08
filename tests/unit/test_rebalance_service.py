@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import MagicMock
 
-from app.market_data.base import AbstractMarketDataProvider
+from app.market_data.provider_registry import ProviderRegistry
 from app.schemas.request import AssetIn, RebalanceRequest
 from app.schemas.result import RebalanceResponse
 from app.services.rebalance_service import run_rebalance
@@ -33,9 +33,9 @@ def _request(
 
 
 def _run(request: RebalanceRequest, prices: dict[str, float]) -> RebalanceResponse:
-    provider = MagicMock(spec=AbstractMarketDataProvider)
-    provider.get_prices.return_value = prices
-    return run_rebalance(request, provider)
+    registry = MagicMock(spec=ProviderRegistry)
+    registry.get_prices_for_assets.return_value = prices
+    return run_rebalance(request, registry)
 
 
 # ---------------------------------------------------------------------------

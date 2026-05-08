@@ -18,9 +18,11 @@ class InstrumentedMarketDataProvider(AbstractMarketDataProvider):
         self,
         provider: AbstractMarketDataProvider,
         *,
+        provider_id: str,
         meter_provider: _metrics.MeterProvider | None = None,
     ) -> None:
         self._provider = provider
+        self._provider_id = provider_id
         mp = meter_provider if meter_provider is not None else _metrics.get_meter_provider()
         meter = mp.get_meter("pestoengine.market_data")
         self._fetch_duration = meter.create_histogram(
@@ -43,5 +45,6 @@ class InstrumentedMarketDataProvider(AbstractMarketDataProvider):
             outcome = "error"
             raise
         finally:
-            self._fetch_duration.record(time.perf_counter() - start)
-            self._fetch_total.add(len(tickers), {"outcome": outcome})
+            elapsed = time.perf_counter() - start
+            self._fetch_duration.record(elapsed, {"provider": self._provider_id})
+            self._fetch_total.add(len(tickers), {"outcome": outcome, "provider": self._provider_id})

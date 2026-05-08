@@ -26,7 +26,9 @@ export function loadSettings(): Settings {
   return { ...DEFAULT_SETTINGS, ...tryParse<Partial<Settings>>(KEYS.settings, {}) };
 }
 
-function isValidAsset(a: unknown): a is Asset {
+type StoredAsset = Omit<Asset, 'provider'> & { provider?: string | null };
+
+function isValidAsset(a: unknown): a is StoredAsset {
   if (typeof a !== 'object' || a === null) return false;
   const obj = a as Record<string, unknown>;
   return (
@@ -35,7 +37,9 @@ function isValidAsset(a: unknown): a is Asset {
     typeof obj.desiredPercentage === 'number' &&
     typeof obj.shares === 'number' &&
     typeof obj.fees === 'number' &&
-    typeof obj.percentageFee === 'boolean'
+    typeof obj.percentageFee === 'boolean' &&
+    // provider is optional for backward compat with pre-feature localStorage entries
+    (obj.provider === undefined || obj.provider === null || typeof obj.provider === 'string')
   );
 }
 
@@ -46,7 +50,7 @@ export function loadAssets(): Asset[] {
     console.warn('Stored assets failed validation, resetting to empty.');
     return [];
   }
-  return val;
+  return val.map(a => ({ ...a, provider: a.provider ?? null }));
 }
 
 export function saveSettings(s: Settings): void {

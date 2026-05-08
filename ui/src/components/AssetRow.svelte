@@ -17,7 +17,7 @@
     <TickerAutocomplete
       id="ticker-{asset.id}"
       value={asset.ticker}
-      on:change={e => dispatch('update', { ticker: e.detail })}
+      on:change={e => dispatch('update', { ticker: e.detail.ticker, provider: e.detail.provider })}
       cellStyle={true}
     />
   </td>

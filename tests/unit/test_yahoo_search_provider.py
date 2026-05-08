@@ -15,11 +15,38 @@ def _resp(quotes: list) -> MagicMock:
 
 
 @patch("app.market_data.yahoo_search_provider.httpx.get")
-def test_returns_quotes_list(mock_get):
-    quotes = [{"symbol": "AAPL", "quoteType": "EQUITY"}]
-    mock_get.return_value = _resp(quotes)
+def test_normalizes_output_fields(mock_get):
+    mock_get.return_value = _resp([
+        {"symbol": "AAPL", "shortname": "Apple Inc.", "exchange": "NMS", "quoteType": "EQUITY"},
+    ])
     provider = YahooTickerSearchProvider()
-    assert provider.search("AAPL") == quotes
+    results = provider.search("AAPL")
+    assert results == [
+        {"symbol": "AAPL", "name": "YF · Apple Inc.", "exchange": "NMS", "type": "EQUITY", "provider": "yahoo"},
+    ]
+
+
+@patch("app.market_data.yahoo_search_provider.httpx.get")
+def test_uses_longname_when_shortname_absent(mock_get):
+    mock_get.return_value = _resp([
+        {"symbol": "VWCE.DE", "longname": "Vanguard FTSE All-World UCITS ETF", "exchange": "GER", "quoteType": "ETF"},
+    ])
+    provider = YahooTickerSearchProvider()
+    results = provider.search("VWCE")
+    assert results[0]["name"] == "YF · Vanguard FTSE All-World UCITS ETF"
+
+
+@patch("app.market_data.yahoo_search_provider.httpx.get")
+def test_filters_out_disallowed_types(mock_get):
+    mock_get.return_value = _resp([
+        {"symbol": "AAPL", "shortname": "Apple", "exchange": "NMS", "quoteType": "EQUITY"},
+        {"symbol": "AAPL221216C00150000", "shortname": "Option", "exchange": "OPR", "quoteType": "OPTION"},
+        {"symbol": "^GSPC", "shortname": "S&P 500", "exchange": "SNP", "quoteType": "INDEX"},
+    ])
+    provider = YahooTickerSearchProvider()
+    results = provider.search("AAPL")
+    assert len(results) == 1
+    assert results[0]["symbol"] == "AAPL"
 
 
 @patch("app.market_data.yahoo_search_provider.httpx.get")
@@ -38,3 +65,23 @@ def test_http_error_propagates(mock_get):
     provider = YahooTickerSearchProvider()
     with pytest.raises(Exception, match="connection refused"):
         provider.search("AAPL")
+
+
+@patch("app.market_data.yahoo_search_provider.httpx.get")
+def test_provider_field_is_yahoo(mock_get):
+    mock_get.return_value = _resp([
+        {"symbol": "BTC-USD", "shortname": "Bitcoin USD", "exchange": "CCC", "quoteType": "CRYPTOCURRENCY"},
+    ])
+    provider = YahooTickerSearchProvider()
+    results = provider.search("BTC")
+    assert results[0]["provider"] == "yahoo"
+
+
+@patch("app.market_data.yahoo_search_provider.httpx.get")
+def test_name_prefix_is_yf_label(mock_get):
+    mock_get.return_value = _resp([
+        {"symbol": "SPY", "shortname": "SPDR S&P 500 ETF", "exchange": "PCX", "quoteType": "ETF"},
+    ])
+    provider = YahooTickerSearchProvider()
+    results = provider.search("SPY")
+    assert results[0]["name"].startswith("YF · ")

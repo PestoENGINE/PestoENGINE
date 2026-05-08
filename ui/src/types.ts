@@ -1,10 +1,19 @@
 export interface Asset {
   id: string;
   ticker: string;
+  provider: string | null;
   desiredPercentage: number;
   shares: number;
   fees: number;
   percentageFee: boolean;
+}
+
+export interface TickerResult {
+  ticker: string;
+  name: string;
+  exchange: string;
+  type: string;
+  provider: string;
 }
 
 export interface Settings {

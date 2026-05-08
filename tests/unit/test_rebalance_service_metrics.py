@@ -7,7 +7,7 @@ import pytest
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import InMemoryMetricReader
 
-from app.market_data.base import AbstractMarketDataProvider
+from app.market_data.provider_registry import ProviderRegistry
 from app.schemas.request import AssetIn, RebalanceRequest
 
 
@@ -41,8 +41,8 @@ def _simple_request(n_assets: int = 2, optimal: bool = False) -> RebalanceReques
 
 
 def _run(request, mp):
-    mock = MagicMock(spec=AbstractMarketDataProvider)
-    mock.get_prices.return_value = {f"T{i}": 10.0 for i in range(len(request.assets))}
+    mock = MagicMock(spec=ProviderRegistry)
+    mock.get_prices_for_assets.return_value = {f"T{i}": 10.0 for i in range(len(request.assets))}
     return _svc.run_rebalance(request, mock, meter_provider=mp)
 
 

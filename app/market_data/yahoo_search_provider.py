@@ -13,6 +13,9 @@ _HEADERS = {"User-Agent": "Mozilla/5.0"}
 
 
 class YahooTickerSearchProvider(AbstractTickerSearchProvider):
+    LABEL = "YF"
+    _ALLOWED_TYPES = {"EQUITY", "ETF", "MUTUALFUND", "CRYPTOCURRENCY", "CURRENCY"}
+
     def search(self, q: str) -> list[dict]:
         r = httpx.get(
             _SEARCH_URL,
@@ -21,7 +24,21 @@ class YahooTickerSearchProvider(AbstractTickerSearchProvider):
             timeout=10,
         )
         r.raise_for_status()
-        return r.json().get("quotes") or []
+        raw = r.json().get("quotes") or []
+        results = []
+        for item in raw:
+            qt = item.get("quoteType")
+            if qt not in self._ALLOWED_TYPES:
+                continue
+            name = item.get("shortname") or item.get("longname") or ""
+            results.append({
+                "symbol": item["symbol"],
+                "name": f"{self.LABEL} · {name}",
+                "exchange": item.get("exchange", ""),
+                "type": qt,
+                "provider": "yahoo",
+            })
+        return results
 
 
 # --- Fallback: yfinance-based implementation (commented out) ---

@@ -1,41 +1,45 @@
 # app/api/v1/routes/tickers.py
-"""GET|HEAD /v1/tickers/search endpoint."""
+"""GET /v1/tickers/search endpoint — parallel multi-provider search."""
 
 import asyncio
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app.api.deps import get_ticker_search_provider
+from app.api.deps import get_search_providers
 from app.market_data.base import AbstractTickerSearchProvider
 from app.schemas.ticker import TickerResult, TickerSearchResponse
 
 router = APIRouter(tags=["tickers"])
 logger = logging.getLogger(__name__)
 
-_ALLOWED_TYPES = {"EQUITY", "ETF", "MUTUALFUND", "CRYPTOCURRENCY", "CURRENCY"}
-
 
 @router.api_route("/tickers/search", methods=["GET", "HEAD"], response_model=TickerSearchResponse)
 async def search_tickers(
     q: str = Query(..., min_length=2),
-    search_provider: AbstractTickerSearchProvider = Depends(get_ticker_search_provider),
+    search_providers: list[AbstractTickerSearchProvider] = Depends(get_search_providers),
 ) -> TickerSearchResponse:
     loop = asyncio.get_running_loop()
-    try:
-        quotes = await loop.run_in_executor(None, search_provider.search, q)
-    except Exception:
-        logger.exception("ticker search failed for query %r", q)
+    tasks = [loop.run_in_executor(None, p.search, q) for p in search_providers]
+    results_per_provider = await asyncio.gather(*tasks, return_exceptions=True)
+
+    merged: list[TickerResult] = []
+    all_failed = True
+    for results in results_per_provider:
+        if isinstance(results, Exception):
+            logger.warning("Search provider failed: %s", results)
+            continue
+        all_failed = False
+        for r in results:
+            merged.append(TickerResult(
+                ticker=r["symbol"],
+                name=r["name"],
+                exchange=r["exchange"],
+                type=r["type"],
+                provider=r["provider"],
+            ))
+
+    if all_failed and search_providers:
         raise HTTPException(status_code=503, detail="Market data unavailable")
 
-    results = [
-        TickerResult(
-            ticker=quote.get("symbol", ""),
-            name=quote.get("shortname") or quote.get("longname") or "",
-            exchange=quote.get("exchange", ""),
-            type=quote.get("quoteType", ""),
-        )
-        for quote in quotes
-        if quote.get("quoteType") in _ALLOWED_TYPES
-    ]
-    return TickerSearchResponse(results=results)
+    return TickerSearchResponse(results=merged)

@@ -8,7 +8,7 @@ from opentelemetry import metrics as _otel_metrics
 from app import rebalance
 from app.core.exceptions import MarketDataError
 from app.core.formatting import truncate2
-from app.market_data.base import AbstractMarketDataProvider
+from app.market_data.provider_registry import ProviderRegistry
 from app.schemas.request import RebalanceRequest
 from app.schemas.result import RebalanceResponse
 
@@ -72,19 +72,10 @@ def _rebalance_instruments(
 
 def run_rebalance(
     request: RebalanceRequest,
-    market_provider: AbstractMarketDataProvider,
+    registry: ProviderRegistry,
     *,
     meter_provider: _otel_metrics.MeterProvider | None = None,
 ) -> RebalanceResponse:
-    """Compute optimal buy quantities for each asset in a portfolio.
-
-    Args:
-        request: A fully validated RebalanceRequest instance.
-        market_provider: Provider used to fetch current market prices.
-
-    Returns:
-        A RebalanceResponse with per-asset results, total fees, and leftover change.
-    """
     dur_hist, ticker_hist = _rebalance_instruments(meter_provider)
     algorithm = "dp" if request.optimal_redistribute else "greedy"
     _start = time.perf_counter()
@@ -93,7 +84,7 @@ def run_rebalance(
         desired_pcts = [a.desired_percentage for a in request.assets]
         shares = [a.shares for a in request.assets]
 
-        prices = market_provider.get_prices(tickers)
+        prices = registry.get_prices_for_assets(request.assets)
         try:
             ticker_prices = [round(prices[t], 2) for t in tickers]
         except KeyError as exc:

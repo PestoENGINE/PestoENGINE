@@ -28,10 +28,12 @@ class CachedMarketDataProvider(AbstractMarketDataProvider):
         provider: AbstractMarketDataProvider,
         cache: AbstractCache,
         *,
+        provider_id: str,
         meter_provider: _metrics.MeterProvider | None = None,
     ) -> None:
         self._provider = provider
         self._cache = cache
+        self._key_prefix = f"{_KEY_PREFIX}{provider_id}:"
         backend = type(cache).__name__.removesuffix("Cache").lower()
         mp = meter_provider if meter_provider is not None else _metrics.get_meter_provider()
         meter = mp.get_meter("pestoengine.cache")
@@ -46,7 +48,7 @@ class CachedMarketDataProvider(AbstractMarketDataProvider):
         misses: list[str] = []
 
         for ticker in tickers:
-            cached = self._cache.get(_KEY_PREFIX + ticker)
+            cached = self._cache.get(self._key_prefix + ticker)
             if cached is not None:
                 logger.debug("Cache HIT for %s", ticker)
                 prices[ticker] = cached
@@ -59,7 +61,7 @@ class CachedMarketDataProvider(AbstractMarketDataProvider):
         if misses:
             fresh = self._provider.get_prices(misses)
             for ticker, price in fresh.items():
-                self._cache.set(_KEY_PREFIX + ticker, price)
+                self._cache.set(self._key_prefix + ticker, price)
                 prices[ticker] = price
 
         return prices

@@ -1,19 +1,13 @@
 <!-- ui/src/components/TickerAutocomplete.svelte -->
 <script lang="ts">
   import { createEventDispatcher, onDestroy } from 'svelte';
+  import type { TickerResult } from '../types';
 
   export let value: string = '';
   export let id: string = '';
   export let cellStyle: boolean = false;
 
-  interface TickerResult {
-    ticker: string;
-    name: string;
-    exchange: string;
-    type: string;
-  }
-
-  const dispatch = createEventDispatcher<{ change: string }>();
+  const dispatch = createEventDispatcher<{ change: { ticker: string; provider: string | null } }>();
 
   let results: TickerResult[] = [];
   let open = false;
@@ -23,7 +17,7 @@
   function onInput(e: Event) {
     const q = (e.target as HTMLInputElement).value.trim().toUpperCase();
     value = q;
-    dispatch('change', q);
+    dispatch('change', { ticker: q, provider: null });
 
     clearTimeout(debounceTimer);
     results = [];
@@ -47,9 +41,9 @@
     }
   }
 
-  function select(ticker: string) {
-    value = ticker;
-    dispatch('change', ticker);
+  function select(result: TickerResult) {
+    value = result.ticker;
+    dispatch('change', { ticker: result.ticker, provider: result.provider });
     open = false;
     results = [];
     activeIndex = -1;
@@ -72,7 +66,7 @@
       activeIndex = Math.max(activeIndex - 1, -1);
     } else if (e.key === 'Enter' && activeIndex >= 0) {
       e.preventDefault();
-      select(results[activeIndex].ticker);
+      select(results[activeIndex]);
     } else if (e.key === 'Escape') {
       e.preventDefault();
       open = false;
@@ -110,7 +104,7 @@
           id="autocomplete-opt-{i}"
           role="option"
           aria-selected={activeIndex === i}
-          on:mousedown|preventDefault={() => select(result.ticker)}
+          on:mousedown|preventDefault={() => select(result)}
           class="autocomplete-item"
           class:active={activeIndex === i}
         >

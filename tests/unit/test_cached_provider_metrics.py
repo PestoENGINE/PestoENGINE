@@ -26,11 +26,14 @@ def _points(reader, name):
     return []
 
 
+_TEST_KEY_PREFIX = _KEY_PREFIX + "test:"
+
+
 def _make_provider(prices, *, meter_provider=None):
     mock = MagicMock(spec=AbstractMarketDataProvider)
     mock.get_prices.return_value = prices
     cache = LocalCache(ttl_seconds=300)
-    return CachedMarketDataProvider(mock, cache, meter_provider=meter_provider), mock, cache
+    return CachedMarketDataProvider(mock, cache, provider_id="test", meter_provider=meter_provider), mock, cache
 
 
 def test_cache_miss_recorded_per_ticker():
@@ -47,8 +50,8 @@ def test_cache_miss_recorded_per_ticker():
 def test_cache_hit_recorded_per_ticker():
     reader, mp = _make_otel()
     provider, _, cache = _make_provider({}, meter_provider=mp)
-    cache.set(_KEY_PREFIX + "A", 10.0)
-    cache.set(_KEY_PREFIX + "B", 20.0)
+    cache.set(_TEST_KEY_PREFIX + "A", 10.0)
+    cache.set(_TEST_KEY_PREFIX + "B", 20.0)
 
     provider.get_prices(["A", "B"])
 
@@ -70,7 +73,7 @@ def test_backend_label_is_local_for_local_cache():
 def test_partial_hit_counts_correctly():
     reader, mp = _make_otel()
     provider, _, cache = _make_provider({"B": 2.0}, meter_provider=mp)
-    cache.set(_KEY_PREFIX + "A", 1.0)
+    cache.set(_TEST_KEY_PREFIX + "A", 1.0)
 
     provider.get_prices(["A", "B"])
 

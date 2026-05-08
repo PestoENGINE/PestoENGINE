@@ -31,7 +31,7 @@ def test_delegates_to_underlying_provider():
     reader, mp = _make_otel()
     mock = MagicMock(spec=AbstractMarketDataProvider)
     mock.get_prices.return_value = {"AAPL": 150.0, "MSFT": 300.0}
-    provider = InstrumentedMarketDataProvider(mock, meter_provider=mp)
+    provider = InstrumentedMarketDataProvider(mock, provider_id="yahoo", meter_provider=mp)
 
     result = provider.get_prices(["AAPL", "MSFT"])
 
@@ -44,13 +44,14 @@ def test_records_duration_on_success():
     reader, mp = _make_otel()
     mock = MagicMock(spec=AbstractMarketDataProvider)
     mock.get_prices.return_value = {"A": 10.0}
-    provider = InstrumentedMarketDataProvider(mock, meter_provider=mp)
+    provider = InstrumentedMarketDataProvider(mock, provider_id="yahoo", meter_provider=mp)
 
     provider.get_prices(["A"])
 
     pts = _points(reader, "pestoengine_market_fetch_duration_seconds")
     assert len(pts) == 1
     assert pts[0].sum >= 0
+    assert pts[0].attributes["provider"] == "yahoo"
 
 
 def test_records_duration_on_error():
@@ -58,7 +59,7 @@ def test_records_duration_on_error():
     reader, mp = _make_otel()
     mock = MagicMock(spec=AbstractMarketDataProvider)
     mock.get_prices.side_effect = MarketDataError("feed down")
-    provider = InstrumentedMarketDataProvider(mock, meter_provider=mp)
+    provider = InstrumentedMarketDataProvider(mock, provider_id="yahoo", meter_provider=mp)
 
     with pytest.raises(MarketDataError):
         provider.get_prices(["A"])
@@ -72,7 +73,7 @@ def test_counter_increments_by_ticker_count_on_success():
     reader, mp = _make_otel()
     mock = MagicMock(spec=AbstractMarketDataProvider)
     mock.get_prices.return_value = {"A": 1.0, "B": 2.0, "C": 3.0}
-    provider = InstrumentedMarketDataProvider(mock, meter_provider=mp)
+    provider = InstrumentedMarketDataProvider(mock, provider_id="yahoo", meter_provider=mp)
 
     provider.get_prices(["A", "B", "C"])
 
@@ -80,6 +81,7 @@ def test_counter_increments_by_ticker_count_on_success():
     assert len(pts) == 1
     assert pts[0].value == 3
     assert pts[0].attributes["outcome"] == "success"
+    assert pts[0].attributes["provider"] == "yahoo"
 
 
 def test_counter_increments_by_ticker_count_on_error():
@@ -87,7 +89,7 @@ def test_counter_increments_by_ticker_count_on_error():
     reader, mp = _make_otel()
     mock = MagicMock(spec=AbstractMarketDataProvider)
     mock.get_prices.side_effect = MarketDataError("feed down")
-    provider = InstrumentedMarketDataProvider(mock, meter_provider=mp)
+    provider = InstrumentedMarketDataProvider(mock, provider_id="alphavantage", meter_provider=mp)
 
     with pytest.raises(MarketDataError):
         provider.get_prices(["X", "Y"])
@@ -96,3 +98,4 @@ def test_counter_increments_by_ticker_count_on_error():
     assert len(pts) == 1
     assert pts[0].value == 2
     assert pts[0].attributes["outcome"] == "error"
+    assert pts[0].attributes["provider"] == "alphavantage"

@@ -51,7 +51,7 @@
 
   function addAsset() {
     const id = uuid();
-    assets = [...assets, { id, ticker: '', desiredPercentage: 0, shares: 0, fees: 0, percentageFee: false }];
+    assets = [...assets, { id, ticker: '', provider: null, desiredPercentage: 0, shares: 0, fees: 0, percentageFee: false }];
     saveAssets(assets);
   }
 
@@ -76,6 +76,7 @@
       optimal_redistribute: settings.optimalRedistribute,
       assets: assets.map(a => ({
         ticker: a.ticker,
+        provider: a.provider ?? null,
         desired_percentage: a.desiredPercentage,
         shares: a.shares,
         fees: a.fees,
@@ -102,7 +103,10 @@
           : typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
         error = `Validation error: ${msgs}`;
       } else if (res.status === 502) {
-        error = 'Market data unavailable. Check ticker symbols or try again.';
+        const data = await res.json().catch(() => ({}));
+        error = typeof data.detail === 'string'
+          ? data.detail
+          : 'Market data unavailable. Check ticker symbols or try again.';
       } else {
         error = 'Request failed. Try again.';
       }
@@ -196,6 +200,7 @@
     const newAssets: Asset[] = (d.assets as Array<Record<string, unknown>>).map(a => ({
       id: uuid(),
       ticker: a.ticker as string,
+      provider: (typeof a.provider === 'string' ? a.provider : null),
       desiredPercentage: a.desiredPercentage as number,
       shares: a.shares as number,
       fees: a.fees as number,

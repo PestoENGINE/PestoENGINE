@@ -20,13 +20,13 @@ _TWO_ASSET_PAYLOAD = {
 }
 
 
-def test_200_single_asset_fee(client, mock_provider):
+def test_200_single_asset_fee(client, mock_registry):
     """POST /v1/rebalance returns 200 with correct buy and change.
 
     increment=500, price=100, fee=10
     net=490, buy=4, total_fees=10, change=90
     """
-    mock_provider.get_prices.return_value = {"A": 100.0}
+    mock_registry.get_prices_for_assets.return_value = {"A": 100.0}
     resp = client.post("/v1/rebalance", json=_SINGLE_ASSET_PAYLOAD)
     assert resp.status_code == 200
     body = resp.json()
@@ -37,9 +37,9 @@ def test_200_single_asset_fee(client, mock_provider):
     assert body["change"] == 90.0
 
 
-def test_200_two_assets(client, mock_provider):
+def test_200_two_assets(client, mock_registry):
     """POST /v1/rebalance returns correct totals for two assets with fees."""
-    mock_provider.get_prices.return_value = {"A": 50.0, "B": 100.0}
+    mock_registry.get_prices_for_assets.return_value = {"A": 50.0, "B": 100.0}
     resp = client.post("/v1/rebalance", json=_TWO_ASSET_PAYLOAD)
     assert resp.status_code == 200
     body = resp.json()
@@ -106,9 +106,9 @@ def test_422_percentage_fee_over_100(client):
     assert resp.status_code == 422
 
 
-def test_optimal_redistribute_flag_wired(client, mock_provider):
+def test_optimal_redistribute_flag_wired(client, mock_registry):
     """optimal_redistribute=True flag is passed through to the service."""
-    mock_provider.get_prices.return_value = {"A": 60.0, "B": 45.0}
+    mock_registry.get_prices_for_assets.return_value = {"A": 60.0, "B": 45.0}
     payload = {
         "only_buy": True,
         "increment": 200.0,
@@ -123,9 +123,9 @@ def test_optimal_redistribute_flag_wired(client, mock_provider):
     assert resp.json()["change"] >= 0.0
 
 
-def test_502_on_market_data_error(client, mock_provider):
-    """MarketDataError from the provider is caught and returns HTTP 502."""
-    mock_provider.get_prices.side_effect = MarketDataError("feed unavailable")
+def test_502_on_market_data_error(client, mock_registry):
+    """MarketDataError from the registry is caught and returns HTTP 502."""
+    mock_registry.get_prices_for_assets.side_effect = MarketDataError("feed unavailable")
     payload = {
         "only_buy": True,
         "increment": 100.0,
@@ -134,3 +134,15 @@ def test_502_on_market_data_error(client, mock_provider):
     resp = client.post("/v1/rebalance", json=payload)
     assert resp.status_code == 502
     assert "feed unavailable" in resp.json()["detail"]
+
+
+def test_legacy_payload_without_provider_field_succeeds(client, mock_registry):
+    """Payload without 'provider' field (legacy localStorage) succeeds via fallback chain."""
+    mock_registry.get_prices_for_assets.return_value = {"A": 100.0}
+    payload = {
+        "only_buy": True,
+        "increment": 100.0,
+        "assets": [{"ticker": "A", "desired_percentage": 100.0, "shares": 0, "fees": 0}],
+    }
+    resp = client.post("/v1/rebalance", json=payload)
+    assert resp.status_code == 200
