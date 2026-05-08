@@ -23,7 +23,7 @@ RUN find .venv/lib -type d \( -name "tests" -o -name "test" \) -prune -exec rm -
 RUN python -m compileall -b -q .venv/lib && \
     find .venv/lib -type f -name "*.py" -delete && \
     find .venv/lib -type d -name "__pycache__" -prune -exec rm -rf {} + 2>/dev/null || true && \
-    find .venv/lib -type d \( -name "*.dist-info" -o -name "*.egg-info" \) -prune -exec rm -rf {} + 2>/dev/null || true && \
+    find .venv/lib -type d -name "*.egg-info" -prune -exec rm -rf {} + 2>/dev/null || true && \
     find .venv/lib -type f -name "*.pyi" -delete
 
 # Stage 3: Runtime
