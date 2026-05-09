@@ -9,6 +9,8 @@ from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.metrics.view import ExplicitBucketHistogramAggregation, View
 from opentelemetry.sdk.resources import Resource, SERVICE_NAME
 
+from app.market_data.instrumented_provider import FETCH_DURATION_METRIC
+
 _FETCH_DURATION_BUCKETS = [0.1, 0.25, 0.5, 0.75, 1.0, 2.0, 5.0]
 
 
@@ -41,7 +43,7 @@ def setup_telemetry(
     )
     views = [
         View(
-            instrument_name="pestoengine_market_fetch_duration_seconds",
+            instrument_name=FETCH_DURATION_METRIC,
             aggregation=ExplicitBucketHistogramAggregation(_FETCH_DURATION_BUCKETS),
         )
     ]

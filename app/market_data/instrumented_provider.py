@@ -6,6 +6,8 @@ from opentelemetry import metrics as _metrics
 
 from app.market_data.base import AbstractMarketDataProvider
 
+FETCH_DURATION_METRIC = "pestoengine_market_fetch_duration_seconds"
+
 
 class InstrumentedMarketDataProvider(AbstractMarketDataProvider):
     """Decorator that records fetch duration and outcomes for any provider.
@@ -26,7 +28,7 @@ class InstrumentedMarketDataProvider(AbstractMarketDataProvider):
         mp = meter_provider if meter_provider is not None else _metrics.get_meter_provider()
         meter = mp.get_meter("pestoengine.market_data")
         self._fetch_duration = meter.create_histogram(
-            "pestoengine_market_fetch_duration_seconds",
+            FETCH_DURATION_METRIC,
             description="Market data API fetch duration (cache misses only)",
             unit="s",
         )

@@ -7,6 +7,7 @@ from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import InMemoryMetricReader
 
 from app.market_data.base import AbstractMarketDataProvider
+from app.market_data.instrumented_provider import FETCH_DURATION_METRIC
 from app.core.exceptions import MarketDataError
 
 
@@ -48,7 +49,7 @@ def test_records_duration_on_success():
 
     provider.get_prices(["A"])
 
-    pts = _points(reader, "pestoengine_market_fetch_duration_seconds")
+    pts = _points(reader, FETCH_DURATION_METRIC)
     assert len(pts) == 1
     assert pts[0].sum >= 0
     assert pts[0].attributes["provider"] == "yahoo"
@@ -64,7 +65,7 @@ def test_records_duration_on_error():
     with pytest.raises(MarketDataError):
         provider.get_prices(["A"])
 
-    pts = _points(reader, "pestoengine_market_fetch_duration_seconds")
+    pts = _points(reader, FETCH_DURATION_METRIC)
     assert len(pts) == 1
 
 
