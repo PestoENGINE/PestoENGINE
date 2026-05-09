@@ -2,12 +2,10 @@
 
 from pydantic import BaseModel, Field, model_validator
 
-from app.core.config import ProviderId
-
 
 class AssetIn(BaseModel):
     ticker: str = Field(min_length=1)
-    provider: ProviderId | None = None
+    provider: str | None = None
     desired_percentage: float = Field(ge=0, le=100)
     shares: float = Field(ge=0)
     fees: float = Field(ge=0)
