@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     otel_exporter_otlp_endpoint: str = "http://localhost:4318"  # docker/k8s: use http://alloy:4318
     otel_service_name: str = "pestoengine"
     otel_export_interval_ms: int = 60_000
+    otel_exporter_otlp_headers: str | None = None
     market_data_providers: list[ProviderId] = ["yahoo"]
     alpha_vantage_api_key: str | None = None
 

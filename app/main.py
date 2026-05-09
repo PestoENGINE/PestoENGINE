@@ -61,6 +61,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             _settings.otel_service_name,
             _settings.otel_exporter_otlp_endpoint,
             _settings.otel_export_interval_ms,
+            _settings.otel_exporter_otlp_headers,
         )
         FastAPIInstrumentor.instrument_app(app, meter_provider=provider)
     yield
