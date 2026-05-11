@@ -27,8 +27,7 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _check_required_settings(self) -> "Settings":
-        seen: set[str] = set()
-        self.market_data_providers = [p for p in self.market_data_providers if not (p in seen or seen.add(p))]  # type: ignore[func-returns-value]
+        self.market_data_providers = list(dict.fromkeys(self.market_data_providers))
         if self.cache_backend == "redis" and self.redis_url is None:
             raise ValueError("REDIS_URL must be set when CACHE_BACKEND=redis")
         if "alphavantage" in self.market_data_providers and not self.alpha_vantage_api_key:
