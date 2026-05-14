@@ -46,30 +46,39 @@ class _AccessLogMiddleware(BaseHTTPMiddleware):
             )
 
 
+_settings = get_settings()
+_meter_provider = None
+_tracer_provider = None
+if _settings.otel_enabled:
+    from app.core.telemetry import setup_telemetry
+    _meter_provider, _tracer_provider = setup_telemetry(
+        _settings.otel_service_name,
+        _settings.otel_exporter_otlp_endpoint,
+        _settings.otel_export_interval_ms,
+        _settings.otel_exporter_otlp_headers,
+    )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # uvicorn calls logging.config.dictConfig during startup, resetting logger
     # levels - silence uvicorn.access here, after dictConfig has run.
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
-
-    _settings = get_settings()
-    provider = None
-    if _settings.otel_enabled:
-        from app.core.telemetry import setup_telemetry
-        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-        provider = setup_telemetry(
-            _settings.otel_service_name,
-            _settings.otel_exporter_otlp_endpoint,
-            _settings.otel_export_interval_ms,
-            _settings.otel_exporter_otlp_headers,
-        )
-        FastAPIInstrumentor.instrument_app(app, meter_provider=provider)
     yield
-    if provider is not None:
-        provider.shutdown()
+    if _meter_provider is not None:
+        _meter_provider.shutdown()
+        _tracer_provider.shutdown()
 
 
 app = FastAPI(title="PestoENGINE API", version="2.0.0", lifespan=lifespan)
+
+if _tracer_provider is not None:
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+    FastAPIInstrumentor.instrument_app(
+        app,
+        meter_provider=_meter_provider,
+        tracer_provider=_tracer_provider,
+    )
 
 app.add_middleware(_AccessLogMiddleware)
 

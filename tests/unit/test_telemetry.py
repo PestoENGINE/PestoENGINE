@@ -2,6 +2,8 @@
 
 import pytest
 
+from opentelemetry.sdk.trace import TracerProvider as SdkTracerProvider
+
 from app.core.telemetry import _parse_headers
 
 
@@ -46,3 +48,14 @@ def test_grafana_cloud_header_roundtrip():
     raw = "Authorization=Basic%20MTYyOTMzMzpnbGNfZXlK"
     result = _parse_headers(raw)
     assert result == {"Authorization": "Basic MTYyOTMzMzpnbGNfZXlK"}
+
+
+def test_setup_telemetry_returns_real_tracer_provider():
+    from app.core.telemetry import setup_telemetry
+
+    mp, tp = setup_telemetry("svc", "http://localhost:4318", 60_000)
+    try:
+        assert isinstance(tp, SdkTracerProvider)
+    finally:
+        mp.shutdown()
+        tp.shutdown()
