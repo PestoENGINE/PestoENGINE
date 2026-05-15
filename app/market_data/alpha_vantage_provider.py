@@ -49,7 +49,10 @@ class AlphaVantageProvider(AbstractMarketDataProvider):
             except MarketDataError:
                 raise
             except (httpx.HTTPError, ValueError) as e:
-                last_err = str(e)
+                if isinstance(e, httpx.HTTPStatusError):
+                    last_err = f"HTTP {e.response.status_code}"
+                else:
+                    last_err = type(e).__name__
                 if attempt < _MAX_RETRIES:
                     time.sleep(_RETRY_DELAY)
         raise MarketDataError(

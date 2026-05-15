@@ -77,3 +77,23 @@ def test_http_error_retries_then_raises(mock_get, mock_sleep):
         provider.get_prices(["AAPL"])
     assert mock_get.call_count == 3
     assert mock_sleep.call_count == 2
+
+
+@patch("app.market_data.alpha_vantage_provider.time.sleep")
+@patch("app.market_data.alpha_vantage_provider.httpx.get")
+def test_http_status_error_does_not_leak_api_key(mock_get, mock_sleep):
+    provider = AlphaVantageProvider(api_key="SECRET_KEY_123")
+    mock_response = MagicMock(spec=httpx.Response)
+    mock_response.status_code = 401
+    mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+        "401 Unauthorized for url 'https://www.alphavantage.co/query?apikey=SECRET_KEY_123'",
+        request=MagicMock(),
+        response=mock_response,
+    )
+    mock_get.return_value = mock_response
+    with pytest.raises(MarketDataError) as exc_info:
+        provider.get_prices(["AAPL"])
+    msg = str(exc_info.value)
+    assert "SECRET_KEY_123" not in msg
+    assert "apikey" not in msg
+    assert "HTTP 401" in msg
