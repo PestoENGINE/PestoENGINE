@@ -37,12 +37,18 @@ class _AccessLogMiddleware(BaseHTTPMiddleware):
                 f"{request.client.host}:{request.client.port}"
                 if request.client else "-"
             )
-            ua = request.headers.get("user-agent", "-")
-            ver = request.scope.get("http_version", "1.1")
             _access_log.info(
-                '%s - "%s %s HTTP/%s" %d %.0fms "%s"',
-                client, request.method, request.url.path,
-                ver, status_code, ms, ua,
+                "%s %s %d %.0fms",
+                request.method, request.url.path, status_code, ms,
+                extra={
+                    "http_method": request.method,
+                    "http_path": request.url.path,
+                    "http_status": status_code,
+                    "http_duration_ms": round(ms, 1),
+                    "http_client": client,
+                    "http_user_agent": request.headers.get("user-agent", "-"),
+                    "http_version": request.scope.get("http_version", "1.1"),
+                },
             )
 
 
