@@ -9,6 +9,9 @@ from opentelemetry.sdk.metrics.export import InMemoryMetricReader
 
 from app.market_data.provider_registry import ProviderRegistry
 from app.schemas.request import AssetIn, RebalanceRequest
+from opentelemetry.sdk.trace import TracerProvider as SdkTracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
 
 def _make_otel():
@@ -89,3 +92,23 @@ def test_algorithm_label_dp():
 
     pts = _points(reader, "pestoengine_rebalance_duration_seconds")
     assert pts[0].attributes["algorithm"] == "dp"
+
+
+def test_rebalance_compute_creates_span_with_attributes():
+    exporter = InMemorySpanExporter()
+    tp = SdkTracerProvider()
+    tp.add_span_processor(SimpleSpanProcessor(exporter))
+    reader, mp = _make_otel()
+    mock = MagicMock(spec=ProviderRegistry)
+    mock.get_prices_for_assets.return_value = {"T0": 10.0, "T1": 10.0}
+    _svc.run_rebalance(
+        _simple_request(optimal=False),
+        mock,
+        meter_provider=mp,
+        tracer_provider=tp,
+    )
+    spans = exporter.get_finished_spans()
+    span = next(s for s in spans if s.name == "rebalance_compute")
+    assert span.attributes["rebalance.algorithm"] == "greedy"
+    assert span.attributes["rebalance.tickers.count"] == 2
+    tp.shutdown()

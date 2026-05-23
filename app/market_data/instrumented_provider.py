@@ -3,6 +3,7 @@
 import time
 
 from opentelemetry import metrics as _metrics
+from opentelemetry import trace as _otel_trace
 
 from app.market_data.base import AbstractMarketDataProvider
 
@@ -22,6 +23,7 @@ class InstrumentedMarketDataProvider(AbstractMarketDataProvider):
         *,
         provider_id: str,
         meter_provider: _metrics.MeterProvider | None = None,
+        tracer_provider: _otel_trace.TracerProvider | None = None,
     ) -> None:
         self._provider = provider
         self._provider_id = provider_id
@@ -36,17 +38,31 @@ class InstrumentedMarketDataProvider(AbstractMarketDataProvider):
             "pestoengine_market_fetch_total",
             description="Tickers fetched from market data API",
         )
+        self._tracer = (
+            tracer_provider.get_tracer("pestoengine.market_data")
+            if tracer_provider is not None
+            else _otel_trace.get_tracer("pestoengine.market_data")
+        )
 
     def get_prices(self, tickers: list[str]) -> dict[str, float]:
         start = time.perf_counter()
         outcome = "success"
-        try:
-            result = self._provider.get_prices(tickers)
-            return result
-        except Exception:
-            outcome = "error"
-            raise
-        finally:
-            elapsed = time.perf_counter() - start
-            self._fetch_duration.record(elapsed, {"provider": self._provider_id})
-            self._fetch_total.add(len(tickers), {"outcome": outcome, "provider": self._provider_id})
+        with self._tracer.start_as_current_span(
+            "market_fetch",
+            attributes={
+                "provider": self._provider_id,
+                "tickers.count": len(tickers),
+            },
+        ) as span:
+            try:
+                result = self._provider.get_prices(tickers)
+                return result
+            except Exception as exc:
+                outcome = "error"
+                span.set_status(_otel_trace.Status(_otel_trace.StatusCode.ERROR))
+                span.record_exception(exc)
+                raise
+            finally:
+                elapsed = time.perf_counter() - start
+                self._fetch_duration.record(elapsed, {"provider": self._provider_id})
+                self._fetch_total.add(len(tickers), {"outcome": outcome, "provider": self._provider_id})

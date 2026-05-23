@@ -3,6 +3,7 @@
 import logging
 
 from opentelemetry import metrics as _metrics
+from opentelemetry import trace as _otel_trace
 
 from app.market_data.base import AbstractMarketDataProvider
 from app.market_data.cache import AbstractCache
@@ -30,6 +31,7 @@ class CachedMarketDataProvider(AbstractMarketDataProvider):
         *,
         provider_id: str,
         meter_provider: _metrics.MeterProvider | None = None,
+        tracer_provider: _otel_trace.TracerProvider | None = None,
     ) -> None:
         self._provider = provider
         self._cache = cache
@@ -42,26 +44,37 @@ class CachedMarketDataProvider(AbstractMarketDataProvider):
             description="Cache lookup outcomes per ticker",
         )
         self._backend = backend
+        self._provider_id = provider_id
+        self._tracer = (
+            tracer_provider.get_tracer("pestoengine.cache")
+            if tracer_provider is not None
+            else _otel_trace.get_tracer("pestoengine.cache")
+        )
 
     def get_prices(self, tickers: list[str]) -> dict[str, float]:
-        prices: dict[str, float] = {}
-        misses: list[str] = []
-
-        for ticker in tickers:
-            cached = self._cache.get(self._key_prefix + ticker)
-            if cached is not None:
-                logger.debug("Cache HIT for %s", ticker)
-                prices[ticker] = cached
-                self._cache_ops.add(1, {"backend": self._backend, "result": "hit"})
-            else:
-                logger.debug("Cache MISS for %s", ticker)
-                misses.append(ticker)
-                self._cache_ops.add(1, {"backend": self._backend, "result": "miss"})
-
-        if misses:
-            fresh = self._provider.get_prices(misses)
-            for ticker, price in fresh.items():
-                self._cache.set(self._key_prefix + ticker, price)
-                prices[ticker] = price
-
-        return prices
+        with self._tracer.start_as_current_span(
+            "cache_lookup",
+            attributes={
+                "cache.backend": self._backend,
+                "provider": self._provider_id,
+                "tickers.count": len(tickers),
+            },
+        ) as span:
+            prices: dict[str, float] = {}
+            misses: list[str] = []
+            for ticker in tickers:
+                cached = self._cache.get(self._key_prefix + ticker)
+                if cached is not None:
+                    prices[ticker] = cached
+                    self._cache_ops.add(1, {"backend": self._backend, "result": "hit"})
+                else:
+                    misses.append(ticker)
+                    self._cache_ops.add(1, {"backend": self._backend, "result": "miss"})
+            span.set_attribute("cache.hits", len(tickers) - len(misses))
+            span.set_attribute("cache.misses", len(misses))
+            if misses:
+                fresh = self._provider.get_prices(misses)
+                for ticker, price in fresh.items():
+                    self._cache.set(self._key_prefix + ticker, price)
+                    prices[ticker] = price
+            return prices

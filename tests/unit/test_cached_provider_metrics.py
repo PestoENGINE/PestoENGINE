@@ -8,6 +8,9 @@ from opentelemetry.sdk.metrics.export import InMemoryMetricReader
 from app.market_data.base import AbstractMarketDataProvider
 from app.market_data.cache import LocalCache
 from app.market_data.cached_provider import CachedMarketDataProvider, _KEY_PREFIX
+from opentelemetry.sdk.trace import TracerProvider as SdkTracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
 
 def _make_otel():
@@ -82,3 +85,23 @@ def test_partial_hit_counts_correctly():
     misses = sum(p.value for p in pts if p.attributes.get("result") == "miss")
     assert hits == 1
     assert misses == 1
+
+
+def test_cache_lookup_creates_span_with_hit_miss_counts():
+    exporter = InMemorySpanExporter()
+    tp = SdkTracerProvider()
+    tp.add_span_processor(SimpleSpanProcessor(exporter))
+    _, mp = _make_otel()
+    mock = MagicMock(spec=AbstractMarketDataProvider)
+    mock.get_prices.return_value = {"B": 2.0}
+    cache = LocalCache(ttl_seconds=300)
+    provider = CachedMarketDataProvider(
+        mock, cache, provider_id="test", meter_provider=mp, tracer_provider=tp
+    )
+    cache.set(_TEST_KEY_PREFIX + "A", 1.0)
+    provider.get_prices(["A", "B"])
+    spans = exporter.get_finished_spans()
+    span = next(s for s in spans if s.name == "cache_lookup")
+    assert span.attributes["cache.hits"] == 1
+    assert span.attributes["cache.misses"] == 1
+    tp.shutdown()
