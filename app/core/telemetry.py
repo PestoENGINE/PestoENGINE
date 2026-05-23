@@ -3,8 +3,12 @@
 from urllib.parse import unquote
 
 from opentelemetry import metrics, trace
+from opentelemetry._logs import set_logger_provider
+from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk._logs import LoggerProvider
+from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.metrics.view import ExplicitBucketHistogramAggregation, View
@@ -33,7 +37,7 @@ def setup_telemetry(
     endpoint: str,
     export_interval_ms: int,
     headers_raw: str | None = None,
-) -> tuple[MeterProvider, TracerProvider]:
+) -> tuple[MeterProvider, TracerProvider, LoggerProvider]:
     resource = Resource.create({SERVICE_NAME: service_name})
     parsed_headers = _parse_headers(headers_raw)
 
@@ -61,4 +65,12 @@ def setup_telemetry(
     tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
     trace.set_tracer_provider(tracer_provider)
 
-    return meter_provider, tracer_provider
+    log_exporter = OTLPLogExporter(
+        endpoint=f"{endpoint}/v1/logs",
+        headers=parsed_headers,
+    )
+    logger_provider = LoggerProvider(resource=resource)
+    logger_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
+    set_logger_provider(logger_provider)
+
+    return meter_provider, tracer_provider, logger_provider

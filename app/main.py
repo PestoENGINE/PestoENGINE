@@ -55,14 +55,18 @@ class _AccessLogMiddleware(BaseHTTPMiddleware):
 _settings = get_settings()
 _meter_provider = None
 _tracer_provider = None
+_logger_provider = None
 if _settings.otel_enabled:
     from app.core.telemetry import setup_telemetry
-    _meter_provider, _tracer_provider = setup_telemetry(
+    _meter_provider, _tracer_provider, _logger_provider = setup_telemetry(
         _settings.otel_service_name,
         _settings.otel_exporter_otlp_endpoint,
         _settings.otel_export_interval_ms,
         _settings.otel_exporter_otlp_headers,
     )
+    from opentelemetry.instrumentation.logging.handler import LoggingHandler
+    otel_handler = LoggingHandler(level=logging.NOTSET, logger_provider=_logger_provider)
+    logging.getLogger().addHandler(otel_handler)
 
 
 @asynccontextmanager
@@ -74,6 +78,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     if _meter_provider is not None:
         _meter_provider.shutdown()
         _tracer_provider.shutdown()
+        _logger_provider.shutdown()
 
 
 app = FastAPI(title="PestoENGINE API", version="2.0.0", lifespan=lifespan)
