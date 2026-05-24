@@ -39,13 +39,3 @@ class YahooTickerSearchProvider(AbstractTickerSearchProvider):
                 "provider": "yahoo",
             })
         return results
-
-
-# --- Fallback: yfinance-based implementation (commented out) ---
-# To restore: pip install yfinance, swap class above with this one in deps.py
-#
-# import yfinance as yf
-#
-# class YahooTickerSearchProvider(AbstractTickerSearchProvider):
-#     def search(self, q: str) -> list[dict]:
-#         return yf.Search(q).quotes or []
