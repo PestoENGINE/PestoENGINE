@@ -18,7 +18,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 from app.market_data.instrumented_provider import FETCH_DURATION_METRIC
 
-_FETCH_DURATION_BUCKETS = [0.1, 0.25, 0.5, 0.75, 1.0, 2.0, 5.0]
+_FETCH_DURATION_BUCKETS = [0.025, 0.05, 0.1, 0.25, 0.5, 0.75, 1.0, 2.0, 5.0]
 
 
 def _parse_headers(raw: str | None) -> dict[str, str]:
