@@ -1,48 +1,136 @@
 # PestoENGINE – Frontend
 
-Svelte 4 + TypeScript single-page application. Communicates with the backend via
-a single endpoint (`POST /v1/rebalance`) and a ticker search endpoint (`GET /v1/tickers/search`).
+Single-page application that consumes `POST /v1/rebalance` and `GET /v1/tickers/search`. Renders the input editor, calls the backend, and displays the resulting buy/sell orders. Persists state in `localStorage` only; no server-side storage.
+
+## Stack
+
+| Layer | Library | Version |
+|-------|---------|---------|
+| UI framework | Svelte | `^5.55.4` (components use the Svelte 4 compatible API: `$:` reactive statements, `createEventDispatcher`, `on:event` directives; no runes) |
+| Language | TypeScript | `~6.0.2` |
+| Styling | Tailwind CSS | v4 via `@tailwindcss/vite` (imported as `@import "tailwindcss"` in `src/app.css`) + CSS custom properties for design tokens |
+| Build tool | Vite | `^8.0.10` |
+| Svelte plugin | `@sveltejs/vite-plugin-svelte` | `^7.0.0` |
+| Typecheck | `svelte-check` + `tsc` | `^4.4.6` / `~6.0.2` |
 
 ## Structure
 
 ```
 ui/
+├── index.html       # Entry HTML; restores dark mode pre-hydration
+├── vite.config.ts   # svelte + tailwindcss; dev proxy /v1/* to http://localhost:8000
+├── public/          # Static assets (favicon, brand logo, robots)
 ├── src/
-│   ├── App.svelte        # Root component (state, rebalance call, dark mode)
-│   ├── app.css           # Global styles and design tokens
-│   ├── storage.ts        # localStorage persistence
-│   ├── types.ts          # TypeScript interfaces
-│   └── components/       # UI components (header, hero, editor, results, static sections)
-├── public/               # Static assets (favicon, brand logo)
-└── index.html            # Entry point
+│   ├── main.ts        # Mounts <App />
+│   ├── App.svelte     # Root: state, API call, import/export, dark mode
+│   ├── app.css        # @import "tailwindcss" + design tokens
+│   ├── storage.ts     # localStorage I/O (versioned, validated)
+│   ├── types.ts       # Asset, Settings, RebalanceResponse, PortfolioExport
+│   └── components/    # Header, Hero, GlobalSettings, PortfolioEditor, AssetRow,
+│                      # TickerAutocomplete, ResultsPanel, AssetResult, ...
+└── dist/            # Production build (committed; served by FastAPI from /)
 ```
 
-## Design system
+## State management
 
-Global CSS tokens are defined in `app.css` under `:root` and `html.dark`:
+All state lives in `App.svelte` (Svelte 4 compatible reactivity: `let` + assignments + `$:` for derived values; child to parent communication via `createEventDispatcher`). Three localStorage keys (see `src/storage.ts`):
 
-- **Teal palette** - `--teal`, `--teal-hover`, `--teal-light`, `--teal-mid`
-- **Hero surface** - `--hero-bg`, `--hero-text`, `--hero-sub`, `--hero-border`
-- **Typography** - `--sans` (Geist), `--mono` (Geist Mono) via Google Fonts
+| Key | Type | Default |
+|-----|------|---------|
+| `pesto_engine_settings` | `{ increment, onlyBuy, optimalRedistribute }` | `{ 1000, true, false }` |
+| `pesto_engine_assets` | `Asset[]` (`id`, `ticker`, `provider`, `desiredPercentage`, `shares`, `fees`, `percentageFee`) | `[]` |
+| `pesto_engine_dark_mode` | `boolean` | `false` |
 
-## Development
+Dark mode class (`html.dark`) is set inline in `index.html` before Svelte hydrates to avoid a flash of light theme.
+
+## Backend integration
+
+| Endpoint | Method | Triggered by |
+|----------|--------|--------------|
+| `/v1/rebalance` | `POST` | "Calculate buy order" button in `PortfolioEditor` |
+| `/v1/tickers/search?q=` | `GET` | Live as the user types in `TickerAutocomplete` |
+
+Error mapping in `App.svelte:runRebalance`:
+
+| Backend status | UI behavior |
+|----------------|-------------|
+| `200` | Render `ResultsPanel`, scroll to `#results` |
+| `422` | Display `"Validation error: ..."` (formats `detail[].msg`) |
+| `502` | Display backend `detail` (typically `MarketDataError` message) |
+| other / network | Generic `"Request failed"` message |
+
+Request payload converts UI camelCase to backend snake_case:
+
+| UI field | Backend field |
+|----------|---------------|
+| `desiredPercentage` | `desired_percentage` |
+| `percentageFee` | `percentage_fee` |
+| `onlyBuy` | `only_buy` |
+| `optimalRedistribute` | `optimal_redistribute` |
+
+## Import / Export
+
+`PortfolioExport` JSON format (versioned, validated by `App.svelte:processImport`):
+
+```json
+{
+  "version": 1,
+  "exportedAt": "2026-05-25T10:00:00Z",
+  "settings": { "increment": 1000, "onlyBuy": true, "optimalRedistribute": false },
+  "assets": [
+    { "ticker": "VOO", "provider": null, "desiredPercentage": 60, "shares": 10, "fees": 0.5, "percentageFee": true }
+  ]
+}
+```
+
+Sample portfolio: [`../portfolios/portfolio.json`](../portfolios/portfolio.json).
+
+## Design tokens
+
+Defined in `src/app.css` under `:root` (light) and `html.dark` (dark). Components reference them via `var(--token)`. Categories:
+
+- Background / surface: `--bg`, `--surface`, `--surface-2`
+- Border: `--border`, `--border-hover`
+- Text: `--text`, `--text-2`, `--text-3`
+- Brand teal: `--teal`, `--teal-hover`, `--teal-light`, `--teal-mid`, `--accent` (alias of `--teal`)
+- Error: `--error`, `--error-bg`, `--error-border`
+- Hero dark surface: `--hero-bg`, `--hero-text`, `--hero-sub`, `--hero-border`
+- Layout: `--nav-height`, `--panel-gap`
+- Typography: `--sans` (Geist), `--mono` (Geist Mono); loaded from Google Fonts in `index.html`
+
+## Setup
 
 ```bash
 npm install
+```
+
+## Run (dev)
+
+```bash
 npm run dev
 ```
 
-UI available at `http://localhost:5173`.
+UI at `http://localhost:5173`. Vite proxies `/v1/*` to `http://localhost:8000`, so the backend must be running on port 8000. No CORS configuration is needed in dev.
 
-Vite proxies all `/v1/*` requests to `http://localhost:8000` in dev mode - no
-CORS configuration needed. The backend must be running concurrently.
-
-## Production build
+## Build
 
 ```bash
-npm run build
-# Output: dist/
+npm run build       # output: dist/
+npm run preview     # serve dist/ locally for verification
 ```
 
-The bundle can be served by any static file server. If the frontend and backend
-are deployed on different origins, set `CORS_ORIGINS` in the backend `.env`.
+`dist/` is committed so the backend Docker image can serve it without needing Node at runtime. It is also rebuilt by the Docker multi-stage build (stage `ui-builder` in [`../Dockerfile`](../Dockerfile)).
+
+## Typecheck
+
+```bash
+npm run check
+```
+
+Runs `svelte-check` (using `tsconfig.app.json`) plus `tsc -p tsconfig.node.json`. Part of CI (`.github/workflows/ci.yml`, job `test-frontend`).
+
+## Deployment
+
+In production, FastAPI mounts `ui/dist/` at `/` (see `_mount_ui` in [`../app/main.py`](../app/main.py)). The same uvicorn process serves both the API (`/v1/*`) and the SPA, so the frontend is reachable at the same origin as the API; no CORS configuration is needed.
+
+When deploying frontend and backend on different origins, set `CORS_ORIGINS` in the backend `.env`.
