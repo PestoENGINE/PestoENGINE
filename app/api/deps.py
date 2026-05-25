@@ -13,6 +13,7 @@ from app.market_data.alpha_vantage_provider import AlphaVantageProvider
 from app.market_data.alpha_vantage_search_provider import AlphaVantageSearchProvider
 from app.market_data.yahoo_finance_provider import YahooFinanceProvider
 from app.market_data.yahoo_search_provider import YahooTickerSearchProvider
+from app.rate_limit.base import AbstractRateLimitStore
 
 PROVIDER_BUILDERS: dict[str, Callable[[Settings], AbstractMarketDataProvider]] = {
     "yahoo":        lambda s: YahooFinanceProvider(),
@@ -66,3 +67,17 @@ def get_registry() -> ProviderRegistry:
 
 def get_search_providers() -> list[AbstractTickerSearchProvider]:
     return _build_search_providers()
+
+
+@lru_cache(maxsize=1)
+def get_rate_limit_store() -> AbstractRateLimitStore | None:
+    from app.rate_limit.local_store import LocalRateLimitStore
+    settings = get_settings()
+    if settings.rate_limit_providers_per_min is None:
+        return None
+    if settings.cache_backend == "redis":
+        import redis
+        from app.rate_limit.redis_store import RedisRateLimitStore
+        client = redis.Redis.from_url(settings.redis_url)
+        return RedisRateLimitStore(client)
+    return LocalRateLimitStore()

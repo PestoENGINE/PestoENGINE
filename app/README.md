@@ -155,6 +155,8 @@ Read from `.env` (see [`.env.example`](../.env.example)):
 | `CORS_ORIGINS` | unset | Comma-separated list; only needed when the frontend is on a different origin |
 | `MARKET_DATA_PROVIDERS` | `["yahoo"]` | JSON list of provider IDs, in fallback order |
 | `ALPHA_VANTAGE_API_KEY` | unset | Required when `alphavantage` is configured |
+| `RATE_LIMIT_PROVIDERS_PER_MIN` | unset | Requests per IP per minute on `/v1/rebalance` and `/v1/tickers/search`; unset = disabled. With multiple uvicorn workers (`--workers N`) the limit is per-worker; use `CACHE_BACKEND=redis` for a shared counter |
+| `TRUSTED_PROXIES` | unset | Comma-separated IPs trusted for `X-Forwarded-For`; `*` for Render/any upstream; unset = always use TCP source IP |
 | `OTEL_ENABLED` | `false` | Enables OTLP/HTTP export of metrics + traces + logs |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4318` | Base URL; `/v1/metrics`, `/v1/traces`, `/v1/logs` are appended |
 | `OTEL_SERVICE_NAME` | `pestoengine` | OTel resource attribute |

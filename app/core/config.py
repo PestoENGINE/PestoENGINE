@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     otel_exporter_otlp_headers: str | None = None
     market_data_providers: list[ProviderId] = ["yahoo"]
     alpha_vantage_api_key: str | None = None
+    rate_limit_providers_per_min: int | None = None
+    trusted_proxies: str | None = None
 
     @model_validator(mode="after")
     def _check_required_settings(self) -> "Settings":
@@ -36,6 +38,13 @@ class Settings(BaseSettings):
             )
         if not self.market_data_providers:
             raise ValueError("MARKET_DATA_PROVIDERS must contain at least one provider")
+        if (
+            self.rate_limit_providers_per_min is not None
+            and self.rate_limit_providers_per_min <= 0
+        ):
+            raise ValueError(
+                "RATE_LIMIT_PROVIDERS_PER_MIN must be a positive integer or left unset"
+            )
         return self
 
 

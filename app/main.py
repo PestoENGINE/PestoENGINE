@@ -13,6 +13,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.requests import Request
 from starlette.responses import Response
 
+from app.api.deps import get_rate_limit_store
 from app.api.v1.routes import health, rebalance, tickers
 from app.core.config import get_settings
 from app.core.exceptions import MarketDataError, market_data_error_handler
@@ -102,6 +103,22 @@ if _origins:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+# Starlette middleware is LIFO: last added = outermost = runs first.
+# RateLimit added before ProxyHeaders so ProxyHeaders wraps it (runs first).
+_rl_store = get_rate_limit_store()
+if _rl_store is not None:
+    from app.rate_limit.middleware import RateLimitMiddleware
+    app.add_middleware(
+        RateLimitMiddleware,
+        store=_rl_store,
+        limit=_settings.rate_limit_providers_per_min,
+    )
+
+if _settings.trusted_proxies:
+    from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+    _trusted = [h.strip() for h in _settings.trusted_proxies.split(",")]
+    app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=_trusted)
 
 app.add_exception_handler(MarketDataError, market_data_error_handler)
 app.include_router(health.router, prefix="/v1")
