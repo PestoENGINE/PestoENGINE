@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     alpha_vantage_api_key: str | None = None
     rate_limit_providers_per_min: int | None = None
     trusted_proxies: str | None = None
+    fastapi_docs: bool = True
 
     @model_validator(mode="after")
     def _check_required_settings(self) -> "Settings":

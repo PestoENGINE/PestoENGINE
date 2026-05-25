@@ -82,7 +82,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         _logger_provider.shutdown()
 
 
-app = FastAPI(title="PestoENGINE API", version="2.0.0", lifespan=lifespan)
+app = FastAPI(
+    title="PestoENGINE API",
+    version="2.0.0",
+    lifespan=lifespan,
+    docs_url="/docs" if _settings.fastapi_docs else None,
+    redoc_url="/redoc" if _settings.fastapi_docs else None,
+    openapi_url="/openapi.json" if _settings.fastapi_docs else None,
+)
 
 if _tracer_provider is not None:
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
