@@ -102,6 +102,14 @@
           ? data.detail.map((d: { msg?: string }) => d.msg || JSON.stringify(d)).join('; ')
           : typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
         error = `Validation error: ${msgs}`;
+      } else if (res.status === 429) {
+        const data = await res.json().catch(() => ({}));
+        const retryAfter = res.headers.get('retry-after');
+        error = typeof data.detail === 'string'
+          ? data.detail
+          : retryAfter
+            ? `Too many requests. Try again in ${retryAfter} seconds.`
+            : 'Too many requests. Try again shortly.';
       } else if (res.status === 502) {
         const data = await res.json().catch(() => ({}));
         error = typeof data.detail === 'string'

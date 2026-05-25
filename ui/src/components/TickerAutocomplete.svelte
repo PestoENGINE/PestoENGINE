@@ -12,6 +12,7 @@
   let results: TickerResult[] = [];
   let open = false;
   let activeIndex = -1;
+  let rateLimited = false;
   let debounceTimer: ReturnType<typeof setTimeout>;
 
   function onInput(e: Event) {
@@ -21,6 +22,7 @@
 
     clearTimeout(debounceTimer);
     results = [];
+    rateLimited = false;
     open = false;
 
     if (q.length < 2) return;
@@ -31,9 +33,15 @@
   async function fetchResults(q: string) {
     try {
       const res = await fetch(`/v1/tickers/search?q=${encodeURIComponent(q)}`);
+      if (res.status === 429) {
+        rateLimited = true;
+        open = true;
+        return;
+      }
       if (!res.ok) return;
       const data = await res.json();
       results = data.results ?? [];
+      rateLimited = false;
       activeIndex = -1;
       open = true;
     } catch {
@@ -99,21 +107,25 @@
   />
   {#if open}
     <ul id="autocomplete-listbox" class="autocomplete-dropdown" role="listbox">
-      {#each results as result, i (`${result.ticker}:${result.exchange}`)}
-        <li
-          id="autocomplete-opt-{i}"
-          role="option"
-          aria-selected={activeIndex === i}
-          on:mousedown|preventDefault={() => select(result)}
-          class="autocomplete-item"
-          class:active={activeIndex === i}
-        >
-          <span class="autocomplete-ticker">{result.ticker}</span>
-          <span class="autocomplete-name">{result.name}</span>
-        </li>
-      {/each}
-      {#if results.length === 0}
-        <li role="presentation" class="autocomplete-empty">No results</li>
+      {#if rateLimited}
+        <li role="presentation" class="autocomplete-empty">Too many searches. Slow down.</li>
+      {:else}
+        {#each results as result, i (`${result.ticker}:${result.exchange}`)}
+          <li
+            id="autocomplete-opt-{i}"
+            role="option"
+            aria-selected={activeIndex === i}
+            on:mousedown|preventDefault={() => select(result)}
+            class="autocomplete-item"
+            class:active={activeIndex === i}
+          >
+            <span class="autocomplete-ticker">{result.ticker}</span>
+            <span class="autocomplete-name">{result.name}</span>
+          </li>
+        {/each}
+        {#if results.length === 0}
+          <li role="presentation" class="autocomplete-empty">No results</li>
+        {/if}
       {/if}
     </ul>
   {/if}
