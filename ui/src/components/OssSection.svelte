@@ -8,7 +8,7 @@
       <div class="oss-links">
         <a class="oss-link" href="https://github.com/PestoENGINE/PestoENGINE" target="_blank" rel="noopener noreferrer">Star on GitHub</a>
         <a class="oss-link" href="https://github.com/PestoENGINE/PestoENGINE/blob/master/app/rebalance/rebalance.py" target="_blank" rel="noopener noreferrer">Read the algorithm</a>
-        <!--<a class="oss-link" href="https://github.com/PestoENGINE/PestoENGINE/blob/master/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing guide</a>-->
+        <a class="oss-link" href="https://github.com/PestoENGINE/PestoENGINE/blob/master/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing guide</a>
       </div>
     </div>
     <div>
