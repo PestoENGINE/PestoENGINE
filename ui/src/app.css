@@ -452,6 +452,10 @@ input[type='checkbox']:checked::after {
   .result-meta { grid-template-columns: 1fr; gap: 0.2rem; align-items: start; }
   .result-allocated { text-align: left; }
   .delta-bar { width: 24px; flex-basis: 24px; }
+  /* Restore the pre-table-layout column sizing: even data columns, narrow × */
+  .asset-table { table-layout: auto; }
+  .asset-table th:last-child,
+  .asset-table td:last-child { width: auto; }
 }
 @media (max-width: 480px) {
   .asset-table th,
