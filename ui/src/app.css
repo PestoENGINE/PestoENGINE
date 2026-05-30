@@ -123,12 +123,12 @@ body {
 }
 .tool-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 300px minmax(0, 1fr);
   gap: 1rem;
   align-items: stretch;
 }
 .result-panel { grid-column: 1 / -1; scroll-margin-top: calc(var(--nav-height) + var(--panel-gap)); }
-@media (max-width: 620px) {
+@media (max-width: 660px) {
   .tool-grid { grid-template-columns: 1fr; }
   .result-panel { grid-column: auto; }
 }
@@ -433,7 +433,7 @@ input[type='checkbox']:checked::after {
     grid-template-columns: 5.5rem 2.25rem minmax(0, 1fr);
   }
 }
-@media (max-width: 620px) {
+@media (max-width: 660px) {
   .result-list-head, .result-row {
     grid-template-columns: 5.2rem 2rem minmax(0, 1fr);
     gap: 0.5rem;
