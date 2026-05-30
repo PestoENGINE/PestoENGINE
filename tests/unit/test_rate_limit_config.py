@@ -12,7 +12,7 @@ def _settings(**kwargs) -> Settings:
         "cache_backend": "local",
     }
     defaults.update(kwargs)
-    return Settings(**defaults)
+    return Settings(_env_file=None, **defaults)
 
 
 def test_rate_limit_disabled_by_default():
