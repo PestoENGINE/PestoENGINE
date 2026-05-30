@@ -45,17 +45,18 @@
     />
   </td>
   <td>
-    <div style="display:flex;align-items:center;gap:0.375rem">
-      <input
-        type="number"
-        min="0"
-        step="any"
-        value={asset.fees}
-        on:input={e => dispatch('update', { fees: num(e) })}
-        class="cell-input"
-        style="flex:1"
-        aria-label="Fee"
-      />
+    <input
+      type="number"
+      min="0"
+      step="any"
+      value={asset.fees}
+      on:input={e => dispatch('update', { fees: num(e) })}
+      class="cell-input"
+      aria-label="Fee"
+    />
+  </td>
+  <td>
+    <div class="asset-actions">
       <label style="cursor:pointer;display:flex;align-items:center;gap:0.2rem" title="Percentage fee">
         <input
           type="checkbox"
@@ -65,14 +66,12 @@
         />
         <span style="font-family:var(--mono);font-size:0.6875rem;color:var(--text-3)">%</span>
       </label>
+      <button
+        type="button"
+        class="remove-btn"
+        on:click={() => dispatch('remove')}
+        aria-label="Remove asset"
+      >×</button>
     </div>
-  </td>
-  <td style="text-align:right">
-    <button
-      type="button"
-      class="remove-btn"
-      on:click={() => dispatch('remove')}
-      aria-label="Remove asset"
-    >×</button>
   </td>
 </tr>

@@ -128,7 +128,7 @@ body {
   align-items: stretch;
 }
 .result-panel { grid-column: 1 / -1; scroll-margin-top: calc(var(--nav-height) + var(--panel-gap)); }
-@media (max-width: 660px) {
+@media (max-width: 700px) {
   .tool-grid { grid-template-columns: 1fr; }
   .result-panel { grid-column: auto; }
 }
@@ -206,7 +206,7 @@ input[type='checkbox']:checked::after {
   transform: rotate(45deg);
 }
 
-.asset-table { width: 100%; border-collapse: collapse; }
+.asset-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 .asset-table th {
   font-size: 0.6875rem;
   font-weight: 700;
@@ -222,6 +222,17 @@ input[type='checkbox']:checked::after {
   font-size: 0.875rem;
 }
 .asset-table tbody tr:first-child td { border-top: none; }
+
+/* Four data columns split the remaining width equally (table-layout: fixed).
+   Actions column (% toggle + remove) stays compact on the right. */
+.asset-table th:last-child,
+.asset-table td:last-child { width: 5rem; }
+.asset-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
 
 /* Inline cell inputs - transparent, styled like text */
 .cell-input {
@@ -433,7 +444,7 @@ input[type='checkbox']:checked::after {
     grid-template-columns: 5.5rem 2.25rem minmax(0, 1fr);
   }
 }
-@media (max-width: 660px) {
+@media (max-width: 700px) {
   .result-list-head, .result-row {
     grid-template-columns: 5.2rem 2rem minmax(0, 1fr);
     gap: 0.5rem;
