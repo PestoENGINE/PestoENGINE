@@ -226,7 +226,7 @@ input[type='checkbox']:checked::after {
 /* Four data columns split the remaining width equally (table-layout: fixed).
    Actions column (% toggle + remove) stays compact on the right. */
 .asset-table th:last-child,
-.asset-table td:last-child { width: 5rem; }
+.asset-table td:last-child { width: 6rem; }
 .asset-actions {
   display: flex;
   align-items: center;
