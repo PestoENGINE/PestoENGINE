@@ -47,7 +47,7 @@ One deployable: FastAPI backend serves both the JSON API and the Svelte SPA (bui
 | Component | Stack | Detailed docs |
 |-----------|-------|---------------|
 | Backend | FastAPI, Python 3.11+, Pydantic v2, httpx, OpenTelemetry | [`app/README.md`](app/README.md) |
-| Frontend | Svelte 5, TypeScript, Tailwind CSS v4, Vite | [`ui/README.md`](ui/README.md) |
+| Frontend | Svelte 5, TypeScript, hand-written CSS, Vite | [`ui/README.md`](ui/README.md) |
 | Market data | Yahoo Finance, Alpha Vantage (configurable fallback), cached 5 minutes | [`app/README.md`](app/README.md) |
 
 ## Prerequisites
@@ -90,7 +90,7 @@ For frontend details (structure, state, build) see [`ui/README.md`](ui/README.md
 ## Stack
 
 - **Backend**: FastAPI, Python 3.11+, Pydantic v2, httpx, OpenTelemetry
-- **Frontend**: Svelte 5, TypeScript, Tailwind CSS v4, Vite
+- **Frontend**: Svelte 5, TypeScript, hand-written CSS, Vite
 - **Market data**: Yahoo Finance and Alpha Vantage (configurable fallback chain), cached 5 minutes (local in-memory or Redis)
 - **Observability**: OTLP/HTTP export of metrics, traces, and logs (Loki-compatible via Grafana Alloy)
 

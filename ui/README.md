@@ -8,7 +8,7 @@ Single-page application that consumes `POST /v1/rebalance` and `GET /v1/tickers/
 |-------|---------|---------|
 | UI framework | Svelte | `^5.55.4` (components use the Svelte 4 compatible API: `$:` reactive statements, `createEventDispatcher`, `on:event` directives; no runes) |
 | Language | TypeScript | `~6.0.2` |
-| Styling | Tailwind CSS | v4 via `@tailwindcss/vite` (imported as `@import "tailwindcss"` in `src/app.css`) + CSS custom properties for design tokens |
+| Styling | Hand-written CSS | Single global `src/app.css` (minimal reset + design tokens as CSS custom properties) plus component-scoped `<style>` blocks |
 | Build tool | Vite | `^8.0.10` |
 | Svelte plugin | `@sveltejs/vite-plugin-svelte` | `^7.0.0` |
 | Typecheck | `svelte-check` + `tsc` | `^4.4.6` / `~6.0.2` |
@@ -18,12 +18,12 @@ Single-page application that consumes `POST /v1/rebalance` and `GET /v1/tickers/
 ```
 ui/
 ├── index.html       # Entry HTML; restores dark mode pre-hydration
-├── vite.config.ts   # svelte + tailwindcss; dev proxy /v1/* to http://localhost:8000
+├── vite.config.ts   # svelte plugin; dev proxy /v1/* to http://localhost:8000
 ├── public/          # Static assets (favicon, brand logo, robots)
 ├── src/
 │   ├── main.ts        # Mounts <App />
 │   ├── App.svelte     # Root: state, API call, import/export, dark mode
-│   ├── app.css        # @import "tailwindcss" + design tokens
+│   ├── app.css        # minimal reset + design tokens + global styles
 │   ├── storage.ts     # localStorage I/O (versioned, validated)
 │   ├── types.ts       # Asset, Settings, RebalanceResponse, PortfolioExport
 │   └── components/    # Header, Hero, GlobalSettings, PortfolioEditor, AssetRow,
