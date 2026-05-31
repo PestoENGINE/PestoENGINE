@@ -123,12 +123,12 @@ body {
 }
 .tool-grid {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
   gap: 1rem;
   align-items: stretch;
 }
 .result-panel { grid-column: 1 / -1; scroll-margin-top: calc(var(--nav-height) + var(--panel-gap)); }
-@media (max-width: 700px) {
+@media (max-width: 600px) {
   .tool-grid { grid-template-columns: 1fr; }
   .result-panel { grid-column: auto; }
 }
@@ -206,6 +206,7 @@ input[type='checkbox']:checked::after {
   transform: rotate(45deg);
 }
 
+/* table-layout: fixed makes every column share the width equally. */
 .asset-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 .asset-table th {
   font-size: 0.6875rem;
@@ -223,10 +224,6 @@ input[type='checkbox']:checked::after {
 }
 .asset-table tbody tr:first-child td { border-top: none; }
 
-/* Four data columns split the remaining width equally (table-layout: fixed).
-   Actions column (% toggle + remove) stays compact on the right. */
-.asset-table th:last-child,
-.asset-table td:last-child { width: 6rem; }
 .asset-actions {
   display: flex;
   align-items: center;
@@ -444,7 +441,7 @@ input[type='checkbox']:checked::after {
     grid-template-columns: 5.5rem 2.25rem minmax(0, 1fr);
   }
 }
-@media (max-width: 700px) {
+@media (max-width: 600px) {
   .result-list-head, .result-row {
     grid-template-columns: 5.2rem 2rem minmax(0, 1fr);
     gap: 0.5rem;
@@ -452,10 +449,6 @@ input[type='checkbox']:checked::after {
   .result-meta { grid-template-columns: 1fr; gap: 0.2rem; align-items: start; }
   .result-allocated { text-align: left; }
   .delta-bar { width: 24px; flex-basis: 24px; }
-  /* Restore the pre-table-layout column sizing: even data columns, narrow × */
-  .asset-table { table-layout: auto; }
-  .asset-table th:last-child,
-  .asset-table td:last-child { width: auto; }
 }
 @media (max-width: 480px) {
   .asset-table th,
