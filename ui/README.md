@@ -89,10 +89,10 @@ Sample portfolio: [`../portfolios/portfolio.json`](../portfolios/portfolio.json)
 
 Defined in `src/app.css` under `:root` (light) and `html.dark` (dark). Components reference them via `var(--token)`. Categories:
 
-- Background / surface: `--bg`, `--surface`, `--surface-2`
-- Border: `--border`, `--border-hover`
+- Background / surface: `--bg`, `--surface`
+- Border: `--border`
 - Text: `--text`, `--text-2`, `--text-3`
-- Brand teal: `--teal`, `--teal-hover`, `--teal-light`, `--teal-mid`, `--accent` (alias of `--teal`)
+- Brand teal: `--teal`, `--teal-hover`, `--teal-light`
 - Error: `--error`, `--error-bg`, `--error-border`
 - Hero dark surface: `--hero-bg`, `--hero-text`, `--hero-sub`, `--hero-border`
 - Layout: `--nav-height`, `--panel-gap`

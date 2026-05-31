@@ -177,7 +177,7 @@
   }
 
   .autocomplete-ticker {
-    font-family: var(--ff-mono);
+    font-family: var(--mono);
     font-size: 0.75rem;
     color: var(--text);
   }

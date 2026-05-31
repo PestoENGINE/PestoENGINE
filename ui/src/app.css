@@ -14,9 +14,7 @@ button:not(:disabled),
 
   --bg:         #f5f4f1;
   --surface:    #ffffff;
-  --surface-2:  #f8f7f4;
   --border:     #e0ddd8;
-  --border-hover: #c0bcb6;
   --text:       #1a1714;
   --text-2:     #6b6660;
   --text-3:     #aaa8a2;
@@ -24,11 +22,6 @@ button:not(:disabled),
   --teal:       #01696f;
   --teal-hover: #015a5f;
   --teal-light: #e6f4f4;
-  --teal-mid:   #b3d8da;
-
-  /* keep --accent pointing at teal so existing components auto-update */
-  --accent:       var(--teal);
-  --accent-hover: var(--teal-hover);
 
   --error:        #881414;
   --error-bg:     #fdf3f3;
@@ -41,7 +34,6 @@ button:not(:disabled),
 
   --sans: 'Geist', system-ui, sans-serif;
   --mono: 'Geist Mono', ui-monospace, monospace;
-  --ff-mono: var(--mono);
 
   --r: 4px;
 }
@@ -49,9 +41,7 @@ button:not(:disabled),
 html.dark {
   --bg:         #141412;
   --surface:    #1e1d1b;
-  --surface-2:  #1a1918;
   --border:     #2e2c28;
-  --border-hover: #4a4740;
   --text:       #f0ede8;
   --text-2:     #a09d98;
   --text-3:     #6b6860;
@@ -59,7 +49,6 @@ html.dark {
   --teal:       #1a9ca3;
   --teal-hover: #15888f;
   --teal-light: rgba(26,156,163,0.12);
-  --teal-mid:   rgba(26,156,163,0.3);
 
   --error:        #cc4444;
   --error-bg:     #2a1515;
@@ -598,7 +587,7 @@ input[type='checkbox']:checked::after {
 }
 .algo-table tr:last-child td { border-bottom: none; }
 .algo-table td:first-child { font-family: var(--mono); font-weight: 600; font-size: 0.875rem; color: var(--teal); white-space: nowrap; }
-.algo-table td:nth-child(2) { /*font-family: var(--mono);*/ font-size: 0.875rem; color: var(--text-2); }
+.algo-table td:nth-child(2) { font-size: 0.875rem; color: var(--text-2); }
 .algo-table td:nth-child(3), .algo-table td:nth-child(4) { color: var(--text-2); font-size: 0.875rem; }
 
 .inline-code {
@@ -670,7 +659,6 @@ input[type='checkbox']:checked::after {
   text-transform: uppercase;
 }
 .qs-body { padding: 1rem 1.125rem; }
-.qs-comment { color: rgba(240,237,232,0.2); display: block; }
 .qs-prompt { color: rgba(1,180,188,0.5); display: inline-block; width: 1.25rem; user-select: none; }
 .qs-cmd { color: #7dd3d6; white-space: pre; }
 .qs-line { display: block; padding-left: 1.25rem; }
