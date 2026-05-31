@@ -28,7 +28,7 @@ ui/
 │   ├── types.ts       # Asset, Settings, RebalanceResponse, PortfolioExport
 │   └── components/    # Header, Hero, GlobalSettings, PortfolioEditor, AssetRow,
 │                      # TickerAutocomplete, ResultsPanel, AssetResult, ...
-└── dist/            # Production build (committed; served by FastAPI from /)
+└── dist/            # Production build (gitignored; built by Vite, served by FastAPI from /)
 ```
 
 ## State management
@@ -119,7 +119,7 @@ npm run build       # output: dist/
 npm run preview     # serve dist/ locally for verification
 ```
 
-`dist/` is committed so the backend Docker image can serve it without needing Node at runtime. It is also rebuilt by the Docker multi-stage build (stage `ui-builder` in [`../Dockerfile`](../Dockerfile)).
+`dist/` is gitignored, not committed. In production it is produced by the Docker multi-stage build (stage `ui-builder` in [`../Dockerfile`](../Dockerfile)) and served by FastAPI from `/`; locally, `npm run build` regenerates it for `npm run preview`.
 
 ## Typecheck
 
