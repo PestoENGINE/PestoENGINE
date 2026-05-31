@@ -12,6 +12,7 @@ Single-page application that consumes `POST /v1/rebalance` and `GET /v1/tickers/
 | Build tool | Vite | `^8.0.10` |
 | Svelte plugin | `@sveltejs/vite-plugin-svelte` | `^7.0.0` |
 | Typecheck | `svelte-check` + `tsc` | `^4.4.6` / `~6.0.2` |
+| Tests | Vitest | `^4.1.7` (unit tests for the plain-TS logic modules) |
 
 ## Structure
 
@@ -128,6 +129,19 @@ npm run check
 ```
 
 Runs `svelte-check` (using `tsconfig.app.json`) plus `tsc -p tsconfig.node.json`. Part of CI (`.github/workflows/ci.yml`, job `test-frontend`).
+
+## Tests
+
+```bash
+npm run test         # run once (CI)
+npm run test:watch   # watch mode
+```
+
+Vitest unit tests cover the framework-agnostic logic extracted from `App.svelte`:
+`api.ts` (request body mapping and HTTP error-message mapping) and `portfolio-io.ts`
+(import validation and the export round-trip). The component keeps only state and
+event wiring, so the testable logic lives in plain `.ts` modules (`*.test.ts`
+alongside them). Also part of CI.
 
 ## Deployment
 

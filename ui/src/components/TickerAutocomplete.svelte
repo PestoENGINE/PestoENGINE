@@ -2,6 +2,7 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy } from 'svelte';
   import type { TickerResult } from '../types';
+  import { searchTickers } from '../api';
 
   export let value: string = '';
   export let id: string = '';
@@ -36,18 +37,16 @@
 
   async function fetchResults(q: string) {
     try {
-      const res = await fetch(`/v1/tickers/search?q=${encodeURIComponent(q)}`);
-      if (res.status === 429) {
+      const outcome = await searchTickers(q);
+      if (outcome.ok) {
+        results = outcome.results;
+        rateLimited = false;
+        activeIndex = -1;
+        open = true;
+      } else if (outcome.rateLimited) {
         rateLimited = true;
         open = true;
-        return;
       }
-      if (!res.ok) return;
-      const data = await res.json();
-      results = data.results ?? [];
-      rateLimited = false;
-      activeIndex = -1;
-      open = true;
     } catch {
       // network error - field remains manually editable
     }

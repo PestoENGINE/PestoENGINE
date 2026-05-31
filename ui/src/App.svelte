@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
-  import type { Asset, Settings, RebalanceResponse, PortfolioExport } from './types';
+  import type { Asset, Settings, RebalanceResponse } from './types';
   import {
     loadSettings, loadAssets, loadDarkMode,
     saveSettings, saveAssets, saveDarkMode,
@@ -17,15 +17,9 @@
   import AlgoSection from './components/AlgoSection.svelte';
   import OssSection from './components/OssSection.svelte';
 
-  function uuid(): string {
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-      return crypto.randomUUID();
-    }
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-      const r = Math.random() * 16 | 0;
-      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-    });
-  }
+  import { uuid } from './util';
+  import { runRebalance as apiRunRebalance } from './api';
+  import { parsePortfolio, buildExport } from './portfolio-io';
 
   let settings: Settings = DEFAULT_SETTINGS;
   let assets: Asset[] = [];
@@ -69,54 +63,15 @@
     loading = true;
     error = null;
     lastResult = null;
-
-    const body = {
-      only_buy: settings.onlyBuy,
-      increment: settings.increment,
-      optimal_redistribute: settings.optimalRedistribute,
-      assets: assets.map(a => ({
-        ticker: a.ticker,
-        provider: a.provider ?? null,
-        desired_percentage: a.desiredPercentage,
-        shares: a.shares,
-        fees: a.fees,
-        percentage_fee: a.percentageFee,
-      })),
-    };
-
     try {
-      const res = await fetch('/v1/rebalance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      if (res.ok) {
+      const r = await apiRunRebalance(settings, assets);
+      if (r.ok) {
         resultSettings = { ...settings };
-        lastResult = await res.json() as RebalanceResponse;
+        lastResult = r.data;
         await tick();
         document.getElementById('results')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      } else if (res.status === 422) {
-        const data = await res.json();
-        const msgs = Array.isArray(data.detail)
-          ? data.detail.map((d: { msg?: string }) => d.msg || JSON.stringify(d)).join('; ')
-          : typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
-        error = `Validation error: ${msgs}`;
-      } else if (res.status === 429) {
-        const data = await res.json().catch(() => ({}));
-        const retryAfter = res.headers.get('retry-after');
-        error = typeof data.detail === 'string'
-          ? data.detail
-          : retryAfter
-            ? `Too many requests. Try again in ${retryAfter} seconds.`
-            : 'Too many requests. Try again shortly.';
-      } else if (res.status === 502) {
-        const data = await res.json().catch(() => ({}));
-        error = typeof data.detail === 'string'
-          ? data.detail
-          : 'Market data unavailable. Check ticker symbols or try again.';
       } else {
-        error = 'Request failed. Try again.';
+        error = r.error;
       }
     } catch {
       error = 'Request failed. Is the backend running?';
@@ -126,18 +81,12 @@
   }
 
   function handleExport() {
-    const now = new Date();
-    const payload: PortfolioExport = {
-      version: 1,
-      exportedAt: now.toISOString(),
-      settings,
-      assets: assets.map(({ id: _id, ...rest }) => rest),
-    };
+    const payload = buildExport(settings, assets);
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `pesto-engine-portfolio-${now.toISOString().slice(0, 10)}.json`;
+    a.download = `pesto-engine-portfolio-${payload.exportedAt.slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -157,71 +106,28 @@
     const file = (e.target as HTMLInputElement).files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = ev.target?.result as string;
-      const importError = processImport(text);
-      if (importError) {
-        error = importError;
-      }
-    };
+    reader.onload = (ev) => applyImport(ev.target?.result as string);
     reader.readAsText(file);
   }
 
-  function processImport(text: string): string | null {
-    let data: unknown;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      return 'File is not valid JSON.';
+  function applyImport(text: string) {
+    const result = parsePortfolio(text);
+    if (!result.ok) {
+      error = result.error;
+      return;
     }
 
-    if (typeof data !== 'object' || data === null) return 'Invalid portfolio file.';
-    const d = data as Record<string, unknown>;
+    const note = result.sumWarning
+      ? ' (Note: percentages do not sum to 100. Fix before running.)'
+      : '';
+    if (!confirm(`This will replace your current portfolio.${note} Continue?`)) return;
 
-    if (d.version !== 1) return 'Unsupported export version. Expected version 1.';
-    if (typeof d.settings !== 'object' || d.settings === null) return 'Invalid portfolio file: missing settings.';
-    if (!Array.isArray(d.assets) || d.assets.length === 0) return 'Invalid portfolio file: assets must be a non-empty array.';
-
-    const s = d.settings as Record<string, unknown>;
-    if (typeof s.increment !== 'number' || s.increment < 0) return 'Invalid portfolio file: invalid increment.';
-
-    for (let i = 0; i < d.assets.length; i++) {
-      const a = d.assets[i] as Record<string, unknown>;
-      if (typeof a.ticker !== 'string' || !a.ticker) return `Invalid portfolio file: asset ${i + 1} missing ticker.`;
-      if (typeof a.desiredPercentage !== 'number' || a.desiredPercentage < 0) return `Invalid portfolio file: asset ${i + 1} invalid desiredPercentage.`;
-      if (typeof a.shares !== 'number' || a.shares < 0) return `Invalid portfolio file: asset ${i + 1} invalid shares.`;
-      if (typeof a.fees !== 'number' || a.fees < 0) return `Invalid portfolio file: asset ${i + 1} invalid fees.`;
-      if (typeof a.percentageFee !== 'boolean') return `Invalid portfolio file: asset ${i + 1} invalid percentageFee.`;
-    }
-
-    const sum = (d.assets as Array<{ desiredPercentage: number }>).reduce((s, a) => s + a.desiredPercentage, 0);
-    const sumWarning = Math.abs(sum - 100) > 0.01 ? ' (Note: percentages do not sum to 100. Fix before running.)' : '';
-
-    if (!confirm(`This will replace your current portfolio.${sumWarning} Continue?`)) return null;
-
-    const newSettings: Settings = {
-      increment: s.increment as number,
-      onlyBuy: typeof s.onlyBuy === 'boolean' ? s.onlyBuy : DEFAULT_SETTINGS.onlyBuy,
-      optimalRedistribute: typeof s.optimalRedistribute === 'boolean' ? s.optimalRedistribute : DEFAULT_SETTINGS.optimalRedistribute,
-    };
-
-    const newAssets: Asset[] = (d.assets as Array<Record<string, unknown>>).map(a => ({
-      id: uuid(),
-      ticker: a.ticker as string,
-      provider: (typeof a.provider === 'string' ? a.provider : null),
-      desiredPercentage: a.desiredPercentage as number,
-      shares: a.shares as number,
-      fees: a.fees as number,
-      percentageFee: a.percentageFee as boolean,
-    }));
-
-    settings = newSettings;
-    assets = newAssets;
+    settings = result.settings;
+    assets = result.assets;
     lastResult = null;
     error = null;
     saveSettings(settings);
     saveAssets(assets);
-    return null;
   }
 </script>
 
