@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Settings } from '../types';
   import { createEventDispatcher } from 'svelte';
+  import { inputNumber, inputChecked } from '../util';
 
   export let increment: number;
   export let onlyBuy: boolean;
@@ -17,7 +18,7 @@
     min="0"
     step="any"
     value={increment}
-    on:input={e => dispatch('update', { increment: parseFloat((e.target as HTMLInputElement).value) || 0 })}
+    on:input={e => dispatch('update', { increment: inputNumber(e) })}
     class="field mono"
   />
   <div class="field-hint">Use 0 to rebalance without adding cash.</div>
@@ -27,7 +28,7 @@
   <input
     type="checkbox"
     checked={onlyBuy}
-    on:change={e => dispatch('update', { onlyBuy: (e.target as HTMLInputElement).checked })}
+    on:change={e => dispatch('update', { onlyBuy: inputChecked(e) })}
   />
   <div>
     <div class="check-text">Only buy</div>
@@ -39,7 +40,7 @@
   <input
     type="checkbox"
     checked={optimalRedistribute}
-    on:change={e => dispatch('update', { optimalRedistribute: (e.target as HTMLInputElement).checked })}
+    on:change={e => dispatch('update', { optimalRedistribute: inputChecked(e) })}
   />
   <div>
     <div class="check-text">Optimal redistribute</div>

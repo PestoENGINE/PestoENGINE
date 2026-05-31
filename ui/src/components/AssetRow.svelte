@@ -2,14 +2,11 @@
   import type { Asset } from '../types';
   import { createEventDispatcher } from 'svelte';
   import TickerAutocomplete from './TickerAutocomplete.svelte';
+  import { inputNumber, inputChecked } from '../util';
 
   export let asset: Asset;
 
   const dispatch = createEventDispatcher<{ update: Partial<Asset>; remove: void }>();
-
-  function num(e: Event): number {
-    return parseFloat((e.target as HTMLInputElement).value) || 0;
-  }
 </script>
 
 <tr>
@@ -28,7 +25,7 @@
       max="100"
       step="any"
       value={asset.desiredPercentage}
-      on:input={e => dispatch('update', { desiredPercentage: num(e) })}
+      on:input={e => dispatch('update', { desiredPercentage: inputNumber(e) })}
       class="cell-input"
       aria-label="Target percentage"
     />
@@ -39,7 +36,7 @@
       min="0"
       step="any"
       value={asset.shares}
-      on:input={e => dispatch('update', { shares: num(e) })}
+      on:input={e => dispatch('update', { shares: inputNumber(e) })}
       class="cell-input"
       aria-label="Shares held"
     />
@@ -51,7 +48,7 @@
         min="0"
         step="any"
         value={asset.fees}
-        on:input={e => dispatch('update', { fees: num(e) })}
+        on:input={e => dispatch('update', { fees: inputNumber(e) })}
         class="cell-input"
         aria-label="Fee"
       />
@@ -59,7 +56,7 @@
         <input
           type="checkbox"
           checked={asset.percentageFee}
-          on:change={e => dispatch('update', { percentageFee: (e.target as HTMLInputElement).checked })}
+          on:change={e => dispatch('update', { percentageFee: inputChecked(e) })}
         />
         <span class="fee-pct">%</span>
       </label>
