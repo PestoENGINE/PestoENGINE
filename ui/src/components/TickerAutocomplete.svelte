@@ -98,8 +98,7 @@
     on:input={onInput}
     on:blur={onBlur}
     on:keydown={onKeydown}
-    class={cellStyle ? 'cell-input ticker' : 'field mono'}
-    style="text-transform: uppercase;"
+    class={`${cellStyle ? 'cell-input ticker' : 'field mono'} ticker-input`}
     autocomplete="off"
     spellcheck="false"
     role="combobox"

@@ -20,11 +20,11 @@
 <PercentageIndicator sum={percentageSum} />
 
 {#if assets.length === 0}
-  <div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:0.875rem;color:var(--text-3)" role="status">
+  <div class="assets-empty" role="status">
     No assets yet - click + Add asset.
   </div>
 {:else}
-  <table class="asset-table" style="margin-bottom:0.75rem">
+  <table class="asset-table">
     <thead>
       <tr>
         <th>Ticker</th>

@@ -1,9 +1,9 @@
-<div style="border-top:1px solid var(--border)">
+<div class="section-divider">
   <div class="content-section">
     <div class="section-kicker">The algorithm</div>
     <h2 class="section-headline">Three modes. Named, documented, auditable.</h2>
 
-    <div style="overflow-x:auto">
+    <div class="table-scroll">
       <table class="algo-table">
         <thead>
           <tr>
@@ -36,7 +36,7 @@
       </table>
     </div>
 
-    <p style="font-size:0.9375rem;color:var(--text-2);margin-top:1.5rem;line-height:1.65">
+    <p class="algo-note">
       The algorithm is not proprietary. The source is in <span class="inline-code">app/rebalance/rebalance.py</span>. Every formula is readable and every result is verifiable by hand.
     </p>
   </div>

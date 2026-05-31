@@ -1,4 +1,4 @@
-<div style="border-top:1px solid var(--border)">
+<div class="section-divider">
   <div class="content-section">
     <div class="section-kicker">How it works</div>
     <h2 class="section-headline">Three inputs. One deterministic result.</h2>

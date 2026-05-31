@@ -23,7 +23,7 @@
   <div class="field-hint">Use 0 to rebalance without adding cash.</div>
 </div>
 
-<label class="check-row" style="cursor:pointer">
+<label class="check-row">
   <input
     type="checkbox"
     checked={onlyBuy}
@@ -35,7 +35,7 @@
   </div>
 </label>
 
-<label class="check-row" style="cursor:pointer;margin-bottom:0">
+<label class="check-row flush">
   <input
     type="checkbox"
     checked={optimalRedistribute}

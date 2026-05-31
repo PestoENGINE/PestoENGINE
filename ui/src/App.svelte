@@ -229,7 +229,7 @@
   bind:this={fileInput}
   type="file"
   accept=".json"
-  style="display:none"
+  class="hidden"
   on:change={handleFileChange}
   aria-hidden="true"
 />
@@ -246,7 +246,7 @@
 
 <div class="tool-section">
   {#if error}
-    <div class="error-box" style="margin-bottom:1rem" role="alert">{error}</div>
+    <div class="error-box" role="alert">{error}</div>
   {/if}
 
   <div class="tool-grid">
@@ -272,7 +272,7 @@
         <span class="panel-title">Assets</span>
         <button type="button" class="add-btn" on:click={addAsset}>+ Add asset</button>
       </div>
-      <div class="panel-body" style="padding:0.625rem 1rem 1rem">
+      <div class="panel-body tight">
         <PortfolioEditor
           {assets}
           {loading}

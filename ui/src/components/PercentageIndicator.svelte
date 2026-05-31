@@ -7,9 +7,7 @@
 
 <div class="pct-label">
   <span>Allocation total</span>
-  <span style="font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;color:{valid ? 'var(--text)' : 'var(--error)'}">
-    {sum.toFixed(2)}%
-  </span>
+  <span class="pct-value" class:over={!valid}>{sum.toFixed(2)}%</span>
 </div>
 <div class="pct-bar">
   <div class="pct-fill {valid ? '' : 'over'}" style="width:{pct}%"></div>

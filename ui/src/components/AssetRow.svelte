@@ -13,7 +13,7 @@
 </script>
 
 <tr>
-  <td style="min-width:0;overflow:visible;position:relative">
+  <td class="ticker-cell">
     <TickerAutocomplete
       id="ticker-{asset.id}"
       value={asset.ticker}
@@ -45,7 +45,7 @@
     />
   </td>
   <td>
-    <div style="display:flex;align-items:center;gap:0.375rem">
+    <div class="fee-cell">
       <input
         type="number"
         min="0"
@@ -53,17 +53,15 @@
         value={asset.fees}
         on:input={e => dispatch('update', { fees: num(e) })}
         class="cell-input"
-        style="width:1.5rem;flex:none"
         aria-label="Fee"
       />
-      <label style="cursor:pointer;display:flex;align-items:center;gap:0.2rem" title="Percentage fee">
+      <label class="fee-toggle" title="Percentage fee">
         <input
           type="checkbox"
           checked={asset.percentageFee}
           on:change={e => dispatch('update', { percentageFee: (e.target as HTMLInputElement).checked })}
-          style="width:12px;height:12px;margin-top:0"
         />
-        <span style="font-family:var(--mono);font-size:0.6875rem;color:var(--text-3)">%</span>
+        <span class="fee-pct">%</span>
       </label>
     </div>
   </td>

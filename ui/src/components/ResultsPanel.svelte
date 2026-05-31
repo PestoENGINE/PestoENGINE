@@ -25,14 +25,14 @@
       <div class="results-badges">
         {#if settings.onlyBuy}<span class="solver-badge">Only buy</span>{/if}
         {#if settings.optimalRedistribute}<span class="solver-badge">Knapsack DP</span>{/if}
-        <button type="button" class="add-btn" style="font-size:0.75rem" on:click={copyJson}>
+        <button type="button" class="add-btn sm" on:click={copyJson}>
           {copied ? 'Copied' : 'Copy JSON'}
         </button>
       </div>
     {/if}
   </div>
 
-  <div class="panel-body" style="padding:0.625rem 0.875rem 1rem">
+  <div class="panel-body tight-x">
     {#if result}
       <div class="result-list">
         <div class="result-list-head">
