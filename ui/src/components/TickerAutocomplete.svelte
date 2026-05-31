@@ -15,6 +15,10 @@
   let rateLimited = false;
   let debounceTimer: ReturnType<typeof setTimeout>;
 
+  // Namespace internal element ids so multiple instances do not collide.
+  $: listboxId = id ? `${id}-listbox` : 'autocomplete-listbox';
+  $: optionId = (i: number) => `${listboxId}-opt-${i}`;
+
   function onInput(e: Event) {
     const q = (e.target as HTMLInputElement).value.trim().toUpperCase();
     value = q;
@@ -101,18 +105,18 @@
     role="combobox"
     aria-label="Ticker symbol"
     aria-expanded={open}
-    aria-controls="autocomplete-listbox"
+    aria-controls={listboxId}
     aria-autocomplete="list"
-    aria-activedescendant={activeIndex >= 0 ? `autocomplete-opt-${activeIndex}` : undefined}
+    aria-activedescendant={activeIndex >= 0 ? optionId(activeIndex) : undefined}
   />
   {#if open}
-    <ul id="autocomplete-listbox" class="autocomplete-dropdown" role="listbox">
+    <ul id={listboxId} class="autocomplete-dropdown" role="listbox">
       {#if rateLimited}
         <li role="presentation" class="autocomplete-empty">Too many searches. Slow down.</li>
       {:else}
         {#each results as result, i (`${result.ticker}:${result.exchange}`)}
           <li
-            id="autocomplete-opt-{i}"
+            id={optionId(i)}
             role="option"
             aria-selected={activeIndex === i}
             on:mousedown|preventDefault={() => select(result)}
