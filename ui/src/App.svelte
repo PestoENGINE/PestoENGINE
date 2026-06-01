@@ -212,6 +212,31 @@
 </footer>
 
 <style>
+  .tool-section {
+    padding: clamp(1rem, 3vw, 1.5rem) clamp(1rem, 4vw, 2rem);
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  .tool-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    gap: 1rem;
+    align-items: stretch;
+  }
+  @media (max-width: 600px) {
+    .tool-grid { grid-template-columns: 1fr; }
+  }
+
+  .error-box {
+    background: var(--error-bg);
+    border: 1px solid var(--error-border);
+    border-radius: var(--r);
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    color: var(--error);
+  }
+  .tool-section > .error-box { margin-bottom: 1rem; }
+
   footer {
     background: var(--hero-bg);
     border-top: 1px solid var(--hero-border);

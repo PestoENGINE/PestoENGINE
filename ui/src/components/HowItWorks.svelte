@@ -52,3 +52,53 @@
     </div>
   </div>
 </div>
+
+<style>
+  .how-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(2rem, 5vw, 3.5rem);
+    align-items: start;
+  }
+  @media (max-width: 720px) { .how-grid { grid-template-columns: 1fr; } }
+  .how-steps { display: flex; flex-direction: column; gap: 2rem; }
+  .how-step { display: flex; gap: 1.125rem; }
+  .how-num {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--teal);
+    width: 20px;
+    flex-shrink: 0;
+    padding-top: 0.15rem;
+  }
+  .how-step-title { font-weight: 600; font-size: 1rem; margin-bottom: 0.375rem; }
+  .how-step-text { font-size: 0.9375rem; color: var(--text-2); line-height: 1.6; }
+
+  .code-block {
+    background: #0c1e1e;
+    border-radius: var(--r);
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+    line-height: 1.8;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .code-header {
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    font-size: 0.6875rem;
+    color: rgba(240,237,232,0.3);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .code-body { padding: 1rem 1.25rem; }
+  .code-line { display: flex; gap: 0; min-height: 1.4em; }
+  .code-ln { width: 2ch; color: rgba(240,237,232,0.15); flex-shrink: 0; margin-right: 1.5rem; text-align: right; user-select: none; }
+  .code-content { color: rgba(240,237,232,0.8); }
+  .ck { color: #7dd3d6; }
+  .cv { color: #f4c97e; }
+  .cs { color: #a8d8a8; }
+  .cn { color: #c3a6ff; }
+  .ci { color: rgba(240,237,232,0.4); }
+</style>

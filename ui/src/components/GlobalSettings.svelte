@@ -47,3 +47,28 @@
     <div class="check-hint">Knapsack DP, minimise leftover cash</div>
   </div>
 </label>
+
+<style>
+  .field-group { margin-bottom: 1rem; }
+  .field-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-2);
+    margin-bottom: 0.35rem;
+    display: block;
+  }
+  .field-hint { font-size: 0.75rem; color: var(--text-3); margin-top: 0.25rem; }
+
+  .check-row {
+    display: flex;
+    gap: 0.625rem;
+    align-items: flex-start;
+    margin-bottom: 0.875rem;
+    cursor: pointer;
+  }
+  .check-row.flush { margin-bottom: 0; }
+  .check-text { font-size: 0.9375rem; font-weight: 500; }
+  .check-hint { font-size: 0.75rem; color: var(--text-3); margin-top: 0.1rem; }
+</style>

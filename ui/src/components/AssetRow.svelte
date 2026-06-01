@@ -73,3 +73,31 @@
     </div>
   </td>
 </tr>
+
+<style>
+  .ticker-cell { min-width: 0; overflow: visible; position: relative; }
+
+  .asset-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
+  .fee-cell { display: flex; align-items: center; gap: 0.375rem; }
+  .fee-cell .cell-input { width: 1.5rem; flex: none; }
+  .fee-toggle { cursor: pointer; display: flex; align-items: center; gap: 0.2rem; }
+  .fee-toggle input[type='checkbox'] { width: 12px; height: 12px; margin-top: 0; }
+  .fee-pct { font-family: var(--mono); font-size: 0.6875rem; color: var(--text-3); }
+
+  .remove-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-3);
+    font-size: 0.875rem;
+    padding: 0 0.25rem;
+    line-height: 1;
+  }
+  .remove-btn:hover { color: var(--error); }
+</style>

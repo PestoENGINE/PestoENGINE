@@ -16,3 +16,25 @@
     Algorithm is documented
   </div>
 </div>
+
+<style>
+  .trust-rail {
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    padding: 1rem clamp(1rem, 4vw, 2rem);
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+    transition: background 0.2s;
+  }
+  .trust-token {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.875rem;
+    color: var(--text-2);
+  }
+  .trust-icon { color: var(--teal); flex-shrink: 0; }
+</style>

@@ -54,3 +54,31 @@
 >
   {loading ? 'Calculating…' : 'Calculate buy order'}
 </button>
+
+<style>
+  .assets-empty {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    color: var(--text-3);
+  }
+
+  .run-btn {
+    width: 100%;
+    background: var(--teal);
+    color: #fff;
+    border: none;
+    border-radius: var(--r);
+    padding: 0.7rem;
+    font-family: var(--sans);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: auto;
+    transition: background 0.15s;
+  }
+  .run-btn:hover:not(:disabled) { background: var(--teal-hover); }
+  .run-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+</style>

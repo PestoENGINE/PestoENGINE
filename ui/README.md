@@ -8,7 +8,7 @@ Single-page application that consumes `POST /v1/rebalance` and `GET /v1/tickers/
 |-------|---------|---------|
 | UI framework | Svelte | `^5.55.4` (components use the Svelte 4 compatible API: `$:` reactive statements, `createEventDispatcher`, `on:event` directives; no runes) |
 | Language | TypeScript | `~6.0.2` |
-| Styling | Hand-written CSS | Single global `src/app.css` (minimal reset + design tokens as CSS custom properties) plus component-scoped `<style>` blocks |
+| Styling | Hand-written CSS | Global `src/app.css` holds only cross-component concerns (reset, design tokens, shared primitives, the two table systems); each component owns its single-use styles in a scoped `<style>` block |
 | Build tool | Vite | `^8.0.10` |
 | Svelte plugin | `@sveltejs/vite-plugin-svelte` | `^7.0.0` |
 | Typecheck | `svelte-check` + `tsc` | `^4.4.6` / `~6.0.2` |
@@ -24,7 +24,7 @@ ui/
 ├── src/
 │   ├── main.ts        # Mounts <App />
 │   ├── App.svelte     # Root: state, API call, import/export, dark mode
-│   ├── app.css        # minimal reset + design tokens + global styles
+│   ├── app.css        # reset, design tokens, shared primitives, table systems
 │   ├── storage.ts     # localStorage I/O (versioned, validated)
 │   ├── types.ts       # Asset, Settings, RebalanceResponse, PortfolioExport
 │   └── components/    # Header, Hero, GlobalSettings, PortfolioEditor, AssetRow,
