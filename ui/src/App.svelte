@@ -176,7 +176,7 @@
     <div class="panel">
       <div class="panel-head">
         <span class="panel-title">Assets</span>
-        <button type="button" class="add-btn" on:click={addAsset}>+ Add asset</button>
+        <button type="button" class="add-asset-btn" on:click={addAsset}>+ Add asset</button>
       </div>
       <div class="panel-body tight">
         <PortfolioEditor
@@ -212,6 +212,18 @@
 </footer>
 
 <style>
+  .add-asset-btn {
+    font-family: var(--sans);
+    font-size: 0.75rem;
+    color: var(--teal);
+    border: 1px solid color-mix(in srgb, var(--teal) 35%, transparent);
+    border-radius: var(--r);
+    padding: 0.2rem 0.55rem;
+    white-space: nowrap;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .add-asset-btn:hover { border-color: var(--teal); background: var(--teal-light); }
+
   .tool-section {
     padding: clamp(1rem, 3vw, 1.5rem) clamp(1rem, 4vw, 2rem);
     max-width: 1000px;
