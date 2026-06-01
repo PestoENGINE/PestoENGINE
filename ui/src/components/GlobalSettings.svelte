@@ -18,7 +18,7 @@
     min="0"
     step="any"
     value={increment}
-    on:input={e => dispatch('update', { increment: inputNumber(e) })}
+    on:change={e => dispatch('update', { increment: inputNumber(e) })}
     class="field mono"
   />
   <div class="field-hint">Use 0 to rebalance without adding cash.</div>

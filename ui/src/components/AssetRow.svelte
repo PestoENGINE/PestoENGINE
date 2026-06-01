@@ -25,7 +25,7 @@
       max="100"
       step="any"
       value={asset.desiredPercentage}
-      on:input={e => dispatch('update', { desiredPercentage: inputNumber(e) })}
+      on:change={e => dispatch('update', { desiredPercentage: inputNumber(e) })}
       class="cell-input"
       aria-label="Target percentage"
     />
@@ -36,7 +36,7 @@
       min="0"
       step="any"
       value={asset.shares}
-      on:input={e => dispatch('update', { shares: inputNumber(e) })}
+      on:change={e => dispatch('update', { shares: inputNumber(e) })}
       class="cell-input"
       aria-label="Shares held"
     />
@@ -48,7 +48,7 @@
         min="0"
         step="any"
         value={asset.fees}
-        on:input={e => dispatch('update', { fees: inputNumber(e) })}
+        on:change={e => dispatch('update', { fees: inputNumber(e) })}
         class="cell-input"
         aria-label="Fee"
       />
