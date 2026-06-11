@@ -57,6 +57,7 @@ Error mapping in `App.svelte:runRebalance`:
 |----------------|-------------|
 | `200` | Render `ResultsPanel`, scroll to `#results` |
 | `422` | Display `"Validation error: ..."` (formats `detail[].msg`) |
+| `429` | Display backend `detail`, or "Too many requests. Try again in N seconds." derived from `Retry-After` |
 | `502` | Display backend `detail` (typically `MarketDataError` message) |
 | other / network | Generic `"Request failed"` message |
 

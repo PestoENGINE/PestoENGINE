@@ -178,6 +178,7 @@ When `OTEL_ENABLED=true`, `app.core.telemetry.setup_telemetry` configures OTLP/H
 | `pestoengine_provider_errors_total` | counter | errors | `provider`, `error_type` (`explicit` / `fallback`) |
 | `pestoengine_rebalance_duration_seconds` | histogram | s | `algorithm` (`greedy` / `dp`) |
 | `pestoengine_rebalance_tickers` | histogram | tickers | (none) |
+| `pestoengine_rate_limit_total` | counter | requests | `outcome` (`allowed` / `denied`), `endpoint` (`rebalance` / `search`) |
 
 `pestoengine_market_fetch_duration_seconds` uses explicit bucket boundaries `[0.025, 0.05, 0.1, 0.25, 0.5, 0.75, 1.0, 2.0, 5.0]` (set via a `View` in `telemetry.py`) for sub-100ms resolution.
 
