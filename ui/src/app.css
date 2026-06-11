@@ -206,20 +206,6 @@ input[type='checkbox']:checked::after {
 .cell-input:focus { color: var(--text); }
 .cell-input.ticker { font-weight: 600; color: var(--text); }
 
-/* Text action button (App + ResultsPanel) */
-.add-btn {
-  font-size: 0.8125rem;
-  color: var(--teal);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0.25rem 0;
-  white-space: nowrap;
-  font-family: var(--sans);
-}
-.add-btn:hover { opacity: 0.75; }
-.add-btn.sm { font-size: 0.75rem; }
-
 /* Results grid contract (ResultsPanel head + AssetResult rows)
    The two components live in separate files but render one table. The only
    thing they must agree on is the column tracks and the gap at each

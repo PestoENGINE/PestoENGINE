@@ -8,14 +8,6 @@
   $: totalAllocated = result
     ? result.results.reduce((s, r) => s + r.allocated, 0)
     : 0;
-
-  let copied = false;
-  function copyJson() {
-    if (!result) return;
-    navigator.clipboard.writeText(JSON.stringify(result, null, 2))
-      .then(() => { copied = true; setTimeout(() => { copied = false; }, 1800); })
-      .catch(() => {});
-  }
 </script>
 
 <div class="panel result-panel" id="results">
@@ -25,9 +17,6 @@
       <div class="results-badges">
         {#if settings.onlyBuy}<span class="solver-badge">Only buy</span>{/if}
         {#if settings.optimalRedistribute}<span class="solver-badge">Knapsack DP</span>{/if}
-        <button type="button" class="add-btn sm" on:click={copyJson}>
-          {copied ? 'Copied' : 'Copy JSON'}
-        </button>
       </div>
     {/if}
   </div>
