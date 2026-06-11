@@ -14,6 +14,7 @@
   let open = false;
   let activeIndex = -1;
   let rateLimited = false;
+  let searchError = false;
   let debounceTimer: ReturnType<typeof setTimeout>;
 
   // Namespace internal element ids so multiple instances do not collide.
@@ -28,6 +29,7 @@
     clearTimeout(debounceTimer);
     results = [];
     rateLimited = false;
+    searchError = false;
     open = false;
 
     if (q.length < 2) return;
@@ -41,10 +43,14 @@
       if (outcome.ok) {
         results = outcome.results;
         rateLimited = false;
+        searchError = false;
         activeIndex = -1;
         open = true;
       } else if (outcome.rateLimited) {
         rateLimited = true;
+        open = true;
+      } else {
+        searchError = true;
         open = true;
       }
     } catch {
@@ -111,6 +117,8 @@
     <ul id={listboxId} class="autocomplete-dropdown" role="listbox">
       {#if rateLimited}
         <li role="presentation" class="autocomplete-empty">Too many searches. Slow down.</li>
+      {:else if searchError}
+        <li role="presentation" class="autocomplete-empty">Search unavailable.</li>
       {:else}
         {#each results as result, i (`${result.ticker}:${result.exchange}`)}
           <li
