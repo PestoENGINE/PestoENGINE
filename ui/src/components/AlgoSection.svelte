@@ -29,8 +29,8 @@
           <tr>
             <td>Buy-only</td>
             <td>O(n)</td>
-            <td>No new cash deployed. Ranks assets by allocation deficit and returns buy quantities to close the gap using existing cash only.</td>
-            <td>Rebalancing without adding capital; set <span class="inline-code">only_buy: true</span>.</td>
+            <td>Full. Distributes the deployed cash across underweight assets proportionally to their allocation gap; overweight assets are never sold.</td>
+            <td>Adding cash without ever triggering a sale; set <span class="inline-code">only_buy: true</span>.</td>
           </tr>
         </tbody>
       </table>

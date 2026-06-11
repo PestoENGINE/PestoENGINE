@@ -21,7 +21,7 @@
     on:change={e => dispatch('update', { increment: inputNumber(e) })}
     class="field mono"
   />
-  <div class="field-hint">Use 0 to rebalance without adding cash.</div>
+  <div class="field-hint">Use 0 with Only buy off to rebalance without adding cash.</div>
 </div>
 
 <label class="check-row">

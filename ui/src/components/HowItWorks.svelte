@@ -16,7 +16,7 @@
           <div class="how-num">02</div>
           <div>
             <div class="how-step-title">Drop in your monthly cash</div>
-            <div class="how-step-text">Enter the cash you want to deploy this period. Enable buy-only mode (default) to ensure PestoENGINE never triggers a sale. Enable knapsack mode to maximise cash deployment. Set cash to 0 to rebalance without adding new capital.</div>
+            <div class="how-step-text">Enter the cash you want to deploy this period. Enable buy-only mode (default) to ensure PestoENGINE never triggers a sale. Enable knapsack mode to maximise cash deployment. Set cash to 0 (with buy-only disabled) to rebalance without adding new capital.</div>
           </div>
         </div>
         <div class="how-step">
