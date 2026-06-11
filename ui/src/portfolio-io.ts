@@ -1,6 +1,6 @@
 import type { Settings, Asset, PortfolioExport } from './types';
 import { DEFAULT_SETTINGS } from './storage';
-import { uuid } from './util';
+import { percentagesSumTo100, uuid } from './util';
 
 export type ImportResult =
   | { ok: true; settings: Settings; assets: Asset[]; sumWarning: boolean }
@@ -40,7 +40,7 @@ export function parsePortfolio(text: string): ImportResult {
   }
 
   const sum = (d.assets as Array<{ desiredPercentage: number }>).reduce((acc, a) => acc + a.desiredPercentage, 0);
-  const sumWarning = Math.abs(sum - 100) > 0.01;
+  const sumWarning = !percentagesSumTo100(sum);
 
   const settings: Settings = {
     increment: s.increment as number,

@@ -1,7 +1,9 @@
 <script lang="ts">
+  import { percentagesSumTo100 } from '../util';
+
   export let sum: number;
 
-  $: valid = Math.abs(sum - 100) <= 0.01;
+  $: valid = percentagesSumTo100(sum);
   $: pct = Math.min(sum, 100);
 </script>
 

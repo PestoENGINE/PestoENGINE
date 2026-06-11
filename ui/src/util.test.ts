@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { inputNumber, inputChecked, uuid } from './util';
+import { inputNumber, inputChecked, percentagesSumTo100, uuid } from './util';
 
 function inputEvent(props: { value?: string; checked?: boolean }): Event {
   return { target: props } as unknown as Event;
@@ -30,6 +30,24 @@ describe('inputChecked', () => {
 
   it('returns false when unchecked', () => {
     expect(inputChecked(inputEvent({ checked: false }))).toBe(false);
+  });
+});
+
+describe('percentagesSumTo100', () => {
+  it('accepts an exact 100', () => {
+    expect(percentagesSumTo100(100)).toBe(true);
+  });
+
+  it('accepts FP noise that rounds to 100.00', () => {
+    expect(percentagesSumTo100(33.333 + 33.333 + 33.334)).toBe(true);
+  });
+
+  it('rejects 60 + 39.99 like the backend does', () => {
+    expect(percentagesSumTo100(60 + 39.99)).toBe(false);
+  });
+
+  it('rejects a plainly wrong sum', () => {
+    expect(percentagesSumTo100(98.5)).toBe(false);
   });
 });
 

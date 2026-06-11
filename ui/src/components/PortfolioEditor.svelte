@@ -3,6 +3,7 @@
   import AssetRow from './AssetRow.svelte';
   import PercentageIndicator from './PercentageIndicator.svelte';
   import { createEventDispatcher } from 'svelte';
+  import { percentagesSumTo100 } from '../util';
 
   export let assets: Asset[];
   export let loading: boolean;
@@ -14,7 +15,7 @@
   }>();
 
   $: percentageSum = assets.reduce((s, a) => s + (a.desiredPercentage || 0), 0);
-  $: canRun = Math.abs(percentageSum - 100) <= 0.01 && !loading && assets.length > 0;
+  $: canRun = percentagesSumTo100(percentageSum) && !loading && assets.length > 0;
 </script>
 
 <PercentageIndicator sum={percentageSum} />

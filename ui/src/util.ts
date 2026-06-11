@@ -5,6 +5,11 @@ export function inputNumber(e: Event): number {
   return parseFloat((e.target as HTMLInputElement).value) || 0;
 }
 
+/** Mirrors the backend rule: round(total, 2) == 100.00 (app/schemas/request.py). */
+export function percentagesSumTo100(sum: number): boolean {
+  return Math.round(sum * 100) / 100 === 100;
+}
+
 /** Read the checked state of a checkbox <input> event. */
 export function inputChecked(e: Event): boolean {
   return (e.target as HTMLInputElement).checked;
