@@ -16,6 +16,7 @@
   let rateLimited = false;
   let searchError = false;
   let debounceTimer: ReturnType<typeof setTimeout>;
+  let searchSeq = 0;
 
   // Namespace internal element ids so multiple instances do not collide.
   $: listboxId = id ? `${id}-listbox` : 'autocomplete-listbox';
@@ -27,6 +28,9 @@
     dispatch('change', { ticker: q, provider: null });
 
     clearTimeout(debounceTimer);
+    // Bumped before the early return so an in-flight response for the old
+    // query cannot reopen the dropdown after the field was cleared.
+    const seq = ++searchSeq;
     results = [];
     rateLimited = false;
     searchError = false;
@@ -34,12 +38,13 @@
 
     if (q.length < 2) return;
 
-    debounceTimer = setTimeout(() => fetchResults(q), 300);
+    debounceTimer = setTimeout(() => fetchResults(q, seq), 300);
   }
 
-  async function fetchResults(q: string) {
+  async function fetchResults(q: string, seq: number) {
     try {
       const outcome = await searchTickers(q);
+      if (seq !== searchSeq) return; // stale: a newer keystroke happened since
       if (outcome.ok) {
         results = outcome.results;
         rateLimited = false;
