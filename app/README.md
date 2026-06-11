@@ -193,7 +193,7 @@ When `OTEL_ENABLED=true`, `app.core.telemetry.setup_telemetry` configures OTLP/H
 
 JSON formatter (`core/log_config.py`) emits one JSON object per line with `ts`, `level`, `logger`, `msg`. When an OTel span is active, `trace_id` and `span_id` are injected automatically. When `OTEL_ENABLED=true`, log records are also exported via OTLP/HTTP to the configured endpoint (Loki-compatible via Grafana Alloy).
 
-The `_AccessLogMiddleware` (in `main.py`) emits one structured access log per request with `http_method`, `http_path`, `http_status`, `http_duration_ms`, `http_client`, `http_user_agent`, `http_version`.
+The `_AccessLogMiddleware` (in `main.py`) emits one structured access log for every request that reaches the router, with `http_method`, `http_path`, `http_status`, `http_duration_ms`, `http_client`, `http_user_agent`, `http_version`. Requests short-circuited further out in the middleware stack (429s from the rate limiter, CORS preflights) are not access-logged; rate-limit decisions are counted by `pestoengine_rate_limit_total`.
 
 ## Setup
 
