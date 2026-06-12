@@ -198,13 +198,13 @@ input[type='checkbox']:checked::after {
   outline: none;
   font-family: var(--mono);
   font-size: 0.875rem;
-  color: var(--text-2);
+  color: var(--text);
   font-variant-numeric: tabular-nums;
   width: 100%;
   padding: 0;
 }
-.cell-input:focus { color: var(--text); }
-.cell-input.ticker { font-weight: 600; color: var(--text); }
+.cell-input.ticker { font-weight: 600; }
+.cell-input::placeholder { color: var(--text-3); font-weight: 400; text-transform: none; }
 
 /* Results grid contract (ResultsPanel head + AssetResult rows)
    The two components live in separate files but render one table. The only

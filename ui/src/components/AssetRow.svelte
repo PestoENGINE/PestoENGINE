@@ -69,7 +69,7 @@
         class="remove-btn"
         on:click={() => dispatch('remove')}
         aria-label="Remove asset"
-      >×</button>
+      >X</button>
     </div>
   </td>
 </tr>
