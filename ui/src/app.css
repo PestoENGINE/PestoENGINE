@@ -188,7 +188,14 @@ input[type='checkbox']:checked::after {
 .asset-table tbody tr:first-child td { border-top: none; }
 @media (max-width: 480px) {
   .asset-table th,
-  .asset-table td { padding: 0.2rem 0.3rem; font-size: 0.8125rem; }
+  .asset-table td { padding: 0.2rem 0.3rem; }
+  .asset-table td { font-size: 0.8125rem; }
+  /* Keep headers compact so the nowrap labels (e.g. "Target %") fit their column
+     instead of bleeding into the next one, and shrink the actions column so the
+     four data columns get the freed width. */
+  .asset-table th { font-size: 0.625rem; letter-spacing: 0.03em; }
+  .asset-table th:last-child,
+  .asset-table td:last-child { width: 2rem; padding-left: 0; padding-right: 0; }
 }
 .ticker-input { text-transform: uppercase; }
 
