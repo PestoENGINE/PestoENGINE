@@ -47,6 +47,7 @@
       <input
         type="number"
         min="0"
+        max={asset.percentageFee ? 100 : undefined}
         step="any"
         value={asset.fees}
         on:change={e => dispatch('update', { fees: inputNumber(e) })}

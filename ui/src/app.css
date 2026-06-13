@@ -129,6 +129,7 @@ body {
   appearance: none;
 }
 .field:focus        { border-color: var(--teal); }
+.field:out-of-range { color: var(--error); }
 .field::placeholder { color: var(--text-3); }
 .field.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
@@ -213,6 +214,7 @@ input[type='checkbox']:checked::after {
 }
 .cell-input.ticker { font-weight: 600; }
 .cell-input::placeholder { color: var(--text-3); font-weight: 400; text-transform: none; }
+.cell-input:out-of-range { color: var(--error); }
 
 /* Results grid contract (ResultsPanel head + AssetResult rows)
    The two components live in separate files but render one table. The only
