@@ -1,15 +1,25 @@
 import { writable, derived, get } from 'svelte/store';
 import en from './en.json';
-import it from './it.json';
 
-// Adding a language is a two-line change: drop an `xx.json` next to these and
-// register it in DICTIONARIES + the Locale union below. Missing keys in a
-// partial translation fall back to English, so contributions can land
-// incrementally. English is the source of truth for the key set.
+// `en` is bundled as the synchronous fallback and the source of truth for the
+// key set. Every other locale is its own dynamically-imported chunk, fetched
+// only when selected, so the initial bundle stays flat as the community adds
+// languages. Registering a language is a two-line change: add an `xx.json` and
+// an entry in LOADERS + the Locale union. Anything untranslated falls back to
+// English, so partial translations land incrementally.
 export type Locale = 'en' | 'it';
 export const LOCALES: readonly Locale[] = ['en', 'it'];
-const DICTIONARIES: Record<Locale, unknown> = { en, it };
 const STORAGE_KEY = 'pesto_engine_locale';
+
+const LOADERS: Record<Locale, () => Promise<unknown>> = {
+  en: () => Promise.resolve(en),
+  it: () => import('./it.json').then((m) => m.default),
+};
+
+// Cache of loaded dictionaries (en is always present). `revision` is bumped
+// whenever a newly fetched dictionary becomes available so `t` re-renders.
+const dictionaries: Partial<Record<Locale, unknown>> = { en };
+const revision = writable(0);
 
 /** Pure locale decision: a valid stored choice wins, else the browser language, else English. */
 export function resolveLocale(stored: string | null, navLang: string | undefined): Locale {
@@ -45,15 +55,27 @@ export function interpolate(raw: string, params?: Record<string, string | number
   );
 }
 
-/** Translate a key for a locale, falling back to English then to the raw key. */
+/**
+ * Translate a key for a locale, falling back to English (always loaded) then to
+ * the raw key. If the locale's dictionary has not loaded yet, the English
+ * fallback is used until it arrives.
+ */
 export function translate(loc: Locale, key: string, params?: Record<string, string | number>): string {
-  const raw = lookup(DICTIONARIES[loc], key) ?? lookup(DICTIONARIES.en, key) ?? key;
+  const raw = lookup(dictionaries[loc], key) ?? lookup(dictionaries.en, key) ?? key;
   return interpolate(raw, params);
+}
+
+/** Fetch and cache a locale's dictionary; resolves once it is available for translation. */
+export async function loadLocale(loc: Locale): Promise<void> {
+  if (dictionaries[loc]) return;
+  dictionaries[loc] = await LOADERS[loc]();
+  revision.update((n) => n + 1);
 }
 
 export const locale = writable<Locale>(detectInitialLocale());
 
-// Persist the choice and reflect it on <html lang> on every change.
+// Persist the choice, reflect it on <html lang>, and ensure its dictionary is
+// fetched on every change (including the initial value).
 locale.subscribe((value) => {
   try {
     localStorage.setItem(STORAGE_KEY, value);
@@ -61,14 +83,15 @@ locale.subscribe((value) => {
     // ignore unavailable localStorage
   }
   if (typeof document !== 'undefined') document.documentElement.lang = value;
+  void loadLocale(value);
 });
 
 export function setLocale(value: Locale): void {
   locale.set(value);
 }
 
-/** Reactive translator for markup: `{$t('settings.onlyBuy')}`. */
-export const t = derived(locale, ($locale) =>
+/** Reactive translator for markup: `{$t('settings.onlyBuy')}`. Re-renders as locales load. */
+export const t = derived([locale, revision], ([$locale]) =>
   (key: string, params?: Record<string, string | number>) => translate($locale, key, params),
 );
 

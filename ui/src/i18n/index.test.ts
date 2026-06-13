@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { get } from 'svelte/store';
 import {
-  resolveLocale, lookup, interpolate, translate, t, locale, setLocale,
+  resolveLocale, lookup, interpolate, translate, loadLocale, t, locale, setLocale,
 } from './index';
 import enDict from './en.json';
 import itDict from './it.json';
@@ -61,8 +61,19 @@ describe('interpolate', () => {
 });
 
 describe('translate', () => {
-  it('returns the locale-specific string', () => {
+  // English is bundled, so it resolves synchronously and is the fallback.
+  it('returns the English string synchronously', () => {
     expect(translate('en', 'settings.onlyBuy')).toBe('Only buy');
+  });
+
+  // This must run before any test loads the it dictionary (lazy cache is shared
+  // across the module). It documents the pre-load fallback to English.
+  it('falls back to English for a lazily-loaded locale that is not loaded yet', () => {
+    expect(translate('it', 'settings.onlyBuy')).toBe('Only buy');
+  });
+
+  it('returns the locale string once its dictionary is loaded', async () => {
+    await loadLocale('it');
     expect(translate('it', 'settings.onlyBuy')).toBe('Solo acquisti');
   });
 
@@ -77,7 +88,8 @@ describe('translate', () => {
 });
 
 describe('t store / setLocale', () => {
-  it('reflects the active locale reactively', () => {
+  it('reflects the active locale reactively once loaded', async () => {
+    await loadLocale('it');
     setLocale('it');
     expect(get(t)('results.title')).toBe('Risultato');
     setLocale('en');
