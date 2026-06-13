@@ -14,7 +14,7 @@
   },
   "panel": {
     "settings": "Impostazioni",
-    "assets": "Asset"
+    "assets": "Posizioni in portafoglio"
   },
   "assets": {
     "add": "+ Aggiungi asset"
@@ -42,7 +42,7 @@
   "portfolio": {
     "empty": "Ancora nessun asset: clicca + Aggiungi asset.",
     "colTicker": "Ticker",
-    "colTarget": "Target",
+    "colTarget": "Target %",
     "colShares": "Quote",
     "colFee": "Commissione",
     "calculating": "Calcolo…",

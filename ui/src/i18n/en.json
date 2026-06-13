@@ -14,7 +14,7 @@
   },
   "panel": {
     "settings": "Settings",
-    "assets": "Assets"
+    "assets": "Current Holdings"
   },
   "assets": {
     "add": "+ Add asset"
@@ -42,7 +42,7 @@
   "portfolio": {
     "empty": "No assets yet - click + Add asset.",
     "colTicker": "Ticker",
-    "colTarget": "Target",
+    "colTarget": "Target %",
     "colShares": "Shares",
     "colFee": "Fee",
     "calculating": "Calculating…",
