@@ -1,36 +1,40 @@
+<script lang="ts">
+  import { t } from '../i18n';
+</script>
+
 <div class="section-divider">
   <div class="content-section">
-    <div class="section-kicker">How it works</div>
-    <h2 class="section-headline">Three inputs. One deterministic result.</h2>
+    <div class="section-kicker">{$t('howItWorks.kicker')}</div>
+    <h2 class="section-headline">{$t('howItWorks.headline')}</h2>
 
     <div class="how-grid">
       <div class="how-steps">
         <div class="how-step">
           <div class="how-num">01</div>
           <div>
-            <div class="how-step-title">Set your target allocation</div>
-            <div class="how-step-text">Enter each ETF ticker, your target weight, current share count, and your broker's fee. PestoENGINE fetches live prices from Yahoo Finance at calculation time, cached for 5 minutes.</div>
+            <div class="how-step-title">{$t('howItWorks.step1Title')}</div>
+            <div class="how-step-text">{$t('howItWorks.step1Text')}</div>
           </div>
         </div>
         <div class="how-step">
           <div class="how-num">02</div>
           <div>
-            <div class="how-step-title">Drop in your monthly cash</div>
-            <div class="how-step-text">Enter the cash you want to deploy this period. Enable buy-only mode (default) to ensure PestoENGINE never triggers a sale. Enable knapsack mode to maximise cash deployment. Set cash to 0 (with buy-only disabled) to rebalance without adding new capital.</div>
+            <div class="how-step-title">{$t('howItWorks.step2Title')}</div>
+            <div class="how-step-text">{$t('howItWorks.step2Text')}</div>
           </div>
         </div>
         <div class="how-step">
           <div class="how-num">03</div>
           <div>
-            <div class="how-step-title">Get the exact buy order</div>
-            <div class="how-step-text">PestoENGINE returns the exact number of shares to buy per asset, with fees already priced in, allocation drift shown, and leftover change made explicit. Same inputs always produce the same output.</div>
+            <div class="how-step-title">{$t('howItWorks.step3Title')}</div>
+            <div class="how-step-text">{$t('howItWorks.step3Text')}</div>
           </div>
         </div>
       </div>
 
       <div>
         <div class="code-block">
-          <div class="code-header">Request: POST /v1/rebalance</div>
+          <div class="code-header">{$t('howItWorks.codeHeader')}</div>
           <div class="code-body">
             <!-- Use HTML entities for curly braces in code display -->
             <div class="code-line"><span class="code-ln">1</span><span class="code-content ci">&#123;</span></div>

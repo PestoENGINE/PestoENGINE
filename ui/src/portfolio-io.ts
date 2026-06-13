@@ -1,10 +1,10 @@
-import type { Settings, Asset, PortfolioExport } from './types';
+import type { Settings, Asset, PortfolioExport, UiError } from './types';
 import { DEFAULT_SETTINGS } from './storage';
 import { percentagesSumTo100, uuid } from './util';
 
 export type ImportResult =
   | { ok: true; settings: Settings; assets: Asset[]; sumWarning: boolean }
-  | { ok: false; error: string };
+  | { ok: false; error: UiError };
 
 /**
  * Validates and parses a portfolio export file. Pure: no confirm, no DOM, no
@@ -17,26 +17,27 @@ export function parsePortfolio(text: string): ImportResult {
   try {
     data = JSON.parse(text);
   } catch {
-    return { ok: false, error: 'File is not valid JSON.' };
+    return { ok: false, error: { kind: 'key', key: 'errors.io.notJson' } };
   }
 
-  if (typeof data !== 'object' || data === null) return { ok: false, error: 'Invalid portfolio file.' };
+  if (typeof data !== 'object' || data === null) return { ok: false, error: { kind: 'key', key: 'errors.io.invalidFile' } };
   const d = data as Record<string, unknown>;
 
-  if (d.version !== 1) return { ok: false, error: 'Unsupported export version. Expected version 1.' };
-  if (typeof d.settings !== 'object' || d.settings === null) return { ok: false, error: 'Invalid portfolio file: missing settings.' };
-  if (!Array.isArray(d.assets) || d.assets.length === 0) return { ok: false, error: 'Invalid portfolio file: assets must be a non-empty array.' };
+  if (d.version !== 1) return { ok: false, error: { kind: 'key', key: 'errors.io.unsupportedVersion' } };
+  if (typeof d.settings !== 'object' || d.settings === null) return { ok: false, error: { kind: 'key', key: 'errors.io.missingSettings' } };
+  if (!Array.isArray(d.assets) || d.assets.length === 0) return { ok: false, error: { kind: 'key', key: 'errors.io.assetsNotArray' } };
 
   const s = d.settings as Record<string, unknown>;
-  if (typeof s.increment !== 'number' || s.increment < 0) return { ok: false, error: 'Invalid portfolio file: invalid increment.' };
+  if (typeof s.increment !== 'number' || s.increment < 0) return { ok: false, error: { kind: 'key', key: 'errors.io.invalidIncrement' } };
 
   for (let i = 0; i < d.assets.length; i++) {
     const a = d.assets[i] as Record<string, unknown>;
-    if (typeof a.ticker !== 'string' || !a.ticker) return { ok: false, error: `Invalid portfolio file: asset ${i + 1} missing ticker.` };
-    if (typeof a.desiredPercentage !== 'number' || a.desiredPercentage < 0) return { ok: false, error: `Invalid portfolio file: asset ${i + 1} invalid desiredPercentage.` };
-    if (typeof a.shares !== 'number' || a.shares < 0) return { ok: false, error: `Invalid portfolio file: asset ${i + 1} invalid shares.` };
-    if (typeof a.fees !== 'number' || a.fees < 0) return { ok: false, error: `Invalid portfolio file: asset ${i + 1} invalid fees.` };
-    if (typeof a.percentageFee !== 'boolean') return { ok: false, error: `Invalid portfolio file: asset ${i + 1} invalid percentageFee.` };
+    const n = i + 1;
+    if (typeof a.ticker !== 'string' || !a.ticker) return { ok: false, error: { kind: 'key', key: 'errors.io.assetMissingTicker', params: { n } } };
+    if (typeof a.desiredPercentage !== 'number' || a.desiredPercentage < 0) return { ok: false, error: { kind: 'key', key: 'errors.io.assetInvalidPercentage', params: { n } } };
+    if (typeof a.shares !== 'number' || a.shares < 0) return { ok: false, error: { kind: 'key', key: 'errors.io.assetInvalidShares', params: { n } } };
+    if (typeof a.fees !== 'number' || a.fees < 0) return { ok: false, error: { kind: 'key', key: 'errors.io.assetInvalidFees', params: { n } } };
+    if (typeof a.percentageFee !== 'boolean') return { ok: false, error: { kind: 'key', key: 'errors.io.assetInvalidPercentageFee', params: { n } } };
   }
 
   const sum = (d.assets as Array<{ desiredPercentage: number }>).reduce((acc, a) => acc + a.desiredPercentage, 0);

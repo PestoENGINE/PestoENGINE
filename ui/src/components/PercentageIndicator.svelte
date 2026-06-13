@@ -1,5 +1,6 @@
 <script lang="ts">
   import { percentagesSumTo100 } from '../util';
+  import { t } from '../i18n';
 
   export let sum: number;
 
@@ -8,7 +9,7 @@
 </script>
 
 <div class="pct-label">
-  <span>Allocation total</span>
+  <span>{$t('percentage.total')}</span>
   <span class="pct-value" class:over={!valid}>{sum.toFixed(2)}%</span>
 </div>
 <div class="pct-bar">

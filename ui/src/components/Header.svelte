@@ -1,5 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
+  import { t, locale, setLocale, LOCALES } from '../i18n';
 
   export let exportDisabled = false;
   export let dark = false;
@@ -9,25 +10,68 @@
     requestExport: void;
     toggleDark: void;
   }>();
+
+  let langOpen = false;
+
+  // Close when focus leaves the dropdown (covers click-outside and tabbing away).
+  function onLangFocusOut(e: FocusEvent & { currentTarget: HTMLDivElement }) {
+    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) langOpen = false;
+  }
 </script>
+
+<svelte:window on:keydown={(e) => { if (langOpen && e.key === 'Escape') langOpen = false; }} />
 
 <nav>
   <img src="/brand-logo-nav.svg" alt="PestoENGINE" class="wordmark-logo" />
   <div class="nav-actions">
-    <button type="button" class="nav-btn" on:click={() => dispatch('requestImport')}>Import</button>
+    <button type="button" class="nav-btn" on:click={() => dispatch('requestImport')}>{$t('nav.import')}</button>
     <div class="nav-sep"></div>
     <button
       type="button"
       class="nav-btn"
       on:click={() => dispatch('requestExport')}
       disabled={exportDisabled}
-    >Export</button>
+    >{$t('nav.export')}</button>
+    <div class="nav-sep"></div>
+    <div
+      class="lang-dd"
+      class:open={langOpen}
+      on:focusout={onLangFocusOut}
+    >
+      <button
+        type="button"
+        class="nav-btn lang-current"
+        aria-haspopup="menu"
+        aria-expanded={langOpen}
+        aria-label={$t('nav.languageAria')}
+        on:click={() => (langOpen = !langOpen)}
+      >
+        {$locale.toUpperCase()}
+        <svg class="lang-caret" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+      {#if langOpen}
+        <div class="lang-menu" role="menu">
+          {#each LOCALES as l}
+            <button
+              type="button"
+              role="menuitem"
+              class="lang-option"
+              class:active={$locale === l}
+              aria-current={$locale === l ? 'true' : undefined}
+              on:click={() => { setLocale(l); langOpen = false; }}
+            >{l.toUpperCase()}</button>
+          {/each}
+        </div>
+      {/if}
+    </div>
     <div class="nav-sep"></div>
     <button
       type="button"
       class="nav-btn icon-btn"
       on:click={() => dispatch('toggleDark')}
-      aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+      aria-label={dark ? $t('nav.toLightMode') : $t('nav.toDarkMode')}
     >
       {#if dark}
         <!-- Sun icon -->
@@ -104,4 +148,36 @@
     height: 16px;
     background: rgba(255,255,255,0.12);
   }
+  .lang-dd { position: relative; display: flex; align-items: center; }
+  .lang-current { display: flex; align-items: center; gap: 0.2rem; }
+  .lang-caret { transition: transform 0.15s; }
+  .lang-dd.open .lang-caret { transform: rotate(180deg); }
+  .lang-menu {
+    position: absolute;
+    top: calc(100% + 0.4rem);
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 0.25rem;
+    min-width: 3.25rem;
+    z-index: 200;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.18);
+  }
+  .lang-option {
+    font-family: var(--sans);
+    font-size: 0.8125rem;
+    text-align: left;
+    color: var(--text-2);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.3rem 0.5rem;
+    border-radius: 3px;
+  }
+  .lang-option:hover { background: var(--teal-light); color: var(--text); }
+  .lang-option.active { color: var(--teal); font-weight: 600; }
 </style>

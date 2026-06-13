@@ -2,6 +2,7 @@
   import type { Settings } from '../types';
   import { createEventDispatcher } from 'svelte';
   import { inputNumber, inputChecked } from '../util';
+  import { t } from '../i18n';
 
   export let increment: number;
   export let onlyBuy: boolean;
@@ -12,7 +13,7 @@
 </script>
 
 <div class="field-group">
-  <label class="field-label" for="increment">Cash to deploy</label>
+  <label class="field-label" for="increment">{$t('settings.cashToDeploy')}</label>
   <input
     id="increment"
     type="number"
@@ -31,8 +32,8 @@
     on:change={e => dispatch('update', { onlyBuy: inputChecked(e) })}
   />
   <div>
-    <div class="check-text">Only buy</div>
-    <div class="check-hint">Never sell existing positions</div>
+    <div class="check-text">{$t('settings.onlyBuy')}</div>
+    <div class="check-hint">{$t('settings.onlyBuyHint')}</div>
   </div>
 </label>
 
@@ -43,8 +44,8 @@
     on:change={e => dispatch('update', { fractionalShares: inputChecked(e) })}
   />
   <div>
-    <div class="check-text">Fractional shares</div>
-    <div class="check-hint">Buy exact fractional quantities</div>
+    <div class="check-text">{$t('settings.fractional')}</div>
+    <div class="check-hint">{$t('settings.fractionalHint')}</div>
   </div>
 </label>
 
@@ -56,9 +57,9 @@
     on:change={e => dispatch('update', { optimalRedistribute: inputChecked(e) })}
   />
   <div>
-    <div class="check-text">Optimal redistribute</div>
+    <div class="check-text">{$t('settings.optimal')}</div>
     <div class="check-hint">
-      {fractionalShares ? 'Not used with fractional shares' : 'Knapsack DP, minimise leftover cash'}
+      {fractionalShares ? $t('settings.optimalHintDisabled') : $t('settings.optimalHint')}
     </div>
   </div>
 </label>

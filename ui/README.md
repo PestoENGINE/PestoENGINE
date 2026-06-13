@@ -18,7 +18,7 @@ Single-page application that consumes `POST /v1/rebalance` and `GET /v1/tickers/
 
 ```
 ui/
-├── index.html       # Entry HTML; restores dark mode pre-hydration
+├── index.html       # Entry HTML; restores dark mode + language pre-hydration
 ├── vite.config.ts   # svelte plugin; dev proxy /v1/* to http://localhost:8000
 ├── public/          # Static assets (favicon, brand logo, robots)
 ├── src/
@@ -26,7 +26,8 @@ ui/
 │   ├── App.svelte     # Root: state, API call, import/export, dark mode
 │   ├── app.css        # reset, design tokens, shared primitives, table systems
 │   ├── storage.ts     # localStorage I/O (versioned, validated)
-│   ├── types.ts       # Asset, Settings, RebalanceResponse, PortfolioExport
+│   ├── types.ts       # Asset, Settings, RebalanceResponse, PortfolioExport, UiError
+│   ├── i18n/          # Hand-rolled i18n: locale store, t/tx, en.json + it.json
 │   └── components/    # Header, Hero, GlobalSettings, PortfolioEditor, AssetRow,
 │                      # TickerAutocomplete, ResultsPanel, AssetResult, ...
 └── dist/            # Production build (gitignored; built by Vite, served by FastAPI from /)
@@ -41,8 +42,22 @@ All state lives in `App.svelte` (Svelte 4 compatible reactivity: `let` + assignm
 | `pesto_engine_settings` | `{ increment, onlyBuy, optimalRedistribute, fractionalShares }` | `{ 1000, true, false, false }` |
 | `pesto_engine_assets` | `Asset[]` (`id`, `ticker`, `provider`, `desiredPercentage`, `shares`, `fees`, `percentageFee`) | `[]` |
 | `pesto_engine_dark_mode` | `boolean` | `false` |
+| `pesto_engine_locale` | `'en' \| 'it'` | auto-detected from `navigator.language`, else `en` |
 
-Dark mode class (`html.dark`) is set inline in `index.html` before Svelte hydrates to avoid a flash of light theme.
+Dark mode class (`html.dark`) and `<html lang>` are set inline in `index.html` before Svelte hydrates to avoid a flash of the wrong theme/language.
+
+## Internationalization (i18n)
+
+UI strings are translated with a small hand-rolled module in `src/i18n/` (no library):
+
+- `en.json` / `it.json` hold the dictionaries; `en.json` is the source of truth for the key set. A test asserts `it.json` defines exactly the same keys.
+- `index.ts` exposes a `locale` store, a reactive translator `t` used in markup as `{$t('settings.onlyBuy')}`, and an imperative `tx(...)` for non-reactive code (`confirm()`, `document.title`). Missing keys fall back to English, then to the raw key, so a partial translation degrades gracefully.
+- Components reference keys via `$t`; the framework-agnostic logic modules (`api.ts`, `portfolio-io.ts`) stay language-free by returning a `UiError` (`{ kind: 'key', ... }` translated in the component, or `{ kind: 'raw', text }` for passthrough backend messages).
+- The choice persists in `localStorage` (`pesto_engine_locale`) and switches live from the header.
+
+**Adding a language** is a small, self-contained change: drop an `xx.json` next to the existing ones, then register it in `DICTIONARIES` and the `Locale` union in `index.ts`. Anything left untranslated falls back to English.
+
+**Not translated:** backend error messages (the `detail` of 422/429/502 responses) are shown as-is; on-screen code (the JSON request sample, the docker command, complexity notations, file paths, ticker examples) and the `PestoENGINE` name stay verbatim.
 
 ## Backend integration
 

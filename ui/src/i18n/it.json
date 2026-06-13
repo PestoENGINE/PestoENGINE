@@ -1,0 +1,149 @@
+{
+  "nav": {
+    "import": "Importa",
+    "export": "Esporta",
+    "toLightMode": "Passa al tema chiaro",
+    "toDarkMode": "Passa al tema scuro",
+    "languageAria": "Lingua"
+  },
+  "hero": {
+    "kicker": "Motore di esecuzione del ribilanciamento",
+    "headlineLine1": "Conosci la tua allocazione.",
+    "headlineLine2": "Ora sai esattamente cosa comprare.",
+    "sub": "Inserisci le tue allocazioni di ETF, le posizioni attuali e la liquidità mensile. PestoENGINE restituisce il numero esatto di quote da comprare, con la struttura commissionale del tuo broker già inclusa."
+  },
+  "panel": {
+    "settings": "Impostazioni",
+    "assets": "Asset"
+  },
+  "assets": {
+    "add": "+ Aggiungi asset"
+  },
+  "footer": {
+    "brand": "PestoENGINE – Ribilanciamento di portafoglio",
+    "github": "GitHub",
+    "license": "Licenza MIT",
+    "noAnalytics": "Nessun tracciamento"
+  },
+  "import": {
+    "confirm": "Questo sostituirà il portafoglio attuale.{note} Continuare?",
+    "sumNote": " (Nota: le percentuali non sommano a 100. Correggi prima di eseguire.)"
+  },
+  "settings": {
+    "cashToDeploy": "Liquidità da investire",
+    "onlyBuy": "Solo acquisti",
+    "onlyBuyHint": "Non vendere mai le posizioni esistenti",
+    "fractional": "Quote frazionate",
+    "fractionalHint": "Compra quantità frazionate esatte",
+    "optimal": "Redistribuzione ottimale",
+    "optimalHint": "Knapsack DP, minimizza la liquidità residua",
+    "optimalHintDisabled": "Non usata con le quote frazionate"
+  },
+  "portfolio": {
+    "empty": "Ancora nessun asset: clicca + Aggiungi asset.",
+    "colTicker": "Ticker",
+    "colTarget": "Target",
+    "colShares": "Quote",
+    "colFee": "Commissione",
+    "calculating": "Calcolo…",
+    "calculate": "Calcola ordine d'acquisto"
+  },
+  "percentage": {
+    "total": "Totale allocazione"
+  },
+  "assetRow": {
+    "targetAria": "Percentuale obiettivo",
+    "sharesAria": "Quote possedute",
+    "feeAria": "Commissione",
+    "percentageFeeTitle": "Commissione percentuale",
+    "removeAria": "Rimuovi asset"
+  },
+  "autocomplete": {
+    "aria": "Simbolo ticker",
+    "rateLimited": "Troppe ricerche. Rallenta.",
+    "error": "Ricerca non disponibile.",
+    "noResults": "Nessun risultato"
+  },
+  "results": {
+    "title": "Risultato",
+    "badgeOnlyBuy": "Solo acquisti",
+    "badgeKnapsack": "Knapsack DP",
+    "colTicker": "Ticker",
+    "colBuy": "Acquista",
+    "colResult": "Risultato",
+    "allocated": "Allocato",
+    "totalFees": "Commissioni totali",
+    "change": "Resto",
+    "empty": "Esegui il calcolo per vedere i risultati."
+  },
+  "trust": {
+    "openSource": "Open source, licenza MIT",
+    "noData": "Nessun account, nessun dato memorizzato",
+    "selfHost": "Auto-ospitabile",
+    "documented": "Algoritmo documentato"
+  },
+  "howItWorks": {
+    "kicker": "Come funziona",
+    "headline": "Tre input. Un risultato deterministico.",
+    "step1Title": "Imposta la tua allocazione obiettivo",
+    "step1Text": "Inserisci ticker dell'ETF, peso obiettivo, quote attuali e commissione del broker. PestoENGINE recupera i prezzi live da Yahoo Finance al momento del calcolo, con cache di 5 minuti.",
+    "step2Title": "Inserisci la liquidità mensile",
+    "step2Text": "Inserisci la liquidità da investire nel periodo. Attiva la modalità solo-acquisti (default) perché PestoENGINE non venda mai. Attiva la modalità zaino per massimizzare l'impiego della liquidità. Imposta la liquidità a 0 (con solo-acquisti disattivato) per ribilanciare senza aggiungere capitale.",
+    "step3Title": "Ottieni l'ordine d'acquisto esatto",
+    "step3Text": "PestoENGINE restituisce il numero esatto di quote da comprare per asset, con le commissioni già incluse, lo scostamento di allocazione mostrato e il resto reso esplicito. Gli stessi input producono sempre lo stesso output.",
+    "codeHeader": "Richiesta: POST /v1/rebalance"
+  },
+  "algo": {
+    "kicker": "L'algoritmo",
+    "headline": "Tre modalità. Nominate, documentate, verificabili.",
+    "colMode": "Modalità",
+    "colComplexity": "Complessità",
+    "colDeployment": "Impiego della liquidità",
+    "colUseWhen": "Usare quando",
+    "greedyName": "Greedy",
+    "greedyDeploy": "Buono. Alloca prima sullo scostamento di allocazione maggiore. Può lasciare piccoli importi non investiti.",
+    "greedyUse": "Conta la velocità; un po' di residuo è accettabile.",
+    "knapsackName": "Knapsack DP",
+    "knapsackDeploy": "Massimo. Tratta gli acquisti di quote come oggetti di uno zaino limitato. Minimizza il resto.",
+    "knapsackUse": "Conta l'efficienza della liquidità; minimizza il resto.",
+    "buyonlyName": "Solo acquisti",
+    "buyonlyDeploy": "Pieno. Distribuisce la liquidità sugli asset sottopeso in proporzione al loro scostamento di allocazione; gli asset sovrappeso non vengono mai venduti.",
+    "buyonlyUse": "Aggiungere liquidità senza mai innescare una vendita; imposta {code}.",
+    "note": "L'algoritmo non è proprietario. Il sorgente è in {code}. Ogni formula è leggibile e ogni risultato è verificabile a mano."
+  },
+  "oss": {
+    "kicker": "Open source",
+    "headlineLine1": "Uno strumento finanziario dev'essere verificabile.",
+    "headlineLine2": "Per questo l'algoritmo è pubblico.",
+    "text1": "PestoENGINE ha licenza MIT, è auto-ospitabile in due comandi ed è costruito su uno stack lineare: backend FastAPI, frontend Svelte, Yahoo Finance per i dati di mercato. Il tuo portafoglio non viene mai memorizzato: le richieste sono calcolate in memoria e scartate, e un'istanza self-hosted mantiene i tuoi dati interamente sulla tua macchina.",
+    "text2": "Questo progetto fa bene una cosa sola. I contributi che ampliano sensibilmente lo scope verranno discussi prima dell'implementazione.",
+    "linkStar": "Metti una stella su GitHub",
+    "linkAlgo": "Leggi l'algoritmo",
+    "linkContrib": "Guida ai contributi",
+    "quickStart": "Avvio rapido"
+  },
+  "meta": {
+    "title": "PestoENGINE – Ribilanciamento di portafoglio"
+  },
+  "errors": {
+    "requestFailed": "Richiesta fallita. Il backend è in esecuzione?",
+    "validation": "Errore di validazione: {detail}",
+    "tooManyRequestsRetry": "Troppe richieste. Riprova tra {n} secondi.",
+    "tooManyRequests": "Troppe richieste. Riprova a breve.",
+    "marketData": "Dati di mercato non disponibili. Controlla i ticker o riprova.",
+    "requestFailedRetry": "Richiesta fallita. Riprova.",
+    "io": {
+      "notJson": "Il file non è un JSON valido.",
+      "invalidFile": "File di portafoglio non valido.",
+      "unsupportedVersion": "Versione di export non supportata. Attesa la versione 1.",
+      "missingSettings": "File di portafoglio non valido: impostazioni mancanti.",
+      "assetsNotArray": "File di portafoglio non valido: assets deve essere un array non vuoto.",
+      "invalidIncrement": "File di portafoglio non valido: increment non valido.",
+      "assetMissingTicker": "File di portafoglio non valido: asset {n} senza ticker.",
+      "assetInvalidPercentage": "File di portafoglio non valido: asset {n} desiredPercentage non valido.",
+      "assetInvalidShares": "File di portafoglio non valido: asset {n} shares non valido.",
+      "assetInvalidFees": "File di portafoglio non valido: asset {n} fees non valido.",
+      "assetInvalidPercentageFee": "File di portafoglio non valido: asset {n} percentageFee non valido."
+    }
+  }
+}

@@ -3,6 +3,7 @@
   import { createEventDispatcher, onDestroy } from 'svelte';
   import type { TickerResult } from '../types';
   import { searchTickers } from '../api';
+  import { t } from '../i18n';
 
   export let value: string = '';
   export let id: string = '';
@@ -112,7 +113,7 @@
     autocomplete="off"
     spellcheck="false"
     role="combobox"
-    aria-label="Ticker symbol"
+    aria-label={$t('autocomplete.aria')}
     aria-expanded={open}
     aria-controls={listboxId}
     aria-autocomplete="list"
@@ -121,9 +122,9 @@
   {#if open}
     <ul id={listboxId} class="autocomplete-dropdown" role="listbox">
       {#if rateLimited}
-        <li role="presentation" class="autocomplete-empty">Too many searches. Slow down.</li>
+        <li role="presentation" class="autocomplete-empty">{$t('autocomplete.rateLimited')}</li>
       {:else if searchError}
-        <li role="presentation" class="autocomplete-empty">Search unavailable.</li>
+        <li role="presentation" class="autocomplete-empty">{$t('autocomplete.error')}</li>
       {:else}
         {#each results as result, i (`${result.ticker}:${result.exchange}`)}
           <li
@@ -139,7 +140,7 @@
           </li>
         {/each}
         {#if results.length === 0}
-          <li role="presentation" class="autocomplete-empty">No results</li>
+          <li role="presentation" class="autocomplete-empty">{$t('autocomplete.noResults')}</li>
         {/if}
       {/if}
     </ul>

@@ -23,6 +23,16 @@ export interface Settings {
   fractionalShares: boolean;
 }
 
+/**
+ * A user-facing error that the logic modules emit without committing to a
+ * language. `kind: 'key'` is translated via the i18n dictionary in the
+ * component; `kind: 'raw'` carries an already-human passthrough message from
+ * the backend (which is intentionally not translated).
+ */
+export type UiError =
+  | { kind: 'key'; key: string; params?: Record<string, string | number> }
+  | { kind: 'raw'; text: string };
+
 export interface AssetResultOut {
   id: number;
   ticker: string;

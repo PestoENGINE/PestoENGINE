@@ -1,43 +1,53 @@
+<script lang="ts">
+  import { t } from '../i18n';
+
+  // These two strings embed an inline-code span. We keep the {code} marker
+  // literal in the dictionary and split around it so the span stays in the
+  // static markup (and keeps its scoped CSS), instead of using {@html}.
+  $: buyonlyUseParts = $t('algo.buyonlyUse').split('{code}');
+  $: noteParts = $t('algo.note').split('{code}');
+</script>
+
 <div class="section-divider">
   <div class="content-section">
-    <div class="section-kicker">The algorithm</div>
-    <h2 class="section-headline">Three modes. Named, documented, auditable.</h2>
+    <div class="section-kicker">{$t('algo.kicker')}</div>
+    <h2 class="section-headline">{$t('algo.headline')}</h2>
 
     <div class="table-scroll">
       <table class="algo-table">
         <thead>
           <tr>
-            <th>Mode</th>
-            <th>Complexity</th>
-            <th>Cash deployment</th>
-            <th>Use when</th>
+            <th>{$t('algo.colMode')}</th>
+            <th>{$t('algo.colComplexity')}</th>
+            <th>{$t('algo.colDeployment')}</th>
+            <th>{$t('algo.colUseWhen')}</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>Greedy</td>
+            <td>{$t('algo.greedyName')}</td>
             <td>O(n log n)</td>
-            <td>Good. Allocates by largest allocation gap first. May leave small amounts undeployed.</td>
-            <td>Speed matters; some leftover tolerance is acceptable.</td>
+            <td>{$t('algo.greedyDeploy')}</td>
+            <td>{$t('algo.greedyUse')}</td>
           </tr>
           <tr>
-            <td>Knapsack DP</td>
+            <td>{$t('algo.knapsackName')}</td>
             <td>O(n × W)</td>
-            <td>Maximum. Treats share purchases as items in a bounded knapsack. Minimises leftover change.</td>
-            <td>Cash efficiency matters; minimises leftover change.</td>
+            <td>{$t('algo.knapsackDeploy')}</td>
+            <td>{$t('algo.knapsackUse')}</td>
           </tr>
           <tr>
-            <td>Buy-only</td>
+            <td>{$t('algo.buyonlyName')}</td>
             <td>O(n)</td>
-            <td>Full. Distributes the deployed cash across underweight assets proportionally to their allocation gap; overweight assets are never sold.</td>
-            <td>Adding cash without ever triggering a sale; set <span class="inline-code">only_buy: true</span>.</td>
+            <td>{$t('algo.buyonlyDeploy')}</td>
+            <td>{buyonlyUseParts[0]}<span class="inline-code">only_buy: true</span>{buyonlyUseParts[1] ?? ''}</td>
           </tr>
         </tbody>
       </table>
     </div>
 
     <p class="algo-note">
-      The algorithm is not proprietary. The source is in <span class="inline-code">app/rebalance/rebalance.py</span>. Every formula is readable and every result is verifiable by hand.
+      {noteParts[0]}<span class="inline-code">app/rebalance/rebalance.py</span>{noteParts[1] ?? ''}
     </p>
   </div>
 </div>

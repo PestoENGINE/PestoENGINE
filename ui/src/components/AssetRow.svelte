@@ -3,6 +3,7 @@
   import { createEventDispatcher } from 'svelte';
   import TickerAutocomplete from './TickerAutocomplete.svelte';
   import { inputNumber, inputChecked } from '../util';
+  import { t } from '../i18n';
 
   export let asset: Asset;
 
@@ -27,7 +28,7 @@
       value={asset.desiredPercentage}
       on:change={e => dispatch('update', { desiredPercentage: inputNumber(e) })}
       class="cell-input"
-      aria-label="Target percentage"
+      aria-label={$t('assetRow.targetAria')}
     />
   </td>
   <td>
@@ -38,7 +39,7 @@
       value={asset.shares}
       on:change={e => dispatch('update', { shares: inputNumber(e) })}
       class="cell-input"
-      aria-label="Shares held"
+      aria-label={$t('assetRow.sharesAria')}
     />
   </td>
   <td>
@@ -50,9 +51,9 @@
         value={asset.fees}
         on:change={e => dispatch('update', { fees: inputNumber(e) })}
         class="cell-input"
-        aria-label="Fee"
+        aria-label={$t('assetRow.feeAria')}
       />
-      <label class="fee-toggle" title="Percentage fee">
+      <label class="fee-toggle" title={$t('assetRow.percentageFeeTitle')}>
         <input
           type="checkbox"
           checked={asset.percentageFee}
@@ -68,7 +69,7 @@
         type="button"
         class="remove-btn"
         on:click={() => dispatch('remove')}
-        aria-label="Remove asset"
+        aria-label={$t('assetRow.removeAria')}
       >X</button>
     </div>
   </td>

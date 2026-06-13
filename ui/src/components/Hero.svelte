@@ -1,9 +1,13 @@
+<script lang="ts">
+  import { t } from '../i18n';
+</script>
+
 <div class="hero">
   <div class="hero-bg-text" aria-hidden="true">VAGF<br>VWCE<br>SWDA</div>
   <div class="hero-inner">
-    <div class="hero-kicker">Rebalancing execution engine</div>
-    <h1 class="hero-headline">You know your allocation.<br>Now know exactly what to buy.</h1>
-    <p class="hero-sub">Enter your ETF allocations, current holdings, and monthly cash. PestoENGINE returns the exact number of shares to buy, with your broker's fee structure already priced in.</p>
+    <div class="hero-kicker">{$t('hero.kicker')}</div>
+    <h1 class="hero-headline">{$t('hero.headlineLine1')}<br>{$t('hero.headlineLine2')}</h1>
+    <p class="hero-sub">{$t('hero.sub')}</p>
   </div>
 </div>
 

@@ -4,6 +4,7 @@
   import PercentageIndicator from './PercentageIndicator.svelte';
   import { createEventDispatcher } from 'svelte';
   import { percentagesSumTo100 } from '../util';
+  import { t } from '../i18n';
 
   export let assets: Asset[];
   export let loading: boolean;
@@ -22,16 +23,16 @@
 
 {#if assets.length === 0}
   <div class="assets-empty" role="status">
-    No assets yet - click + Add asset.
+    {$t('portfolio.empty')}
   </div>
 {:else}
   <table class="asset-table">
     <thead>
       <tr>
-        <th>Ticker</th>
-        <th>Target</th>
-        <th>Shares</th>
-        <th>Fee</th>
+        <th>{$t('portfolio.colTicker')}</th>
+        <th>{$t('portfolio.colTarget')}</th>
+        <th>{$t('portfolio.colShares')}</th>
+        <th>{$t('portfolio.colFee')}</th>
         <th></th>
       </tr>
     </thead>
@@ -53,7 +54,7 @@
   on:click={() => dispatch('run')}
   disabled={!canRun}
 >
-  {loading ? 'Calculating…' : 'Calculate buy order'}
+  {loading ? $t('portfolio.calculating') : $t('portfolio.calculate')}
 </button>
 
 <style>

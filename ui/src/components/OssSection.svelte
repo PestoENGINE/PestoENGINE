@@ -1,19 +1,23 @@
+<script lang="ts">
+  import { t } from '../i18n';
+</script>
+
 <div class="oss-section">
   <div class="oss-inner">
     <div>
-      <div class="oss-kicker">Open source</div>
-      <h2 class="oss-headline">A financial tool must be auditable.<br>So the algorithm is public.</h2>
-      <p class="oss-text">PestoENGINE is MIT licensed, self-hostable in two commands, and built on a straightforward stack: FastAPI backend, Svelte frontend, Yahoo Finance for market data. Your portfolio is never stored: requests are computed in memory and discarded, and a self-hosted instance keeps your data entirely on your own machine.</p>
-      <p class="oss-text">This project does one thing well. Contributions that significantly expand the scope will be discussed before implementation.</p>
+      <div class="oss-kicker">{$t('oss.kicker')}</div>
+      <h2 class="oss-headline">{$t('oss.headlineLine1')}<br>{$t('oss.headlineLine2')}</h2>
+      <p class="oss-text">{$t('oss.text1')}</p>
+      <p class="oss-text">{$t('oss.text2')}</p>
       <div class="oss-links">
-        <a class="oss-link" href="https://github.com/PestoENGINE/PestoENGINE" target="_blank" rel="noopener noreferrer">Star on GitHub</a>
-        <a class="oss-link" href="https://github.com/PestoENGINE/PestoENGINE/blob/master/app/rebalance/rebalance.py" target="_blank" rel="noopener noreferrer">Read the algorithm</a>
-        <a class="oss-link" href="https://github.com/PestoENGINE/PestoENGINE/blob/master/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing guide</a>
+        <a class="oss-link" href="https://github.com/PestoENGINE/PestoENGINE" target="_blank" rel="noopener noreferrer">{$t('oss.linkStar')}</a>
+        <a class="oss-link" href="https://github.com/PestoENGINE/PestoENGINE/blob/master/app/rebalance/rebalance.py" target="_blank" rel="noopener noreferrer">{$t('oss.linkAlgo')}</a>
+        <a class="oss-link" href="https://github.com/PestoENGINE/PestoENGINE/blob/master/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">{$t('oss.linkContrib')}</a>
       </div>
     </div>
     <div>
       <div class="quickstart">
-        <div class="qs-header">Quick start</div>
+        <div class="qs-header">{$t('oss.quickStart')}</div>
         <div class="qs-body">
           <span class="qs-line"><span class="qs-prompt">$</span><span class="qs-cmd">docker run -d \</span></span>
           <span class="qs-line"><span class="qs-cmd">{'   '}--name pestoengine \</span></span>

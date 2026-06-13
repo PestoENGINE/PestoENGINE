@@ -1,0 +1,149 @@
+{
+  "nav": {
+    "import": "Import",
+    "export": "Export",
+    "toLightMode": "Switch to light mode",
+    "toDarkMode": "Switch to dark mode",
+    "languageAria": "Language"
+  },
+  "hero": {
+    "kicker": "Rebalancing execution engine",
+    "headlineLine1": "You know your allocation.",
+    "headlineLine2": "Now know exactly what to buy.",
+    "sub": "Enter your ETF allocations, current holdings, and monthly cash. PestoENGINE returns the exact number of shares to buy, with your broker's fee structure already priced in."
+  },
+  "panel": {
+    "settings": "Settings",
+    "assets": "Assets"
+  },
+  "assets": {
+    "add": "+ Add asset"
+  },
+  "footer": {
+    "brand": "PestoENGINE – Portfolio Rebalancing",
+    "github": "GitHub",
+    "license": "MIT License",
+    "noAnalytics": "No analytics"
+  },
+  "import": {
+    "confirm": "This will replace your current portfolio.{note} Continue?",
+    "sumNote": " (Note: percentages do not sum to 100. Fix before running.)"
+  },
+  "settings": {
+    "cashToDeploy": "Cash to deploy",
+    "onlyBuy": "Only buy",
+    "onlyBuyHint": "Never sell existing positions",
+    "fractional": "Fractional shares",
+    "fractionalHint": "Buy exact fractional quantities",
+    "optimal": "Optimal redistribute",
+    "optimalHint": "Knapsack DP, minimise leftover cash",
+    "optimalHintDisabled": "Not used with fractional shares"
+  },
+  "portfolio": {
+    "empty": "No assets yet - click + Add asset.",
+    "colTicker": "Ticker",
+    "colTarget": "Target",
+    "colShares": "Shares",
+    "colFee": "Fee",
+    "calculating": "Calculating…",
+    "calculate": "Calculate buy order"
+  },
+  "percentage": {
+    "total": "Allocation total"
+  },
+  "assetRow": {
+    "targetAria": "Target percentage",
+    "sharesAria": "Shares held",
+    "feeAria": "Fee",
+    "percentageFeeTitle": "Percentage fee",
+    "removeAria": "Remove asset"
+  },
+  "autocomplete": {
+    "aria": "Ticker symbol",
+    "rateLimited": "Too many searches. Slow down.",
+    "error": "Search unavailable.",
+    "noResults": "No results"
+  },
+  "results": {
+    "title": "Result",
+    "badgeOnlyBuy": "Only buy",
+    "badgeKnapsack": "Knapsack DP",
+    "colTicker": "Ticker",
+    "colBuy": "Buy",
+    "colResult": "Result",
+    "allocated": "Allocated",
+    "totalFees": "Total fees",
+    "change": "Change",
+    "empty": "Run the calculator to see results."
+  },
+  "trust": {
+    "openSource": "Open source, MIT licensed",
+    "noData": "No accounts, no data stored",
+    "selfHost": "Self-hostable",
+    "documented": "Algorithm is documented"
+  },
+  "howItWorks": {
+    "kicker": "How it works",
+    "headline": "Three inputs. One deterministic result.",
+    "step1Title": "Set your target allocation",
+    "step1Text": "Enter each ETF ticker, your target weight, current share count, and your broker's fee. PestoENGINE fetches live prices from Yahoo Finance at calculation time, cached for 5 minutes.",
+    "step2Title": "Drop in your monthly cash",
+    "step2Text": "Enter the cash you want to deploy this period. Enable buy-only mode (default) to ensure PestoENGINE never triggers a sale. Enable knapsack mode to maximise cash deployment. Set cash to 0 (with buy-only disabled) to rebalance without adding new capital.",
+    "step3Title": "Get the exact buy order",
+    "step3Text": "PestoENGINE returns the exact number of shares to buy per asset, with fees already priced in, allocation drift shown, and leftover change made explicit. Same inputs always produce the same output.",
+    "codeHeader": "Request: POST /v1/rebalance"
+  },
+  "algo": {
+    "kicker": "The algorithm",
+    "headline": "Three modes. Named, documented, auditable.",
+    "colMode": "Mode",
+    "colComplexity": "Complexity",
+    "colDeployment": "Cash deployment",
+    "colUseWhen": "Use when",
+    "greedyName": "Greedy",
+    "greedyDeploy": "Good. Allocates by largest allocation gap first. May leave small amounts undeployed.",
+    "greedyUse": "Speed matters; some leftover tolerance is acceptable.",
+    "knapsackName": "Knapsack DP",
+    "knapsackDeploy": "Maximum. Treats share purchases as items in a bounded knapsack. Minimises leftover change.",
+    "knapsackUse": "Cash efficiency matters; minimises leftover change.",
+    "buyonlyName": "Buy-only",
+    "buyonlyDeploy": "Full. Distributes the deployed cash across underweight assets proportionally to their allocation gap; overweight assets are never sold.",
+    "buyonlyUse": "Adding cash without ever triggering a sale; set {code}.",
+    "note": "The algorithm is not proprietary. The source is in {code}. Every formula is readable and every result is verifiable by hand."
+  },
+  "oss": {
+    "kicker": "Open source",
+    "headlineLine1": "A financial tool must be auditable.",
+    "headlineLine2": "So the algorithm is public.",
+    "text1": "PestoENGINE is MIT licensed, self-hostable in two commands, and built on a straightforward stack: FastAPI backend, Svelte frontend, Yahoo Finance for market data. Your portfolio is never stored: requests are computed in memory and discarded, and a self-hosted instance keeps your data entirely on your own machine.",
+    "text2": "This project does one thing well. Contributions that significantly expand the scope will be discussed before implementation.",
+    "linkStar": "Star on GitHub",
+    "linkAlgo": "Read the algorithm",
+    "linkContrib": "Contributing guide",
+    "quickStart": "Quick start"
+  },
+  "meta": {
+    "title": "PestoENGINE – Portfolio Rebalancing"
+  },
+  "errors": {
+    "requestFailed": "Request failed. Is the backend running?",
+    "validation": "Validation error: {detail}",
+    "tooManyRequestsRetry": "Too many requests. Try again in {n} seconds.",
+    "tooManyRequests": "Too many requests. Try again shortly.",
+    "marketData": "Market data unavailable. Check ticker symbols or try again.",
+    "requestFailedRetry": "Request failed. Try again.",
+    "io": {
+      "notJson": "File is not valid JSON.",
+      "invalidFile": "Invalid portfolio file.",
+      "unsupportedVersion": "Unsupported export version. Expected version 1.",
+      "missingSettings": "Invalid portfolio file: missing settings.",
+      "assetsNotArray": "Invalid portfolio file: assets must be a non-empty array.",
+      "invalidIncrement": "Invalid portfolio file: invalid increment.",
+      "assetMissingTicker": "Invalid portfolio file: asset {n} missing ticker.",
+      "assetInvalidPercentage": "Invalid portfolio file: asset {n} invalid desiredPercentage.",
+      "assetInvalidShares": "Invalid portfolio file: asset {n} invalid shares.",
+      "assetInvalidFees": "Invalid portfolio file: asset {n} invalid fees.",
+      "assetInvalidPercentageFee": "Invalid portfolio file: asset {n} invalid percentageFee."
+    }
+  }
+}

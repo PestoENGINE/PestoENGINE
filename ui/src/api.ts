@@ -1,4 +1,4 @@
-import type { Asset, Settings, RebalanceResponse, TickerResult } from './types';
+import type { Asset, Settings, RebalanceResponse, TickerResult, UiError } from './types';
 
 export interface RebalanceBody {
   only_buy: boolean;
@@ -34,39 +34,40 @@ export function buildRebalanceBody(settings: Settings, assets: Asset[]): Rebalan
 }
 
 /**
- * Maps a non-ok rebalance Response to a user-facing error string.
- * May reject if a 422 body is not valid JSON; callers treat that like a
- * network failure, matching the original inline behavior.
+ * Maps a non-ok rebalance Response to a language-agnostic UiError.
+ * `kind: 'key'` is translated in the component; `kind: 'raw'` is a passthrough
+ * of the backend's own message (not translated). May reject if a 422 body is
+ * not valid JSON; callers treat that like a network failure, matching the
+ * original inline behavior.
  */
-export async function rebalanceErrorMessage(res: Response): Promise<string> {
+export async function rebalanceError(res: Response): Promise<UiError> {
   if (res.status === 422) {
     const data = await res.json();
-    const msgs = Array.isArray(data.detail)
+    const detail = Array.isArray(data.detail)
       ? data.detail.map((d: { msg?: string }) => d.msg || JSON.stringify(d)).join('; ')
       : typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
-    return `Validation error: ${msgs}`;
+    return { kind: 'key', key: 'errors.validation', params: { detail } };
   }
   if (res.status === 429) {
     const data = await res.json().catch(() => ({}));
+    if (typeof data.detail === 'string') return { kind: 'raw', text: data.detail };
     const retryAfter = res.headers.get('retry-after');
-    return typeof data.detail === 'string'
-      ? data.detail
-      : retryAfter
-        ? `Too many requests. Try again in ${retryAfter} seconds.`
-        : 'Too many requests. Try again shortly.';
+    return retryAfter
+      ? { kind: 'key', key: 'errors.tooManyRequestsRetry', params: { n: retryAfter } }
+      : { kind: 'key', key: 'errors.tooManyRequests' };
   }
   if (res.status === 502) {
     const data = await res.json().catch(() => ({}));
     return typeof data.detail === 'string'
-      ? data.detail
-      : 'Market data unavailable. Check ticker symbols or try again.';
+      ? { kind: 'raw', text: data.detail }
+      : { kind: 'key', key: 'errors.marketData' };
   }
-  return 'Request failed. Try again.';
+  return { kind: 'key', key: 'errors.requestFailedRetry' };
 }
 
 export type RebalanceOutcome =
   | { ok: true; data: RebalanceResponse }
-  | { ok: false; error: string };
+  | { ok: false; error: UiError };
 
 /**
  * Sends the rebalance request and returns a discriminated outcome.
@@ -86,7 +87,7 @@ export async function runRebalance(
   if (res.ok) {
     return { ok: true, data: await res.json() as RebalanceResponse };
   }
-  return { ok: false, error: await rebalanceErrorMessage(res) };
+  return { ok: false, error: await rebalanceError(res) };
 }
 
 export type TickerSearchOutcome =

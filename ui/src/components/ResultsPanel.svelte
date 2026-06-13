@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { RebalanceResponse, Settings } from '../types';
   import AssetResult from './AssetResult.svelte';
+  import { t } from '../i18n';
 
   export let result: RebalanceResponse | null;
   export let settings: Settings;
@@ -12,11 +13,11 @@
 
 <div class="panel result-panel" id="results">
   <div class="panel-head">
-    <span class="panel-title">Result</span>
+    <span class="panel-title">{$t('results.title')}</span>
     {#if result}
       <div class="results-badges">
-        {#if settings.onlyBuy}<span class="solver-badge">Only buy</span>{/if}
-        {#if settings.optimalRedistribute}<span class="solver-badge">Knapsack DP</span>{/if}
+        {#if settings.onlyBuy}<span class="solver-badge">{$t('results.badgeOnlyBuy')}</span>{/if}
+        {#if settings.optimalRedistribute}<span class="solver-badge">{$t('results.badgeKnapsack')}</span>{/if}
       </div>
     {/if}
   </div>
@@ -25,9 +26,9 @@
     {#if result}
       <div class="result-list">
         <div class="result-list-head">
-          <span>Ticker</span>
-          <span>Buy</span>
-          <span>Result</span>
+          <span>{$t('results.colTicker')}</span>
+          <span>{$t('results.colBuy')}</span>
+          <span>{$t('results.colResult')}</span>
         </div>
         {#each result.results as asset (asset.id)}
           <AssetResult {asset} />
@@ -36,20 +37,20 @@
 
       <div class="results-summary">
         <div>
-          <div class="stat-label">Allocated</div>
+          <div class="stat-label">{$t('results.allocated')}</div>
           <div class="stat-val">{totalAllocated.toFixed(2)}</div>
         </div>
         <div>
-          <div class="stat-label">Total fees</div>
+          <div class="stat-label">{$t('results.totalFees')}</div>
           <div class="stat-val">{result.total_fees.toFixed(2)}</div>
         </div>
         <div>
-          <div class="stat-label">Change</div>
+          <div class="stat-label">{$t('results.change')}</div>
           <div class="stat-val">{result.change.toFixed(2)}</div>
         </div>
       </div>
     {:else}
-      <div class="result-empty">Run the calculator to see results.</div>
+      <div class="result-empty">{$t('results.empty')}</div>
     {/if}
   </div>
 </div>

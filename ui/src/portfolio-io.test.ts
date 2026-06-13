@@ -55,34 +55,34 @@ describe('parsePortfolio', () => {
   });
 
   it('rejects non-JSON input', () => {
-    expect(parsePortfolio('{nope')).toEqual({ ok: false, error: 'File is not valid JSON.' });
+    expect(parsePortfolio('{nope')).toEqual({ ok: false, error: { kind: 'key', key: 'errors.io.notJson' } });
   });
 
   it('rejects a non-object payload', () => {
-    expect(parsePortfolio('42')).toEqual({ ok: false, error: 'Invalid portfolio file.' });
+    expect(parsePortfolio('42')).toEqual({ ok: false, error: { kind: 'key', key: 'errors.io.invalidFile' } });
   });
 
   it('rejects an unsupported version', () => {
     expect(parsePortfolio(fileWith({ version: 2 }))).toEqual({
-      ok: false, error: 'Unsupported export version. Expected version 1.',
+      ok: false, error: { kind: 'key', key: 'errors.io.unsupportedVersion' },
     });
   });
 
   it('rejects missing settings', () => {
     expect(parsePortfolio(fileWith({ settings: null }))).toEqual({
-      ok: false, error: 'Invalid portfolio file: missing settings.',
+      ok: false, error: { kind: 'key', key: 'errors.io.missingSettings' },
     });
   });
 
   it('rejects an empty assets array', () => {
     expect(parsePortfolio(fileWith({ assets: [] }))).toEqual({
-      ok: false, error: 'Invalid portfolio file: assets must be a non-empty array.',
+      ok: false, error: { kind: 'key', key: 'errors.io.assetsNotArray' },
     });
   });
 
   it('rejects an invalid increment', () => {
     expect(parsePortfolio(fileWith({ settings: { increment: -1 } }))).toEqual({
-      ok: false, error: 'Invalid portfolio file: invalid increment.',
+      ok: false, error: { kind: 'key', key: 'errors.io.invalidIncrement' },
     });
   });
 
@@ -93,21 +93,21 @@ describe('parsePortfolio', () => {
         { ticker: 123, provider: null, desiredPercentage: 50, shares: 0, fees: 0, percentageFee: false },
       ],
     }));
-    expect(r).toEqual({ ok: false, error: 'Invalid portfolio file: asset 2 missing ticker.' });
+    expect(r).toEqual({ ok: false, error: { kind: 'key', key: 'errors.io.assetMissingTicker', params: { n: 2 } } });
   });
 
   it('rejects negative shares', () => {
     const r = parsePortfolio(fileWith({
       assets: [{ ticker: 'VOO', provider: null, desiredPercentage: 100, shares: -3, fees: 0, percentageFee: false }],
     }));
-    expect(r).toEqual({ ok: false, error: 'Invalid portfolio file: asset 1 invalid shares.' });
+    expect(r).toEqual({ ok: false, error: { kind: 'key', key: 'errors.io.assetInvalidShares', params: { n: 1 } } });
   });
 
   it('rejects a non-boolean percentageFee', () => {
     const r = parsePortfolio(fileWith({
       assets: [{ ticker: 'VOO', provider: null, desiredPercentage: 100, shares: 0, fees: 0, percentageFee: 'yes' }],
     }));
-    expect(r).toEqual({ ok: false, error: 'Invalid portfolio file: asset 1 invalid percentageFee.' });
+    expect(r).toEqual({ ok: false, error: { kind: 'key', key: 'errors.io.assetInvalidPercentageFee', params: { n: 1 } } });
   });
 });
 

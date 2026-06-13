@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildRebalanceBody, rebalanceErrorMessage, runRebalance, searchTickers } from './api';
+import { buildRebalanceBody, rebalanceError, runRebalance, searchTickers } from './api';
 import type { Asset, Settings, RebalanceResponse } from './types';
 
 const settings: Settings = { increment: 1000, onlyBuy: true, optimalRedistribute: false, fractionalShares: false };
@@ -33,45 +33,45 @@ describe('buildRebalanceBody', () => {
   });
 });
 
-describe('rebalanceErrorMessage', () => {
-  it('joins a 422 array detail', async () => {
+describe('rebalanceError', () => {
+  it('joins a 422 array detail into the validation key', async () => {
     const res = jsonResponse({ detail: [{ msg: 'too low' }, { msg: 'too high' }] }, { status: 422 });
-    expect(await rebalanceErrorMessage(res)).toBe('Validation error: too low; too high');
+    expect(await rebalanceError(res)).toEqual({ kind: 'key', key: 'errors.validation', params: { detail: 'too low; too high' } });
   });
 
-  it('passes through a 422 string detail', async () => {
+  it('passes a 422 string detail through the validation key', async () => {
     const res = jsonResponse({ detail: 'bad input' }, { status: 422 });
-    expect(await rebalanceErrorMessage(res)).toBe('Validation error: bad input');
+    expect(await rebalanceError(res)).toEqual({ kind: 'key', key: 'errors.validation', params: { detail: 'bad input' } });
   });
 
   it('uses the retry-after header on 429', async () => {
     const res = jsonResponse({}, { status: 429, headers: { 'retry-after': '30' } });
-    expect(await rebalanceErrorMessage(res)).toBe('Too many requests. Try again in 30 seconds.');
+    expect(await rebalanceError(res)).toEqual({ kind: 'key', key: 'errors.tooManyRequestsRetry', params: { n: '30' } });
   });
 
-  it('falls back to a generic message on 429 without retry-after', async () => {
+  it('falls back to a generic key on 429 without retry-after', async () => {
     const res = jsonResponse({}, { status: 429 });
-    expect(await rebalanceErrorMessage(res)).toBe('Too many requests. Try again shortly.');
+    expect(await rebalanceError(res)).toEqual({ kind: 'key', key: 'errors.tooManyRequests' });
   });
 
-  it('prefers a string detail on 429', async () => {
+  it('passes a 429 string detail through as raw (backend message)', async () => {
     const res = jsonResponse({ detail: 'slow down' }, { status: 429 });
-    expect(await rebalanceErrorMessage(res)).toBe('slow down');
+    expect(await rebalanceError(res)).toEqual({ kind: 'raw', text: 'slow down' });
   });
 
-  it('maps 502 to the market-data message', async () => {
+  it('maps 502 to the market-data key', async () => {
     const res = jsonResponse({}, { status: 502 });
-    expect(await rebalanceErrorMessage(res)).toBe('Market data unavailable. Check ticker symbols or try again.');
+    expect(await rebalanceError(res)).toEqual({ kind: 'key', key: 'errors.marketData' });
   });
 
-  it('passes through a 502 string detail', async () => {
+  it('passes a 502 string detail through as raw (backend message)', async () => {
     const res = jsonResponse({ detail: 'Yahoo down' }, { status: 502 });
-    expect(await rebalanceErrorMessage(res)).toBe('Yahoo down');
+    expect(await rebalanceError(res)).toEqual({ kind: 'raw', text: 'Yahoo down' });
   });
 
-  it('maps any other status to a generic failure', async () => {
+  it('maps any other status to the generic retry key', async () => {
     const res = jsonResponse({}, { status: 500 });
-    expect(await rebalanceErrorMessage(res)).toBe('Request failed. Try again.');
+    expect(await rebalanceError(res)).toEqual({ kind: 'key', key: 'errors.requestFailedRetry' });
   });
 });
 
@@ -87,7 +87,7 @@ describe('runRebalance', () => {
   it('returns a mapped error on a non-ok status', async () => {
     const fetchFn = async () => jsonResponse({ detail: 'bad input' }, { status: 422 });
     const r = await runRebalance(settings, assets, fetchFn as typeof fetch);
-    expect(r).toEqual({ ok: false, error: 'Validation error: bad input' });
+    expect(r).toEqual({ ok: false, error: { kind: 'key', key: 'errors.validation', params: { detail: 'bad input' } } });
   });
 
   it('propagates a network failure', async () => {

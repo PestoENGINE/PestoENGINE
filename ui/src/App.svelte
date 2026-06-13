@@ -1,11 +1,12 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
-  import type { Asset, Settings, RebalanceResponse } from './types';
+  import type { Asset, Settings, RebalanceResponse, UiError } from './types';
   import {
     loadSettings, loadAssets, loadDarkMode,
     saveSettings, saveAssets, saveDarkMode,
     DEFAULT_SETTINGS,
   } from './storage';
+  import { t, tx } from './i18n';
 
   import Header from './components/Header.svelte';
   import Hero from './components/Hero.svelte';
@@ -25,11 +26,14 @@
   let assets: Asset[] = [];
   let lastResult: RebalanceResponse | null = null;
   let resultSettings: Settings = DEFAULT_SETTINGS;
-  let error: string | null = null;
+  let error: UiError | null = null;
   let loading = false;
   let dark = false;
 
   let fileInput: HTMLInputElement;
+
+  // Keep the document title in sync with the active language.
+  $: document.title = $t('meta.title');
 
   onMount(() => {
     settings = loadSettings();
@@ -74,7 +78,7 @@
         error = r.error;
       }
     } catch {
-      error = 'Request failed. Is the backend running?';
+      error = { kind: 'key', key: 'errors.requestFailed' };
     } finally {
       loading = false;
     }
@@ -117,10 +121,8 @@
       return;
     }
 
-    const note = result.sumWarning
-      ? ' (Note: percentages do not sum to 100. Fix before running.)'
-      : '';
-    if (!confirm(`This will replace your current portfolio.${note} Continue?`)) return;
+    const note = result.sumWarning ? tx('import.sumNote') : '';
+    if (!confirm(tx('import.confirm', { note }))) return;
 
     settings = result.settings;
     assets = result.assets;
@@ -152,7 +154,7 @@
 
 <div class="tool-section">
   {#if error}
-    <div class="error-box" role="alert">{error}</div>
+    <div class="error-box" role="alert">{error.kind === 'key' ? $t(error.key, error.params) : error.text}</div>
   {/if}
 
   <div class="tool-grid">
@@ -160,7 +162,7 @@
     <!-- Settings panel -->
     <div class="panel">
       <div class="panel-head">
-        <span class="panel-title">Settings</span>
+        <span class="panel-title">{$t('panel.settings')}</span>
       </div>
       <div class="panel-body">
         <GlobalSettings
@@ -176,8 +178,8 @@
     <!-- Assets panel -->
     <div class="panel">
       <div class="panel-head">
-        <span class="panel-title">Assets</span>
-        <button type="button" class="add-asset-btn" on:click={addAsset}>+ Add asset</button>
+        <span class="panel-title">{$t('panel.assets')}</span>
+        <button type="button" class="add-asset-btn" on:click={addAsset}>{$t('assets.add')}</button>
       </div>
       <div class="panel-body tight">
         <PortfolioEditor
@@ -202,13 +204,13 @@
 <OssSection />
 
 <footer>
-  <span>PestoENGINE – Portfolio Rebalancing</span>
+  <span>{$t('footer.brand')}</span>
   <div class="footer-links">
-    <a href="https://github.com/PestoENGINE/PestoENGINE" target="_blank" rel="noopener noreferrer">GitHub</a>
+    <a href="https://github.com/PestoENGINE/PestoENGINE" target="_blank" rel="noopener noreferrer">{$t('footer.github')}</a>
     <span class="footer-sep">·</span>
-    <span>MIT License</span>
+    <span>{$t('footer.license')}</span>
     <span class="footer-sep">·</span>
-    <span>No analytics</span>
+    <span>{$t('footer.noAnalytics')}</span>
   </div>
 </footer>
 
