@@ -34,7 +34,9 @@ class YahooTickerSearchProvider(AbstractTickerSearchProvider):
             results.append({
                 "symbol": item["symbol"],
                 "name": f"{self.LABEL} · {name}",
-                "exchange": item.get("exchange", ""),
+                # Human-readable market label (e.g. "XETRA", "Milan", "NASDAQ").
+                # exchDisp is the display name; fall back to the raw code.
+                "exchange": item.get("exchDisp") or item.get("exchange", ""),
                 "type": qt,
                 "provider": "yahoo",
             })

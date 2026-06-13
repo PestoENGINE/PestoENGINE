@@ -53,6 +53,8 @@ class AlphaVantageSearchProvider(AbstractTickerSearchProvider):
             results.append({
                 "symbol": m["1. symbol"],
                 "name": f"{self.LABEL} · {m['2. name']}",
+                # Market label: AV exposes no exchange display name, so the region
+                # is the closest human-readable value (e.g. "United States").
                 "exchange": m.get("4. region", ""),
                 "type": mapped_type,
                 "provider": "alphavantage",

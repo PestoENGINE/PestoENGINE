@@ -17,13 +17,33 @@ def _resp(quotes: list) -> MagicMock:
 @patch("app.market_data.yahoo_search_provider.httpx.get")
 def test_normalizes_output_fields(mock_get):
     mock_get.return_value = _resp([
-        {"symbol": "AAPL", "shortname": "Apple Inc.", "exchange": "NMS", "quoteType": "EQUITY"},
+        {"symbol": "AAPL", "shortname": "Apple Inc.", "exchange": "NMS",
+         "exchDisp": "NASDAQ", "quoteType": "EQUITY"},
     ])
     provider = YahooTickerSearchProvider()
     results = provider.search("AAPL")
     assert results == [
-        {"symbol": "AAPL", "name": "YF · Apple Inc.", "exchange": "NMS", "type": "EQUITY", "provider": "yahoo"},
+        {"symbol": "AAPL", "name": "YF · Apple Inc.", "exchange": "NASDAQ", "type": "EQUITY", "provider": "yahoo"},
     ]
+
+
+@patch("app.market_data.yahoo_search_provider.httpx.get")
+def test_exchange_prefers_display_name(mock_get):
+    mock_get.return_value = _resp([
+        {"symbol": "VWCE.DE", "shortname": "Vanguard FTSE All-World", "exchange": "GER",
+         "exchDisp": "XETRA", "quoteType": "ETF"},
+    ])
+    provider = YahooTickerSearchProvider()
+    assert provider.search("VWCE")[0]["exchange"] == "XETRA"
+
+
+@patch("app.market_data.yahoo_search_provider.httpx.get")
+def test_exchange_falls_back_to_code_without_display_name(mock_get):
+    mock_get.return_value = _resp([
+        {"symbol": "AAPL", "shortname": "Apple Inc.", "exchange": "NMS", "quoteType": "EQUITY"},
+    ])
+    provider = YahooTickerSearchProvider()
+    assert provider.search("AAPL")[0]["exchange"] == "NMS"
 
 
 @patch("app.market_data.yahoo_search_provider.httpx.get")

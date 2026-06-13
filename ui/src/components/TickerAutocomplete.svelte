@@ -136,7 +136,7 @@
             class:active={activeIndex === i}
           >
             <span class="autocomplete-ticker">{result.ticker}</span>
-            <span class="autocomplete-name">{result.name}</span>
+            <span class="autocomplete-name">{result.name}{#if result.exchange}{' · '}{result.exchange}{/if}</span>
           </li>
         {/each}
         {#if results.length === 0}

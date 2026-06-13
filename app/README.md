@@ -135,7 +135,7 @@ Query parameters: `q` (string, min length 2). Calls all configured search provid
 }
 ```
 
-`type` is one of: `EQUITY`, `ETF`, `MUTUALFUND`, `CRYPTOCURRENCY`, `CURRENCY`. Indices, futures, and options are filtered out. `name` is prefixed with a provider label (`YF · ...`, `AV · ...`). `provider` round-trips to `POST /v1/rebalance`.
+`type` is one of: `EQUITY`, `ETF`, `MUTUALFUND`, `CRYPTOCURRENCY`, `CURRENCY`. Indices, futures, and options are filtered out. `name` is prefixed with a provider label (`YF · ...`, `AV · ...`). `exchange` is a human-readable market label (Yahoo's exchange display name such as `XETRA`/`Milan`/`NASDAQ`, falling back to its code; Alpha Vantage's region). `provider` round-trips to `POST /v1/rebalance`.
 
 Errors:
 
