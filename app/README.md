@@ -61,8 +61,8 @@ HTTP request
                        → raw provider (httpx)
                        → set cache
       → calculate_rebalance()                            (pure math; only_buy switches gap redistribution vs. full rebalance)
-      → _apply_fee() per asset → buy_quantities (floor div by ticker_price)
-      → redistribute_change() | redistribute_change_optimal()    (knapsack DP when optimal_redistribute=true)
+      → _apply_fee() per asset → buy_quantities (floor div by ticker_price, or exact 6-dp fraction when fractional_shares=true)
+      → redistribute_change() | redistribute_change_optimal()    (knapsack DP when optimal_redistribute=true; skipped when fractional_shares=true)
       → second pass: recompute percentage fees + change on final quantities
       → RebalanceResponse
 ```
@@ -78,6 +78,7 @@ Request:
   "only_buy": true,
   "increment": 1000,
   "optimal_redistribute": false,
+  "fractional_shares": false,
   "assets": [
     {"ticker": "VWCE.DE", "provider": null, "desired_percentage": 60, "shares": 10, "fees": 0.5, "percentage_fee": true},
     {"ticker": "VAGF.DE", "provider": null, "desired_percentage": 40, "shares": 5,  "fees": 1.5, "percentage_fee": false}
@@ -90,6 +91,7 @@ Request:
 | `only_buy` | bool | When `true`, never sell; distribute the increment among underweight assets only |
 | `increment` | float ≥0 | Cash to deploy this period |
 | `optimal_redistribute` | bool (default `false`) | Use knapsack DP for the leftover-change step |
+| `fractional_shares` | bool (default `false`) | Buy exact fractional quantities (6 dp) instead of whole shares; each asset lands on its target and the leftover-change step is skipped |
 | `assets[].ticker` | string (non-empty) | Symbol recognized by the chosen provider |
 | `assets[].provider` | string \| null | `"yahoo"` / `"alphavantage"` for direct routing; `null` to use the fallback chain |
 | `assets[].desired_percentage` | float 0..100 | All assets must sum to exactly `100` |
@@ -103,14 +105,17 @@ Response (`200 OK`):
 {
   "results": [
     {"id": 0, "ticker": "VWCE.DE", "current_percentage": 37.45, "desired_percentage": 60.0,
-     "shares": 10, "allocated": 594.05, "ticker_price": 118.42, "fees": 2.97, "buy": 5},
+     "shares": 10, "allocated": 594.05, "ticker_price": 118.42, "fees": 2.97, "buy": 5.0},
     {"id": 1, "ticker": "VAGF.DE", "current_percentage": 62.55, "desired_percentage": 40.0,
-     "shares": 5, "allocated": 398.5, "ticker_price": 23.18, "fees": 1.5, "buy": 17}
+     "shares": 5, "allocated": 398.5, "ticker_price": 23.18, "fees": 1.5, "buy": 17.0}
   ],
   "total_fees": 4.47,
   "change": 6.52
 }
 ```
+
+`buy` is a float: an integer-valued share count in whole-share mode (`5.0`), or a
+fractional quantity truncated to 6 decimals when `fractional_shares=true`.
 
 Errors:
 

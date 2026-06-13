@@ -15,6 +15,16 @@ export function inputChecked(e: Event): boolean {
   return (e.target as HTMLInputElement).checked;
 }
 
+/**
+ * Formats a buy quantity for display. Whole numbers render plainly ("5"),
+ * fractional quantities up to 6 decimals with trailing zeros trimmed ("3.5").
+ * Mirrors the backend's 6-dp fractional-share precision (app/schemas/result.py).
+ */
+export function formatShares(qty: number): string {
+  if (Number.isInteger(qty)) return String(qty);
+  return parseFloat(qty.toFixed(6)).toString();
+}
+
 /** RFC 4122 v4 id, using the platform crypto when available. */
 export function uuid(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {

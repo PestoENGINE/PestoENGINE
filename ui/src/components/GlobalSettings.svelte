@@ -6,6 +6,7 @@
   export let increment: number;
   export let onlyBuy: boolean;
   export let optimalRedistribute: boolean;
+  export let fractionalShares: boolean;
 
   const dispatch = createEventDispatcher<{ update: Partial<Settings> }>();
 </script>
@@ -35,15 +36,30 @@
   </div>
 </label>
 
-<label class="check-row flush">
+<label class="check-row">
+  <input
+    type="checkbox"
+    checked={fractionalShares}
+    on:change={e => dispatch('update', { fractionalShares: inputChecked(e) })}
+  />
+  <div>
+    <div class="check-text">Fractional shares</div>
+    <div class="check-hint">Buy exact fractional quantities</div>
+  </div>
+</label>
+
+<label class="check-row flush" class:disabled={fractionalShares}>
   <input
     type="checkbox"
     checked={optimalRedistribute}
+    disabled={fractionalShares}
     on:change={e => dispatch('update', { optimalRedistribute: inputChecked(e) })}
   />
   <div>
     <div class="check-text">Optimal redistribute</div>
-    <div class="check-hint">Knapsack DP, minimise leftover cash</div>
+    <div class="check-hint">
+      {fractionalShares ? 'Not used with fractional shares' : 'Knapsack DP, minimise leftover cash'}
+    </div>
   </div>
 </label>
 
@@ -67,6 +83,8 @@
     cursor: pointer;
   }
   .check-row.flush { margin-bottom: 0; }
+  .check-row.disabled { opacity: 0.5; cursor: default; }
+  .check-row.disabled input[type='checkbox'] { cursor: default; }
   .check-text { font-size: 0.9375rem; font-weight: 500; }
   .check-hint { font-size: 0.75rem; color: var(--text-3); margin-top: 0.1rem; }
 </style>

@@ -24,6 +24,7 @@ class RebalanceRequest(BaseModel):
     only_buy: bool
     increment: float = Field(ge=0)
     optimal_redistribute: bool = False
+    fractional_shares: bool = False
     assets: list[AssetIn] = Field(min_length=1)
 
     @model_validator(mode="after")

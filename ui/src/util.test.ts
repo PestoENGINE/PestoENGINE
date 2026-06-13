@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { inputNumber, inputChecked, percentagesSumTo100, uuid } from './util';
+import { inputNumber, inputChecked, percentagesSumTo100, formatShares, uuid } from './util';
 
 function inputEvent(props: { value?: string; checked?: boolean }): Event {
   return { target: props } as unknown as Event;
@@ -48,6 +48,22 @@ describe('percentagesSumTo100', () => {
 
   it('rejects a plainly wrong sum', () => {
     expect(percentagesSumTo100(98.5)).toBe(false);
+  });
+});
+
+describe('formatShares', () => {
+  it('shows a whole quantity without decimals', () => {
+    expect(formatShares(5)).toBe('5');
+  });
+
+  it('shows a fractional quantity up to 6 dp, trimming trailing zeros', () => {
+    expect(formatShares(3.333333)).toBe('3.333333');
+    expect(formatShares(3.5)).toBe('3.5');
+  });
+
+  it('handles negative sell quantities', () => {
+    expect(formatShares(-3.5)).toBe('-3.5');
+    expect(formatShares(-4)).toBe('-4');
   });
 });
 

@@ -20,7 +20,7 @@ describe('parsePortfolio', () => {
     const r = parsePortfolio(fileWith());
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.settings).toEqual({ increment: 1000, onlyBuy: true, optimalRedistribute: false });
+    expect(r.settings).toEqual({ increment: 1000, onlyBuy: true, optimalRedistribute: false, fractionalShares: false });
     expect(r.assets).toHaveLength(2);
     expect(r.assets[0]).toMatchObject({ ticker: 'VOO', desiredPercentage: 60, shares: 10, fees: 0.5, percentageFee: true });
     expect(typeof r.assets[0].id).toBe('string');
@@ -29,11 +29,20 @@ describe('parsePortfolio', () => {
     expect(r.sumWarning).toBe(false);
   });
 
-  it('defaults onlyBuy/optimalRedistribute when missing', () => {
+  it('defaults onlyBuy/optimalRedistribute/fractionalShares when missing', () => {
     const r = parsePortfolio(fileWith({ settings: { increment: 500 } }));
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.settings).toEqual({ increment: 500, onlyBuy: true, optimalRedistribute: false });
+    expect(r.settings).toEqual({ increment: 500, onlyBuy: true, optimalRedistribute: false, fractionalShares: false });
+  });
+
+  it('reads fractionalShares from the file when present', () => {
+    const r = parsePortfolio(fileWith({
+      settings: { increment: 1000, onlyBuy: true, optimalRedistribute: false, fractionalShares: true },
+    }));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.settings.fractionalShares).toBe(true);
   });
 
   it('flags sumWarning when targets do not sum to 100', () => {
@@ -103,7 +112,7 @@ describe('parsePortfolio', () => {
 });
 
 describe('buildExport / round-trip', () => {
-  const settings: Settings = { increment: 250, onlyBuy: false, optimalRedistribute: true };
+  const settings: Settings = { increment: 250, onlyBuy: false, optimalRedistribute: true, fractionalShares: true };
   const assets: Asset[] = [
     { id: 'local-1', ticker: 'VWCE', provider: 'yahoo', desiredPercentage: 70, shares: 12, fees: 1, percentageFee: false },
     { id: 'local-2', ticker: 'AGGH', provider: null, desiredPercentage: 30, shares: 3, fees: 0, percentageFee: true },

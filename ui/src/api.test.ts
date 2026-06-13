@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { buildRebalanceBody, rebalanceErrorMessage, runRebalance, searchTickers } from './api';
 import type { Asset, Settings, RebalanceResponse } from './types';
 
-const settings: Settings = { increment: 1000, onlyBuy: true, optimalRedistribute: false };
+const settings: Settings = { increment: 1000, onlyBuy: true, optimalRedistribute: false, fractionalShares: false };
 const assets: Asset[] = [
   { id: 'a1', ticker: 'VOO', provider: 'yahoo', desiredPercentage: 60, shares: 10, fees: 0.5, percentageFee: true },
 ];
@@ -20,6 +20,7 @@ describe('buildRebalanceBody', () => {
       only_buy: true,
       increment: 1000,
       optimal_redistribute: false,
+      fractional_shares: false,
       assets: [
         { ticker: 'VOO', provider: 'yahoo', desired_percentage: 60, shares: 10, fees: 0.5, percentage_fee: true },
       ],

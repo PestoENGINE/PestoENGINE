@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { AssetResultOut } from '../types';
+  import { formatShares } from '../util';
 
   export let asset: AssetResultOut;
 
@@ -11,7 +12,7 @@
 
 <div class="result-row">
   <div class="result-ticker">{asset.ticker}</div>
-  <div class="result-buy" class:muted>{asset.buy}</div>
+  <div class="result-buy" class:muted>{formatShares(asset.buy)}</div>
   <div class="result-meta">
     <div class="result-drift">
       <div class="delta-bar">
@@ -47,7 +48,7 @@
     color: var(--teal);
     font-family: var(--mono);
     font-weight: 600;
-    font-size: 1rem;
+    font-size: 0.875rem;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
@@ -94,5 +95,8 @@
     .result-meta { grid-template-columns: 1fr; gap: 0.2rem; align-items: start; }
     .result-allocated { text-align: left; }
     .delta-bar { width: 24px; flex-basis: 24px; }
+  }
+  @media (max-width: 480px) {
+    .result-buy { font-size: 0.75rem; }
   }
 </style>

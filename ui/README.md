@@ -38,7 +38,7 @@ All state lives in `App.svelte` (Svelte 4 compatible reactivity: `let` + assignm
 
 | Key | Type | Default |
 |-----|------|---------|
-| `pesto_engine_settings` | `{ increment, onlyBuy, optimalRedistribute }` | `{ 1000, true, false }` |
+| `pesto_engine_settings` | `{ increment, onlyBuy, optimalRedistribute, fractionalShares }` | `{ 1000, true, false, false }` |
 | `pesto_engine_assets` | `Asset[]` (`id`, `ticker`, `provider`, `desiredPercentage`, `shares`, `fees`, `percentageFee`) | `[]` |
 | `pesto_engine_dark_mode` | `boolean` | `false` |
 
@@ -69,6 +69,7 @@ Request payload converts UI camelCase to backend snake_case:
 | `percentageFee` | `percentage_fee` |
 | `onlyBuy` | `only_buy` |
 | `optimalRedistribute` | `optimal_redistribute` |
+| `fractionalShares` | `fractional_shares` |
 
 ## Import / Export
 
@@ -78,7 +79,7 @@ Request payload converts UI camelCase to backend snake_case:
 {
   "version": 1,
   "exportedAt": "2026-05-25T10:00:00Z",
-  "settings": { "increment": 1000, "onlyBuy": true, "optimalRedistribute": false },
+  "settings": { "increment": 1000, "onlyBuy": true, "optimalRedistribute": false, "fractionalShares": false },
   "assets": [
     { "ticker": "VOO", "provider": null, "desiredPercentage": 60, "shares": 10, "fees": 0.5, "percentageFee": true }
   ]

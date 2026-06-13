@@ -4,6 +4,7 @@ export interface RebalanceBody {
   only_buy: boolean;
   increment: number;
   optimal_redistribute: boolean;
+  fractional_shares: boolean;
   assets: Array<{
     ticker: string;
     provider: string | null;
@@ -20,6 +21,7 @@ export function buildRebalanceBody(settings: Settings, assets: Asset[]): Rebalan
     only_buy: settings.onlyBuy,
     increment: settings.increment,
     optimal_redistribute: settings.optimalRedistribute,
+    fractional_shares: settings.fractionalShares,
     assets: assets.map(a => ({
       ticker: a.ticker,
       provider: a.provider ?? null,

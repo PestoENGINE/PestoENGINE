@@ -10,6 +10,7 @@ export const DEFAULT_SETTINGS: Settings = {
   increment: 1000,
   onlyBuy: true,
   optimalRedistribute: false,
+  fractionalShares: false,
 };
 
 function tryParse<T>(key: string, fallback: T): T {

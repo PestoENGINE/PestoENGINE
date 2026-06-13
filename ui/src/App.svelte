@@ -167,6 +167,7 @@
           increment={settings.increment}
           onlyBuy={settings.onlyBuy}
           optimalRedistribute={settings.optimalRedistribute}
+          fractionalShares={settings.fractionalShares}
           on:update={e => updateSettings(e.detail)}
         />
       </div>

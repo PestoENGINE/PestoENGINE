@@ -8,7 +8,11 @@ from opentelemetry import trace as _otel_trace
 
 from app import rebalance
 from app.core.exceptions import MarketDataError
-from app.core.formatting import truncate2
+from app.core.formatting import truncate, truncate2
+
+# Decimal places kept for a fractional share quantity. Finer than any broker;
+# truncating down keeps the residual unspent cash below a cent.
+_FRACTIONAL_PLACES = 6
 from app.market_data.provider_registry import ProviderRegistry
 from app.schemas.request import RebalanceRequest
 from app.schemas.result import RebalanceResponse
@@ -127,7 +131,14 @@ def run_rebalance(
                 *[_apply_fee(r, a.fees, a.percentage_fee) for a, r in zip(request.assets, rebalance_amounts)]
             )
 
-            buy_quantities: list[int] = [int(t // p) for t, p in zip(qty_targets, ticker_prices)]
+            # Fractional mode buys the exact quantity each budget affords, so every
+            # asset lands on its target precisely. Whole-share mode floors to integer
+            # share counts and relies on the redistribution step to place the leftover.
+            buy_quantities: list[float]
+            if request.fractional_shares:
+                buy_quantities = [truncate(t / p, _FRACTIONAL_PLACES) for t, p in zip(qty_targets, ticker_prices)]
+            else:
+                buy_quantities = [int(t // p) for t, p in zip(qty_targets, ticker_prices)]
 
             # First pass: compute fees and change budget to feed into redistribution.
             effective_fees = [
@@ -148,17 +159,21 @@ def run_rebalance(
                 for p, a in zip(ticker_prices, request.assets)
             ]
 
-            if request.optimal_redistribute:
-                buy_quantities, _ = rebalance.redistribute_change_optimal(
-                    request.only_buy,
-                    buy_quantities, redistribute_prices,
-                    current_pcts, desired_pcts, change,
-                )
-            else:
-                buy_quantities, _ = rebalance.redistribute_change(
-                    buy_quantities, redistribute_prices,
-                    current_pcts, desired_pcts, change
-                )
+            # Fractional mode already spent the budget exactly, so there is no
+            # integer leftover to place: the redistribution step is skipped entirely
+            # (and optimal_redistribute has no effect under fractional shares).
+            if not request.fractional_shares:
+                if request.optimal_redistribute:
+                    buy_quantities, _ = rebalance.redistribute_change_optimal(
+                        request.only_buy,
+                        buy_quantities, redistribute_prices,
+                        current_pcts, desired_pcts, change,
+                    )
+                else:
+                    buy_quantities, _ = rebalance.redistribute_change(
+                        buy_quantities, redistribute_prices,
+                        current_pcts, desired_pcts, change
+                    )
 
             # Second pass: recompute fees and change on final quantities.
             # Redistribution may have changed buy_quantities; percentage fees scale with actual shares.

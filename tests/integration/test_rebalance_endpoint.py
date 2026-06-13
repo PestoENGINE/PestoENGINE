@@ -1,5 +1,7 @@
 """Integration tests for POST /v1/rebalance via FastAPI TestClient."""
 
+import pytest
+
 from app.core.exceptions import MarketDataError
 
 _SINGLE_ASSET_PAYLOAD = {
@@ -121,6 +123,28 @@ def test_optimal_redistribute_flag_wired(client, mock_registry):
     resp = client.post("/v1/rebalance", json=payload)
     assert resp.status_code == 200
     assert resp.json()["change"] >= 0.0
+
+
+def test_fractional_shares_flag_wired(client, mock_registry):
+    """fractional_shares=True yields a genuinely fractional buy and ~0 change.
+
+    increment=1000, price=300, 100 % target
+        buy = 1000/300 = 3.333333 (not a whole number), change = 0
+    """
+    mock_registry.get_prices_for_assets.return_value = {"A": 300.0}
+    payload = {
+        "only_buy": True,
+        "increment": 1000.0,
+        "fractional_shares": True,
+        "assets": [{"ticker": "A", "desired_percentage": 100.0, "shares": 0, "fees": 0}],
+    }
+    resp = client.post("/v1/rebalance", json=payload)
+    assert resp.status_code == 200
+    body = resp.json()
+    buy = body["results"][0]["buy"]
+    assert buy == pytest.approx(3.333333, abs=1e-6)
+    assert buy % 1 != 0  # fractional, not floored to a whole share
+    assert body["change"] == 0.0
 
 
 def test_502_on_market_data_error(client, mock_registry):

@@ -14,11 +14,13 @@ def _request(
     increment: float,
     asset_defs: list[dict],
     optimal_redistribute: bool = False,
+    fractional_shares: bool = False,
 ) -> RebalanceRequest:
     return RebalanceRequest(
         only_buy=only_buy,
         increment=increment,
         optimal_redistribute=optimal_redistribute,
+        fractional_shares=fractional_shares,
         assets=[
             AssetIn(
                 ticker=d["ticker"],
@@ -374,6 +376,101 @@ def test_percentage_fee_allow_sell():
     assert out.results[0].buy == 4
     assert out.total_fees == pytest.approx(1.6, abs=0.01)
     assert out.change == pytest.approx(18.4, abs=0.01)
+
+
+# ---------------------------------------------------------------------------
+# Fractional shares
+# ---------------------------------------------------------------------------
+
+def test_fractional_only_buy_deploys_full_increment():
+    """Fractional only-buy spends the whole increment, leaving ~0 change.
+
+    increment=1000, price=300, 100 % target
+        buy = trunc6(1000/300) = 3.333333 (genuinely fractional)
+        allocated = 999.99, change = 0
+    """
+    req = _request(True, 1000.0, [
+        {"ticker": "A", "desired_percentage": 100.0, "shares": 0, "fees": 0.0},
+    ], fractional_shares=True)
+    out = _run(req, {"A": 300.0})
+    r = out.results[0]
+    assert r.buy == pytest.approx(3.333333, abs=1e-6)
+    assert isinstance(r.buy, float)
+    assert r.buy % 1 != 0  # not a whole share
+    assert out.change == 0.0
+
+
+def test_fractional_allow_sell_hits_exact_target():
+    """Fractional allow-sell drives every asset onto its exact target weight.
+
+    values [0, 210] (A: 0@10, B: 7@30), targets 50/50, increment 0
+        amounts = [105, -105]
+        buy_A = trunc6(105/10) = 10.5, buy_B = trunc6(-105/30) = -3.5
+        (whole-share mode would floor these to 10 and -4; fractional must not)
+        change = 0
+    """
+    req = _request(False, 0.0, [
+        {"ticker": "A", "desired_percentage": 50.0, "shares": 0.0, "fees": 0.0},
+        {"ticker": "B", "desired_percentage": 50.0, "shares": 7.0, "fees": 0.0},
+    ], fractional_shares=True)
+    out = _run(req, {"A": 10.0, "B": 30.0})
+    by = {r.ticker: r for r in out.results}
+    assert by["A"].buy == pytest.approx(10.5, abs=1e-6)
+    assert by["B"].buy == pytest.approx(-3.5, abs=1e-6)
+    assert out.change == 0.0
+
+
+def test_fractional_flat_fee_applied():
+    """A flat fee is reserved from the budget before the fractional buy.
+
+    increment=1000, price=300, fee=10 flat
+        net budget = 990, buy = trunc6(990/300) = 3.3
+        total_fees = 10, change = 0
+    """
+    req = _request(True, 1000.0, [
+        {"ticker": "A", "desired_percentage": 100.0, "shares": 0, "fees": 10.0},
+    ], fractional_shares=True)
+    out = _run(req, {"A": 300.0})
+    r = out.results[0]
+    assert r.buy == pytest.approx(3.3, abs=1e-6)
+    assert out.total_fees == 10.0
+    assert out.change == 0.0
+
+
+def test_fractional_percentage_fee_applied():
+    """A percentage fee scales with the exact fractional spend.
+
+    increment=1000, price=300, fee=1 % pct
+        qty_target = 1000/1.01 = 990.099..., buy = trunc6(990.099/300) = 3.300330
+        (whole-share mode would floor to 3; fractional must not)
+        effective fee = 3.300330*300*1% = 9.90, change = 0
+    """
+    req = _request(True, 1000.0, [
+        {"ticker": "A", "desired_percentage": 100.0, "shares": 0,
+         "fees": 1.0, "percentage_fee": True},
+    ], fractional_shares=True)
+    out = _run(req, {"A": 300.0})
+    r = out.results[0]
+    assert r.buy == pytest.approx(3.30033, abs=1e-5)
+    assert out.total_fees == pytest.approx(9.90, abs=0.01)
+    assert out.change == pytest.approx(0.0, abs=0.01)
+
+
+def test_fractional_ignores_optimal_redistribute_flag():
+    """With fractional on there is no integer leftover, so the DP flag is a no-op.
+
+    prices [60, 45], increment 100, 50/50 -> fractional buys 0.833333 / 1.111111;
+    the result must be identical whether optimal_redistribute is on or off.
+    """
+    assets_def = [
+        {"ticker": "A", "desired_percentage": 50.0, "shares": 0, "fees": 0.0},
+        {"ticker": "B", "desired_percentage": 50.0, "shares": 0, "fees": 0.0},
+    ]
+    prices = {"A": 60.0, "B": 45.0}
+    out_off = _run(_request(True, 100.0, assets_def, fractional_shares=True, optimal_redistribute=False), prices)
+    out_on = _run(_request(True, 100.0, assets_def, fractional_shares=True, optimal_redistribute=True), prices)
+    assert {r.ticker: r.buy for r in out_off.results} == {r.ticker: r.buy for r in out_on.results}
+    assert all(r.buy % 1 != 0 for r in out_off.results)  # genuinely fractional
 
 
 # ---------------------------------------------------------------------------

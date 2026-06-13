@@ -20,6 +20,7 @@ export interface Settings {
   increment: number;
   onlyBuy: boolean;
   optimalRedistribute: boolean;
+  fractionalShares: boolean;
 }
 
 export interface AssetResultOut {

@@ -103,3 +103,13 @@ def test_request_empty_assets_raises():
 def test_request_default_optimal_redistribute_is_false():
     req = RebalanceRequest(**_request())
     assert req.optimal_redistribute is False
+
+
+def test_request_default_fractional_shares_is_false():
+    req = RebalanceRequest(**_request())
+    assert req.fractional_shares is False
+
+
+def test_request_fractional_shares_accepts_true():
+    req = RebalanceRequest(**_request(fractional_shares=True))
+    assert req.fractional_shares is True

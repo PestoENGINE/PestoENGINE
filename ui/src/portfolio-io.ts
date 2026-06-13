@@ -46,6 +46,7 @@ export function parsePortfolio(text: string): ImportResult {
     increment: s.increment as number,
     onlyBuy: typeof s.onlyBuy === 'boolean' ? s.onlyBuy : DEFAULT_SETTINGS.onlyBuy,
     optimalRedistribute: typeof s.optimalRedistribute === 'boolean' ? s.optimalRedistribute : DEFAULT_SETTINGS.optimalRedistribute,
+    fractionalShares: typeof s.fractionalShares === 'boolean' ? s.fractionalShares : DEFAULT_SETTINGS.fractionalShares,
   };
 
   const assets: Asset[] = (d.assets as Array<Record<string, unknown>>).map(a => ({
