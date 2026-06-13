@@ -18,7 +18,10 @@ const LOADERS: Record<Locale, () => Promise<unknown>> = {
 
 // Cache of loaded dictionaries (en is always present). `revision` is bumped
 // whenever a newly fetched dictionary becomes available so `t` re-renders.
+// `inflight` dedupes concurrent loads of the same locale (the locale
+// subscription and the main.ts preload both request it at startup).
 const dictionaries: Partial<Record<Locale, unknown>> = { en };
+const inflight: Partial<Record<Locale, Promise<void>>> = {};
 const revision = writable(0);
 
 /** Pure locale decision: a valid stored choice wins, else the browser language, else English. */
@@ -65,11 +68,13 @@ export function translate(loc: Locale, key: string, params?: Record<string, stri
   return interpolate(raw, params);
 }
 
-/** Fetch and cache a locale's dictionary; resolves once it is available for translation. */
-export async function loadLocale(loc: Locale): Promise<void> {
-  if (dictionaries[loc]) return;
-  dictionaries[loc] = await LOADERS[loc]();
-  revision.update((n) => n + 1);
+/** Fetch and cache a locale's dictionary; concurrent calls share a single fetch. */
+export function loadLocale(loc: Locale): Promise<void> {
+  if (dictionaries[loc]) return Promise.resolve();
+  return (inflight[loc] ??= LOADERS[loc]().then((dict) => {
+    dictionaries[loc] = dict;
+    revision.update((n) => n + 1);
+  }));
 }
 
 export const locale = writable<Locale>(detectInitialLocale());
