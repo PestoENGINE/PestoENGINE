@@ -1,10 +1,9 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { get } from 'svelte/store';
 import {
-  resolveLocale, lookup, interpolate, translate, loadLocale, t, locale, setLocale,
+  resolveLocale, lookup, interpolate, translate, loadLocale, t, locale, setLocale, LOCALES,
 } from './index';
 import enDict from './en.json';
-import itDict from './it.json';
 
 afterEach(() => setLocale('en'));
 
@@ -20,7 +19,13 @@ describe('resolveLocale', () => {
   });
 
   it('ignores an unrecognised stored value', () => {
-    expect(resolveLocale('de', 'it')).toBe('it');
+    expect(resolveLocale('xx', 'it')).toBe('it');
+  });
+
+  it('auto-detects any registered locale from the navigator language', () => {
+    for (const loc of LOCALES) {
+      expect(resolveLocale(null, `${loc}-XX`)).toBe(loc);
+    }
   });
 
   it('defaults to en when nothing is known', () => {
@@ -102,7 +107,7 @@ describe('t store / setLocale', () => {
   });
 });
 
-describe('en/it key parity', () => {
+describe('locale key parity', () => {
   function paths(obj: unknown, prefix = ''): string[] {
     if (typeof obj !== 'object' || obj === null) return [prefix];
     return Object.entries(obj as Record<string, unknown>).flatMap(([k, v]) =>
@@ -110,7 +115,14 @@ describe('en/it key parity', () => {
     );
   }
 
-  it('it.json defines exactly the same keys as en.json', () => {
-    expect(new Set(paths(itDict))).toEqual(new Set(paths(enDict)));
-  });
+  const enPaths = new Set(paths(enDict));
+  const dicts = import.meta.glob('./*.json', { eager: true, import: 'default' }) as Record<string, unknown>;
+
+  // Every registered non-en locale must define exactly the same keys as en.
+  // Driven by LOCALES, so a newly added language is covered automatically.
+  for (const loc of LOCALES.filter((l) => l !== 'en')) {
+    it(`${loc}.json defines exactly the same keys as en.json`, () => {
+      expect(new Set(paths(dicts[`./${loc}.json`]))).toEqual(enPaths);
+    });
+  }
 });

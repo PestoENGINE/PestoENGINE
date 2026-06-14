@@ -1,20 +1,22 @@
 import { writable, derived, get } from 'svelte/store';
 import en from './en.json';
 
-// `en` is bundled as the synchronous fallback and the source of truth for the
-// key set. Every other locale is its own dynamically-imported chunk, fetched
-// only when selected, so the initial bundle stays flat as the community adds
-// languages. Registering a language is a two-line change: add an `xx.json` and
-// an entry in LOADERS + the Locale union. Anything untranslated falls back to
-// English, so partial translations land incrementally.
-export type Locale = 'en' | 'it';
-export const LOCALES: readonly Locale[] = ['en', 'it'];
+// `LOADERS` is the single source of truth for languages: add a locale by adding
+// one entry here (plus the matching `xx.json`). The `Locale` type, the `LOCALES`
+// list, browser-language detection, persistence, and the key-parity test all
+// derive from it. `en` is bundled as the synchronous fallback and the source of
+// truth for the key set; every other locale is its own dynamically-imported
+// chunk, fetched only when selected, so the initial bundle stays flat as the
+// community adds languages. Anything untranslated falls back to English.
 const STORAGE_KEY = 'pesto_engine_locale';
 
-const LOADERS: Record<Locale, () => Promise<unknown>> = {
+const LOADERS = {
   en: () => Promise.resolve(en),
   it: () => import('./it.json').then((m) => m.default),
-};
+} satisfies Record<string, () => Promise<unknown>>;
+
+export type Locale = keyof typeof LOADERS;
+export const LOCALES = Object.keys(LOADERS) as Locale[];
 
 // Cache of loaded dictionaries (en is always present). `revision` is bumped
 // whenever a newly fetched dictionary becomes available so `t` re-renders.
@@ -26,8 +28,9 @@ const revision = writable(0);
 
 /** Pure locale decision: a valid stored choice wins, else the browser language, else English. */
 export function resolveLocale(stored: string | null, navLang: string | undefined): Locale {
-  if (stored === 'en' || stored === 'it') return stored;
-  return (navLang ?? '').toLowerCase().startsWith('it') ? 'it' : 'en';
+  if (stored !== null && (LOCALES as string[]).includes(stored)) return stored as Locale;
+  const lang = (navLang ?? '').toLowerCase();
+  return LOCALES.find((l) => lang.startsWith(l)) ?? 'en';
 }
 
 function detectInitialLocale(): Locale {
