@@ -1,6 +1,7 @@
 """Pydantic v2 schemas for the HTTP request boundary."""
 
 from pydantic import BaseModel, Field, model_validator
+from pydantic_core import PydanticCustomError
 
 
 class AssetIn(BaseModel):
@@ -14,8 +15,11 @@ class AssetIn(BaseModel):
     @model_validator(mode="after")
     def check_percentage_fee_cap(self) -> "AssetIn":
         if self.percentage_fee and self.fees > 100:
-            raise ValueError(
-                f"Asset '{self.ticker}': percentage fee cannot exceed 100, got {self.fees}."
+            # Stable code + ctx so the client can localize without parsing prose.
+            raise PydanticCustomError(
+                "percentage_fee_cap",
+                "Asset '{ticker}': percentage fee cannot exceed 100, got {fees}",
+                {"ticker": self.ticker, "fees": self.fees},
             )
         return self
 
@@ -31,7 +35,10 @@ class RebalanceRequest(BaseModel):
     def check_percentages_sum(self) -> "RebalanceRequest":
         total = sum(a.desired_percentage for a in self.assets)
         if round(total, 2) != 100.0:
-            raise ValueError(
-                f"desired_percentage must sum to 100.00, got {total:.2f}"
+            # Stable code + ctx so the client can localize without parsing prose.
+            raise PydanticCustomError(
+                "percentage_sum",
+                "desired_percentage must sum to 100.00, got {total}",
+                {"total": round(total, 2)},
             )
         return self

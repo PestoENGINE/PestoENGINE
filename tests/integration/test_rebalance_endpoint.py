@@ -64,6 +64,7 @@ def test_422_percentages_do_not_sum_to_100(client):
     }
     resp = client.post("/v1/rebalance", json=payload)
     assert resp.status_code == 422
+    assert resp.json()["detail"][0]["type"] == "percentage_sum"
 
 
 def test_422_negative_increment(client):
@@ -106,6 +107,7 @@ def test_422_percentage_fee_over_100(client):
     }
     resp = client.post("/v1/rebalance", json=payload)
     assert resp.status_code == 422
+    assert resp.json()["detail"][0]["type"] == "percentage_fee_cap"
 
 
 def test_optimal_redistribute_flag_wired(client, mock_registry):

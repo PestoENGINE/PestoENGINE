@@ -52,6 +52,14 @@ def test_asset_percentage_fee_over_100_raises():
         AssetIn(**_asset(fees=101.0, percentage_fee=True))
 
 
+def test_percentage_fee_cap_error_carries_stable_code():
+    with pytest.raises(ValidationError) as exc_info:
+        AssetIn(**_asset(fees=101.0, percentage_fee=True))
+    err = exc_info.value.errors()[0]
+    assert err["type"] == "percentage_fee_cap"
+    assert err["ctx"]["fees"] == 101.0
+
+
 def test_asset_percentage_fee_exactly_100_is_valid():
     a = AssetIn(**_asset(fees=100.0, percentage_fee=True))
     assert a.percentage_fee is True
@@ -76,6 +84,21 @@ def test_request_percentages_not_summing_to_100_raises():
                 AssetIn(ticker="B", desired_percentage=30.0, shares=0, fees=0),
             ],
         )
+
+
+def test_percentage_sum_error_carries_stable_code_and_total():
+    with pytest.raises(ValidationError) as exc_info:
+        RebalanceRequest(
+            only_buy=True,
+            increment=100.0,
+            assets=[
+                AssetIn(ticker="A", desired_percentage=60.0, shares=0, fees=0),
+                AssetIn(ticker="B", desired_percentage=30.0, shares=0, fees=0),
+            ],
+        )
+    err = exc_info.value.errors()[0]
+    assert err["type"] == "percentage_sum"
+    assert err["ctx"]["total"] == 90.0
 
 
 def test_request_percentages_summing_to_100_is_valid():

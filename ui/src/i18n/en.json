@@ -132,6 +132,16 @@
     "tooManyRequests": "Too many requests. Try again shortly.",
     "marketData": "Market data unavailable. Check ticker symbols or try again.",
     "requestFailedRetry": "Request failed. Try again.",
+    "invalid": {
+      "percentageSum": "Target percentages must add up to 100 (currently {total}%).",
+      "feeCap": "Percentage fee can't exceed 100 (asset {n}).",
+      "percentageRange": "Each target must be between 0 and 100.",
+      "sharesNegative": "Shares can't be negative.",
+      "feeNegative": "Fee can't be negative.",
+      "incrementNegative": "Cash to deploy can't be negative.",
+      "tickerRequired": "Every asset needs a ticker.",
+      "assetsRequired": "Add at least one asset."
+    },
     "io": {
       "notJson": "File is not valid JSON.",
       "invalidFile": "Invalid portfolio file.",

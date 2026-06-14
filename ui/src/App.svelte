@@ -65,20 +65,25 @@
 
   async function runRebalance() {
     loading = true;
-    error = null;
-    lastResult = null;
+    // Don't clear error/result up front: that unmounts the error box and the
+    // results panel for the duration of the request, which on a fast response
+    // is a visible flash + layout jump. Update state only once the outcome is
+    // known so a re-click just updates the message in place.
     try {
       const r = await apiRunRebalance(settings, assets);
       if (r.ok) {
+        error = null;
         resultSettings = { ...settings };
         lastResult = r.data;
         await tick();
         document.getElementById('results')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       } else {
         error = r.error;
+        lastResult = null;
       }
     } catch {
       error = { kind: 'key', key: 'errors.requestFailed' };
+      lastResult = null;
     } finally {
       loading = false;
     }
@@ -154,7 +159,15 @@
 
 <div class="tool-section">
   {#if error}
-    <div class="error-box" role="alert">{error.kind === 'key' ? $t(error.key, error.params) : error.text}</div>
+    <div class="error-box" role="alert">
+      {#if error.kind === 'validation'}
+        {error.items.map((i) => $t(i.key, i.params)).join(' · ')}
+      {:else if error.kind === 'key'}
+        {$t(error.key, error.params)}
+      {:else}
+        {error.text}
+      {/if}
+    </div>
   {/if}
 
   <div class="tool-grid">

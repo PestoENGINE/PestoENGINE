@@ -132,6 +132,16 @@
     "tooManyRequests": "Troppe richieste. Riprova a breve.",
     "marketData": "Dati di mercato non disponibili. Controlla i ticker o riprova.",
     "requestFailedRetry": "Richiesta fallita. Riprova.",
+    "invalid": {
+      "percentageSum": "Le percentuali obiettivo devono sommare a 100 (ora {total}%).",
+      "feeCap": "La commissione percentuale non può superare 100 (asset {n}).",
+      "percentageRange": "Ogni percentuale obiettivo deve essere tra 0 e 100.",
+      "sharesNegative": "Le quote non possono essere negative.",
+      "feeNegative": "La commissione non può essere negativa.",
+      "incrementNegative": "La liquidità da investire non può essere negativa.",
+      "tickerRequired": "Ogni asset deve avere un ticker.",
+      "assetsRequired": "Aggiungi almeno un asset."
+    },
     "io": {
       "notJson": "Il file non è un JSON valido.",
       "invalidFile": "File di portafoglio non valido.",

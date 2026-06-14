@@ -52,12 +52,12 @@ UI strings are translated with a small hand-rolled module in `src/i18n/` (no lib
 
 - `en.json` / `it.json` hold the dictionaries; `en.json` is the source of truth for the key set. A test asserts `it.json` defines exactly the same keys.
 - `index.ts` exposes a `locale` store, a reactive translator `t` used in markup as `{$t('settings.onlyBuy')}`, and an imperative `tx(...)` for non-reactive code (`confirm()`, `document.title`). Missing keys fall back to English, then to the raw key, so a partial translation degrades gracefully.
-- Components reference keys via `$t`; the framework-agnostic logic modules (`api.ts`, `portfolio-io.ts`) stay language-free by returning a `UiError` (`{ kind: 'key', ... }` translated in the component, or `{ kind: 'raw', text }` for passthrough backend messages).
+- Components reference keys via `$t`; the framework-agnostic logic modules (`api.ts`, `portfolio-io.ts`) stay language-free by returning a `UiError`: `{ kind: 'key', ... }` (one translated message), `{ kind: 'validation', items }` (a list of translated messages mapped from a 422's stable `type`/`loc`), or `{ kind: 'raw', text }` (verbatim passthrough, now only for an upstream-limiter 429 that omits `Retry-After`).
 - The choice persists in `localStorage` (`pesto_engine_locale`) and switches live from the header.
 
 **Adding a language** is a small, self-contained change: drop an `xx.json` next to the existing ones, then register it in `DICTIONARIES` and the `Locale` union in `index.ts`. Anything left untranslated falls back to English.
 
-**Not translated:** backend error messages (the `detail` of 422/429/502 responses) are shown as-is; on-screen code (the JSON request sample, the docker command, complexity notations, file paths, ticker examples) and the `PestoENGINE` name stay verbatim.
+**Translated:** backend errors are localized on the client by mapping their stable codes, not by translating prose: the Pydantic `type`/`loc` of a 422, the `Retry-After` of a 429, and a generic message for a 502. **Not translated:** on-screen code (the JSON request sample, the docker command, complexity notations, file paths, ticker examples), the `PestoENGINE` name, and the rare upstream-limiter 429 prose that arrives without a `Retry-After`.
 
 ## Backend integration
 
@@ -71,10 +71,10 @@ Error mapping in `App.svelte:runRebalance`:
 | Backend status | UI behavior |
 |----------------|-------------|
 | `200` | Render `ResultsPanel`, scroll to `#results` |
-| `422` | Display `"Validation error: ..."` (formats `detail[].msg`) |
-| `429` | Display backend `detail`, or "Too many requests. Try again in N seconds." derived from `Retry-After` |
-| `502` | Display backend `detail` (typically `MarketDataError` message) |
-| other / network | Generic `"Request failed"` message |
+| `422` | Map each `detail[]` item (its stable `type` + `loc`) to a translated message; unknown types fall back to a generic translated wrapper around the backend `msg` |
+| `429` | Translated "Too many requests" message, with seconds from `Retry-After` when present (a string `detail` without the header is passed through verbatim) |
+| `502` | Translated generic market-data message (`errors.marketData`) |
+| other / network | Translated generic "Request failed" message |
 
 Request payload converts UI camelCase to backend snake_case:
 

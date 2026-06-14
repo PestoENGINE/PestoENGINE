@@ -119,7 +119,7 @@ fractional quantity truncated to 6 decimals when `fractional_shares=true`.
 
 Errors:
 
-- `422`: schema validation failed (e.g. `desired_percentage` does not sum to 100, percentage fee > 100)
+- `422`: schema validation failed. Body is FastAPI's standard `{"detail": [{type, loc, msg, ctx}, ...]}`. Each item carries a stable `type` code a client can localize without parsing prose: Pydantic's own (`greater_than_equal`, `less_than_equal`, `string_too_short`, `too_short`, ...) plus two custom domain codes, `percentage_sum` (ctx `{total}`) and `percentage_fee_cap` (ctx `{ticker, fees}`). `msg` stays English as a fallback.
 - `502`: market data fetch failed; body is `{"detail": "..."}` (raised as `MarketDataError`)
 
 ### `GET /v1/tickers/search`

@@ -1,4 +1,4 @@
-import type { Asset, Settings, RebalanceResponse, TickerResult, UiError } from './types';
+import type { Asset, Settings, RebalanceResponse, TickerResult, UiError, UiErrorItem } from './types';
 
 export interface RebalanceBody {
   only_buy: boolean;
@@ -33,34 +33,90 @@ export function buildRebalanceBody(settings: Settings, assets: Asset[]): Rebalan
   };
 }
 
+/** One item of FastAPI's 422 `detail` array (Pydantic validation error). */
+interface PydanticError {
+  type?: string;
+  loc?: (string | number)[];
+  msg?: string;
+  ctx?: Record<string, unknown>;
+}
+
 /**
- * Maps a non-ok rebalance Response to a language-agnostic UiError.
- * `kind: 'key'` is translated in the component; `kind: 'raw'` is a passthrough
- * of the backend's own message (not translated). May reject if a 422 body is
- * not valid JSON; callers treat that like a network failure, matching the
- * original inline behavior.
+ * Maps one Pydantic 422 error to a translatable item. Standard field
+ * constraints are routed by (type, field); the two custom domain rules carry
+ * their own stable codes (`percentage_sum`, `percentage_fee_cap`). Anything
+ * unmapped falls back to the generic key wrapping the backend's English `msg`.
+ */
+function mapValidationError(d: PydanticError): UiErrorItem {
+  const type = d.type ?? '';
+  const loc = d.loc ?? [];
+  const ctx = d.ctx ?? {};
+  const ai = loc.indexOf('assets');
+  const assetIndex = ai >= 0 && typeof loc[ai + 1] === 'number' ? (loc[ai + 1] as number) : null;
+  const names = loc.filter((x): x is string => typeof x === 'string' && x !== 'body');
+  const field = names.length ? names[names.length - 1] : null;
+
+  switch (type) {
+    case 'percentage_sum':
+      return { key: 'errors.invalid.percentageSum', params: { total: Number(ctx.total) } };
+    case 'percentage_fee_cap':
+      if (assetIndex !== null) return { key: 'errors.invalid.feeCap', params: { n: assetIndex + 1 } };
+      break;
+    case 'greater_than_equal':
+    case 'less_than_equal':
+      if (field === 'desired_percentage') return { key: 'errors.invalid.percentageRange' };
+      if (field === 'shares') return { key: 'errors.invalid.sharesNegative' };
+      if (field === 'fees') return { key: 'errors.invalid.feeNegative' };
+      if (field === 'increment') return { key: 'errors.invalid.incrementNegative' };
+      break;
+    case 'string_too_short':
+      if (field === 'ticker') return { key: 'errors.invalid.tickerRequired' };
+      break;
+    case 'too_short':
+      if (field === 'assets') return { key: 'errors.invalid.assetsRequired' };
+      break;
+  }
+  return { key: 'errors.validation', params: { detail: d.msg || type || 'invalid' } };
+}
+
+/** Drops items that translate to the same key+params (e.g. two assets out of range). */
+function dedupeItems(items: UiErrorItem[]): UiErrorItem[] {
+  const seen = new Set<string>();
+  return items.filter((it) => {
+    const id = `${it.key}:${JSON.stringify(it.params ?? {})}`;
+    if (seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+}
+
+/**
+ * Maps a non-ok rebalance Response to a language-agnostic UiError, so the
+ * component owns all translation. 422 validation errors are mapped from their
+ * stable Pydantic `type`/`loc` to dictionary keys; 429 prefers the translated
+ * key (with seconds from `Retry-After`) and only passes prose through raw when
+ * an upstream limiter omits the header; 502 shows a generic translated message.
+ * May reject if a 422 body is not valid JSON; callers treat that like a network
+ * failure, matching the original inline behavior.
  */
 export async function rebalanceError(res: Response): Promise<UiError> {
   if (res.status === 422) {
     const data = await res.json();
-    const detail = Array.isArray(data.detail)
-      ? data.detail.map((d: { msg?: string }) => d.msg || JSON.stringify(d)).join('; ')
-      : typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
+    if (Array.isArray(data.detail)) {
+      return { kind: 'validation', items: dedupeItems((data.detail as PydanticError[]).map(mapValidationError)) };
+    }
+    const detail = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
     return { kind: 'key', key: 'errors.validation', params: { detail } };
   }
   if (res.status === 429) {
+    const retryAfter = res.headers.get('retry-after');
+    if (retryAfter) return { kind: 'key', key: 'errors.tooManyRequestsRetry', params: { n: retryAfter } };
     const data = await res.json().catch(() => ({}));
     if (typeof data.detail === 'string') return { kind: 'raw', text: data.detail };
-    const retryAfter = res.headers.get('retry-after');
-    return retryAfter
-      ? { kind: 'key', key: 'errors.tooManyRequestsRetry', params: { n: retryAfter } }
-      : { kind: 'key', key: 'errors.tooManyRequests' };
+    return { kind: 'key', key: 'errors.tooManyRequests' };
   }
   if (res.status === 502) {
-    const data = await res.json().catch(() => ({}));
-    return typeof data.detail === 'string'
-      ? { kind: 'raw', text: data.detail }
-      : { kind: 'key', key: 'errors.marketData' };
+    return { kind: 'key', key: 'errors.marketData' };
   }
   return { kind: 'key', key: 'errors.requestFailedRetry' };
 }

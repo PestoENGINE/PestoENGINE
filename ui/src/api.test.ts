@@ -34,9 +34,51 @@ describe('buildRebalanceBody', () => {
 });
 
 describe('rebalanceError', () => {
-  it('joins a 422 array detail into the validation key', async () => {
-    const res = jsonResponse({ detail: [{ msg: 'too low' }, { msg: 'too high' }] }, { status: 422 });
-    expect(await rebalanceError(res)).toEqual({ kind: 'key', key: 'errors.validation', params: { detail: 'too low; too high' } });
+  it('maps a 422 array detail to translatable validation items', async () => {
+    const res = jsonResponse({ detail: [
+      { type: 'percentage_sum', loc: ['body'], ctx: { total: 90 }, msg: 'must sum to 100' },
+      { type: 'greater_than_equal', loc: ['body', 'assets', 0, 'shares'], ctx: { ge: 0 }, msg: '>= 0' },
+    ] }, { status: 422 });
+    expect(await rebalanceError(res)).toEqual({
+      kind: 'validation',
+      items: [
+        { key: 'errors.invalid.percentageSum', params: { total: 90 } },
+        { key: 'errors.invalid.sharesNegative' },
+      ],
+    });
+  });
+
+  it('routes percentage-range and fee-cap errors, fee-cap with the asset index', async () => {
+    const res = jsonResponse({ detail: [
+      { type: 'less_than_equal', loc: ['body', 'assets', 2, 'desired_percentage'], ctx: { le: 100 } },
+      { type: 'percentage_fee_cap', loc: ['body', 'assets', 1], ctx: { fees: 150 } },
+    ] }, { status: 422 });
+    expect(await rebalanceError(res)).toEqual({
+      kind: 'validation',
+      items: [
+        { key: 'errors.invalid.percentageRange' },
+        { key: 'errors.invalid.feeCap', params: { n: 2 } },
+      ],
+    });
+  });
+
+  it('falls back to the generic key for an unmapped 422 type', async () => {
+    const res = jsonResponse({ detail: [{ type: 'whatever', loc: ['body', 'x'], msg: 'odd' }] }, { status: 422 });
+    expect(await rebalanceError(res)).toEqual({
+      kind: 'validation',
+      items: [{ key: 'errors.validation', params: { detail: 'odd' } }],
+    });
+  });
+
+  it('de-duplicates identical validation items', async () => {
+    const res = jsonResponse({ detail: [
+      { type: 'less_than_equal', loc: ['body', 'assets', 0, 'desired_percentage'] },
+      { type: 'greater_than_equal', loc: ['body', 'assets', 1, 'desired_percentage'] },
+    ] }, { status: 422 });
+    expect(await rebalanceError(res)).toEqual({
+      kind: 'validation',
+      items: [{ key: 'errors.invalid.percentageRange' }],
+    });
   });
 
   it('passes a 422 string detail through the validation key', async () => {
@@ -64,9 +106,9 @@ describe('rebalanceError', () => {
     expect(await rebalanceError(res)).toEqual({ kind: 'key', key: 'errors.marketData' });
   });
 
-  it('passes a 502 string detail through as raw (backend message)', async () => {
+  it('maps 502 with a backend detail to the translated market-data key', async () => {
     const res = jsonResponse({ detail: 'Yahoo down' }, { status: 502 });
-    expect(await rebalanceError(res)).toEqual({ kind: 'raw', text: 'Yahoo down' });
+    expect(await rebalanceError(res)).toEqual({ kind: 'key', key: 'errors.marketData' });
   });
 
   it('maps any other status to the generic retry key', async () => {

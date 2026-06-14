@@ -23,14 +23,22 @@ export interface Settings {
   fractionalShares: boolean;
 }
 
+/** A single translatable message: a dictionary key plus optional params. */
+export interface UiErrorItem {
+  key: string;
+  params?: Record<string, string | number>;
+}
+
 /**
  * A user-facing error that the logic modules emit without committing to a
- * language. `kind: 'key'` is translated via the i18n dictionary in the
- * component; `kind: 'raw'` carries an already-human passthrough message from
- * the backend (which is intentionally not translated).
+ * language. `kind: 'key'` is one translated message; `kind: 'validation'` is a
+ * list of them (mapped from a 422's structured `type`/`loc`); `kind: 'raw'`
+ * carries an already-human passthrough message from the backend (which is
+ * intentionally not translated).
  */
 export type UiError =
   | { kind: 'key'; key: string; params?: Record<string, string | number> }
+  | { kind: 'validation'; items: UiErrorItem[] }
   | { kind: 'raw'; text: string };
 
 export interface AssetResultOut {
