@@ -46,7 +46,7 @@
     "colTicker": "Ticker",
     "colTarget": "Target %",
     "colShares": "Quote",
-    "colFee": "Commissione",
+    "colFee": "Fee",
     "colActions": "Azioni",
     "calculating": "Calcolo…",
     "calculate": "Calcola ordine d'acquisto",

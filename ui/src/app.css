@@ -234,6 +234,7 @@ input[type='checkbox']:checked::after {
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--text-3);
+    white-space: nowrap;
   }
   .asset-table td:first-child { grid-column: 1 / -1; }
   .asset-table td:last-child {
@@ -258,10 +259,96 @@ input[type='checkbox']:checked::after {
     gap: 0.45rem;
   }
 }
-@media (max-width: 420px) {
+@media (max-width: 700px) {
+  .asset-table tr {
+    --asset-action-col: 1.65rem;
+    --asset-card-gap-x: 0.55rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) var(--asset-action-col);
+    gap: 0.65rem var(--asset-card-gap-x);
+    padding: 0.85rem 0.75rem;
+  }
+  .asset-table td:first-child {
+    grid-column: 1 / 4;
+    padding-right: 0;
+  }
+  .asset-table td:nth-child(2) { grid-column: 1; }
+  .asset-table td:nth-child(3) { grid-column: 2; }
+  .asset-table td:nth-child(4) {
+    grid-column: 3 / 5;
+    padding-right: 0;
+  }
+  .asset-table td:last-child {
+    position: static;
+    grid-column: 4;
+    grid-row: 1;
+    align-self: start;
+    justify-self: center;
+    width: var(--asset-action-col);
+    height: 1.65rem;
+  }
+  .asset-table .fee-cell.fee-cell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--asset-action-col);
+    align-items: center;
+    gap: var(--asset-card-gap-x);
+  }
+  .asset-table .fee-cell.fee-cell .cell-input.cell-input {
+    width: 100%;
+    flex: initial;
+  }
+  .asset-table .fee-cell.fee-cell .fee-toggle.fee-toggle {
+    position: relative;
+    width: var(--asset-action-col);
+    height: 1.65rem;
+    flex: 0 0 var(--asset-action-col);
+    justify-self: center;
+    justify-content: center;
+    gap: 0;
+  }
+  .asset-table .fee-pct {
+    position: absolute;
+    left: calc(50% + 0.45rem);
+    top: 50%;
+    transform: translateY(-50%);
+  }
+}
+@media (max-width: 300px) {
+  .asset-table tr { grid-template-columns: repeat(2, minmax(0, 1fr)) var(--asset-action-col); }
+  .asset-table td:first-child { grid-column: 1 / 3; }
+  .asset-table td:nth-child(2) { grid-column: 1; }
+  .asset-table td:nth-child(3) { grid-column: 2; }
+  .asset-table td:nth-child(4) { grid-column: 1 / 4; }
+  .asset-table td:last-child {
+    grid-column: 3;
+    grid-row: 1;
+  }
+}
+@media (max-width: 280px) {
   .asset-table tr { grid-template-columns: minmax(0, 1fr); }
-  .asset-table td:not(:last-child) { grid-column: 1 / -1; }
-  .asset-table td:last-child { grid-column: auto; }
+  .asset-table td:first-child,
+  .asset-table td:nth-child(2),
+  .asset-table td:nth-child(3),
+  .asset-table td:nth-child(4) {
+    grid-column: 1 / -1;
+    padding-right: 2.25rem;
+  }
+  .asset-table td:last-child {
+    position: absolute;
+    top: 0.7rem;
+    right: 0.7rem;
+    grid-column: auto;
+  }
+  .asset-table .fee-cell.fee-cell {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  .asset-table .fee-cell.fee-cell .fee-toggle.fee-toggle {
+    position: absolute;
+    right: 0.7rem;
+    bottom: 1.6rem;
+    width: 1.65rem;
+    height: 1.65rem;
+  }
 }
 .ticker-input { text-transform: uppercase; }
 

@@ -128,7 +128,7 @@
   .fee-cell { display: flex; align-items: center; gap: 0.375rem; }
   .fee-cell .cell-input { width: 3.75rem; flex: 0 0 3.75rem; }
   .fee-toggle { cursor: pointer; display: flex; align-items: center; gap: 0.2rem; }
-  .fee-toggle input[type='checkbox'] { width: 12px; height: 12px; margin-top: 0; }
+  .fee-toggle input[type='checkbox'] { width: 12px; height: 12px; margin: 0; }
   .fee-pct { font-family: var(--mono); font-size: 0.6875rem; color: var(--text-3); }
 
   .remove-btn {
