@@ -138,6 +138,8 @@
   }
 </script>
 
+<a class="skip-link" href="#main">{$t('nav.skipToMain')}</a>
+
 <input
   bind:this={fileInput}
   type="file"
@@ -155,66 +157,65 @@
   on:toggleDark={handleToggleDark}
 />
 
-<Hero />
+<main id="main" tabindex="-1">
+  <Hero />
 
-<div class="tool-section">
-  {#if error}
-    <div class="error-box" role="alert">
-      {#if error.kind === 'validation'}
-        {error.items.map((i) => $t(i.key, i.params)).join(' · ')}
-      {:else if error.kind === 'key'}
-        {$t(error.key, error.params)}
-      {:else}
-        {error.text}
-      {/if}
+  <div class="tool-section">
+    {#if error}
+      <div class="error-box" role="alert">
+        {#if error.kind === 'validation'}
+          {error.items.map((i) => $t(i.key, i.params)).join(' · ')}
+        {:else if error.kind === 'key'}
+          {$t(error.key, error.params)}
+        {:else}
+          {error.text}
+        {/if}
+      </div>
+    {/if}
+
+    <div class="tool-grid">
+
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">{$t('panel.settings')}</span>
+        </div>
+        <div class="panel-body">
+          <GlobalSettings
+            increment={settings.increment}
+            onlyBuy={settings.onlyBuy}
+            optimalRedistribute={settings.optimalRedistribute}
+            fractionalShares={settings.fractionalShares}
+            on:update={e => updateSettings(e.detail)}
+          />
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">{$t('panel.assets')}</span>
+          <button type="button" class="add-asset-btn" on:click={addAsset}>{$t('assets.add')}</button>
+        </div>
+        <div class="panel-body tight">
+          <PortfolioEditor
+            {assets}
+            {loading}
+            on:removeAsset={e => removeAsset(e.detail)}
+            on:updateAsset={e => updateAsset(e.detail.id, e.detail.patch)}
+            on:run={runRebalance}
+          />
+        </div>
+      </div>
+
+      <ResultsPanel result={lastResult} settings={resultSettings} />
+
     </div>
-  {/if}
-
-  <div class="tool-grid">
-
-    <!-- Settings panel -->
-    <div class="panel">
-      <div class="panel-head">
-        <span class="panel-title">{$t('panel.settings')}</span>
-      </div>
-      <div class="panel-body">
-        <GlobalSettings
-          increment={settings.increment}
-          onlyBuy={settings.onlyBuy}
-          optimalRedistribute={settings.optimalRedistribute}
-          fractionalShares={settings.fractionalShares}
-          on:update={e => updateSettings(e.detail)}
-        />
-      </div>
-    </div>
-
-    <!-- Assets panel -->
-    <div class="panel">
-      <div class="panel-head">
-        <span class="panel-title">{$t('panel.assets')}</span>
-        <button type="button" class="add-asset-btn" on:click={addAsset}>{$t('assets.add')}</button>
-      </div>
-      <div class="panel-body tight">
-        <PortfolioEditor
-          {assets}
-          {loading}
-          on:removeAsset={e => removeAsset(e.detail)}
-          on:updateAsset={e => updateAsset(e.detail.id, e.detail.patch)}
-          on:run={runRebalance}
-        />
-      </div>
-    </div>
-
-    <!-- Result panel (owns its own panel shell) -->
-    <ResultsPanel result={lastResult} settings={resultSettings} />
-
   </div>
-</div>
 
-<TrustRail />
-<HowItWorks />
-<AlgoSection />
-<OssSection />
+  <TrustRail />
+  <HowItWorks />
+  <AlgoSection />
+  <OssSection />
+</main>
 
 <footer>
   <span>{$t('footer.brand')}</span>
@@ -228,6 +229,32 @@
 </footer>
 
 <style>
+  .skip-link {
+    position: fixed;
+    top: 0.75rem;
+    left: 0.75rem;
+    z-index: 1000;
+    transform: translateY(-150%);
+    opacity: 0;
+    pointer-events: none;
+    background: var(--surface);
+    border: 1px solid var(--teal);
+    border-radius: var(--r);
+    color: var(--teal);
+    padding: 0.45rem 0.7rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+    transition: transform 0.15s, opacity 0.15s;
+  }
+  .skip-link:focus-visible {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .skip-link:focus:not(:focus-visible) { transform: translateY(-150%); opacity: 0; }
+  main:focus { outline: none; }
+
   .add-asset-btn {
     font-family: var(--sans);
     font-size: 0.75rem;
@@ -251,7 +278,7 @@
     gap: 1rem;
     align-items: stretch;
   }
-  @media (max-width: 600px) {
+  @media (max-width: 700px) {
     .tool-grid { grid-template-columns: 1fr; }
   }
 
@@ -287,9 +314,13 @@
   }
   footer a {
     font-size: 0.6875rem;
-    color: rgba(240,237,232,0.3);
+    color: rgba(240,237,232,0.62);
     text-decoration: none;
   }
-  footer a:hover { color: var(--teal); }
-  .footer-sep { color: rgba(240,237,232,0.1); }
+  footer a:hover { color: var(--teal-on-dark); }
+  .footer-sep { color: rgba(240,237,232,0.25); }
+  @media (max-width: 560px) {
+    footer { align-items: flex-start; }
+    .footer-links { gap: 0.75rem; flex-wrap: wrap; }
+  }
 </style>

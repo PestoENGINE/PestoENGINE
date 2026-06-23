@@ -91,7 +91,7 @@
     text-align: right;
     white-space: nowrap;
   }
-  @media (max-width: 600px) {
+  @media (max-width: 700px) {
     .result-meta { grid-template-columns: 1fr; gap: 0.2rem; align-items: start; }
     .result-allocated { text-align: left; }
     .delta-bar { width: 24px; flex-basis: 24px; }

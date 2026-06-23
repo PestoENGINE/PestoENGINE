@@ -43,13 +43,14 @@
     gap: clamp(2rem, 5vw, 3.5rem);
     align-items: start;
   }
+  .oss-inner > * { min-width: 0; }
   @media (max-width: 720px) { .oss-inner { grid-template-columns: 1fr; } }
   .oss-kicker {
     font-family: var(--mono);
     font-size: 0.6875rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--teal);
+    color: var(--teal-on-dark);
     margin-bottom: 0.75rem;
   }
   .oss-headline {
@@ -63,15 +64,18 @@
   .oss-links { display: flex; gap: 0.625rem; flex-wrap: wrap; margin-top: 1.5rem; }
   .oss-link {
     font-size: 0.875rem;
-    color: var(--teal);
-    border: 1px solid rgba(1,105,111,0.4);
+    color: var(--teal-on-dark);
+    border: 1px solid color-mix(in srgb, var(--teal-on-dark) 45%, transparent);
     border-radius: var(--r);
     padding: 0.4rem 0.875rem;
     text-decoration: none;
   }
-  .oss-link:hover { border-color: var(--teal); background: var(--teal-light); }
+  .oss-link:hover { border-color: var(--teal-on-dark); background: rgba(53,200,207,0.12); }
 
   .quickstart {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     background: rgba(255,255,255,0.04);
     border: 1px solid rgba(255,255,255,0.08);
     border-radius: var(--r);
@@ -79,19 +83,31 @@
     font-size: 0.8125rem;
     line-height: 1.9;
     color: rgba(240,237,232,0.7);
-    overflow-x: auto;
+    overflow: hidden;
   }
   .qs-header {
     padding: 0.5rem 1.125rem;
     border-bottom: 1px solid rgba(255,255,255,0.06);
     font-size: 0.6875rem;
-    color: rgba(240,237,232,0.25);
+    color: rgba(240,237,232,0.68);
     letter-spacing: 0.06em;
     text-transform: uppercase;
   }
-  .qs-body { padding: 1rem 1.125rem; }
+  .qs-body { padding: 1rem 1.125rem; min-width: 0; }
   .qs-prompt { color: rgba(1,180,188,0.5); display: inline-block; width: 1.25rem; user-select: none; }
-  .qs-cmd { color: #7dd3d6; white-space: pre; }
-  .qs-line { display: block; padding-left: 1.25rem; }
+  .qs-cmd { color: #7dd3d6; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
+  .qs-line { display: block; padding-left: 1.25rem; min-width: 0; }
   .qs-line:has(.qs-prompt) { padding-left: 0; }
+  @media (max-width: 393px) {
+    .quickstart { font-size: 0.75rem; }
+    .qs-header { padding: 0.45rem 0.875rem; }
+    .qs-body { padding: 0.85rem 0.875rem; }
+  }
+  @media (max-width: 360px) {
+    .oss-section { padding-left: 0.75rem; padding-right: 0.75rem; }
+    .quickstart { font-size: 0.625rem; }
+    .qs-header { padding: 0.45rem 0.75rem; }
+    .qs-body { padding: 0.75rem; }
+    .qs-line { padding-left: 1rem; }
+  }
 </style>

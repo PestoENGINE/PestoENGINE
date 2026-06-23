@@ -4,7 +4,9 @@
     "export": "Export",
     "toLightMode": "Switch to light mode",
     "toDarkMode": "Switch to dark mode",
-    "languageAria": "Language"
+    "languageAria": "Language",
+    "primaryAria": "Primary navigation",
+    "skipToMain": "Skip to main content"
   },
   "hero": {
     "kicker": "Rebalancing execution engine",
@@ -45,8 +47,19 @@
     "colTarget": "Target %",
     "colShares": "Shares",
     "colFee": "Fee",
+    "colActions": "Actions",
     "calculating": "Calculating…",
-    "calculate": "Calculate buy order"
+    "calculate": "Calculate buy order",
+    "validation": {
+      "title": "Fix these fields before calculating:",
+      "percentageSum": "Target percentages must add up to 100 (currently {total}%).",
+      "tickerRequired": "Asset {n}: enter a ticker.",
+      "percentageRange": "Asset {n}: target must be between 0 and 100.",
+      "sharesNegative": "Asset {n}: shares can't be negative.",
+      "feeNegative": "Asset {n}: fee can't be negative.",
+      "feeCap": "Asset {n}: percentage fee can't exceed 100.",
+      "more": "And {n} more issue(s)."
+    }
   },
   "percentage": {
     "total": "Allocation total"

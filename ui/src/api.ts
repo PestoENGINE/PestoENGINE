@@ -1,6 +1,6 @@
 import type { Asset, Settings, RebalanceResponse, TickerResult, UiError, UiErrorItem } from './types';
 
-export interface RebalanceBody {
+interface RebalanceBody {
   only_buy: boolean;
   increment: number;
   optimal_redistribute: boolean;
@@ -121,7 +121,7 @@ export async function rebalanceError(res: Response): Promise<UiError> {
   return { kind: 'key', key: 'errors.requestFailedRetry' };
 }
 
-export type RebalanceOutcome =
+type RebalanceOutcome =
   | { ok: true; data: RebalanceResponse }
   | { ok: false; error: UiError };
 
@@ -146,7 +146,7 @@ export async function runRebalance(
   return { ok: false, error: await rebalanceError(res) };
 }
 
-export type TickerSearchOutcome =
+type TickerSearchOutcome =
   | { ok: true; results: TickerResult[] }
   | { ok: false; rateLimited: boolean };
 

@@ -25,22 +25,22 @@
         </thead>
         <tbody>
           <tr>
-            <td>{$t('algo.greedyName')}</td>
-            <td>O(n log n)</td>
-            <td>{$t('algo.greedyDeploy')}</td>
-            <td>{$t('algo.greedyUse')}</td>
+            <td data-label={$t('algo.colMode')}>{$t('algo.greedyName')}</td>
+            <td data-label={$t('algo.colComplexity')}>O(n log n)</td>
+            <td data-label={$t('algo.colDeployment')}>{$t('algo.greedyDeploy')}</td>
+            <td data-label={$t('algo.colUseWhen')}>{$t('algo.greedyUse')}</td>
           </tr>
           <tr>
-            <td>{$t('algo.knapsackName')}</td>
-            <td>O(n × W)</td>
-            <td>{$t('algo.knapsackDeploy')}</td>
-            <td>{$t('algo.knapsackUse')}</td>
+            <td data-label={$t('algo.colMode')}>{$t('algo.knapsackName')}</td>
+            <td data-label={$t('algo.colComplexity')}>O(n × W)</td>
+            <td data-label={$t('algo.colDeployment')}>{$t('algo.knapsackDeploy')}</td>
+            <td data-label={$t('algo.colUseWhen')}>{$t('algo.knapsackUse')}</td>
           </tr>
           <tr>
-            <td>{$t('algo.buyonlyName')}</td>
-            <td>O(n)</td>
-            <td>{$t('algo.buyonlyDeploy')}</td>
-            <td>{buyonlyUseParts[0]}<span class="inline-code">only_buy: true</span>{buyonlyUseParts[1] ?? ''}</td>
+            <td data-label={$t('algo.colMode')}>{$t('algo.buyonlyName')}</td>
+            <td data-label={$t('algo.colComplexity')}>O(n)</td>
+            <td data-label={$t('algo.colDeployment')}>{$t('algo.buyonlyDeploy')}</td>
+            <td data-label={$t('algo.colUseWhen')}>{buyonlyUseParts[0]}<span class="inline-code">only_buy: true</span>{buyonlyUseParts[1] ?? ''}</td>
           </tr>
         </tbody>
       </table>
@@ -53,7 +53,10 @@
 </div>
 
 <style>
-  .table-scroll { overflow-x: auto; }
+  .table-scroll {
+    overflow-x: visible;
+    padding-bottom: 0.25rem;
+  }
 
   .algo-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
   .algo-table th {
@@ -77,6 +80,39 @@
   .algo-table td:first-child { font-family: var(--mono); font-weight: 600; font-size: 0.875rem; color: var(--teal); white-space: nowrap; }
   .algo-table td:nth-child(2) { font-size: 0.875rem; color: var(--text-2); }
   .algo-table td:nth-child(3), .algo-table td:nth-child(4) { color: var(--text-2); font-size: 0.875rem; }
+
+  @media (max-width: 700px) {
+    .algo-table,
+    .algo-table tbody,
+    .algo-table tr,
+    .algo-table td { display: block; }
+    .algo-table { min-width: 0; }
+    .algo-table thead { display: none; }
+    .algo-table tbody { display: grid; gap: 0.75rem; }
+    .algo-table tr {
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 0.8rem;
+      background: color-mix(in srgb, var(--surface) 88%, var(--bg));
+    }
+    .algo-table td {
+      border-bottom: none;
+      padding: 0;
+      font-size: 0.875rem;
+    }
+    .algo-table td + td { margin-top: 0.65rem; }
+    .algo-table td::before {
+      content: attr(data-label);
+      display: block;
+      margin-bottom: 0.15rem;
+      font-size: 0.625rem;
+      font-family: var(--sans);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-3);
+    }
+  }
 
   .inline-code {
     font-family: var(--mono);

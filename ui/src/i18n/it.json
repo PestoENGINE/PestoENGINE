@@ -4,7 +4,9 @@
     "export": "Esporta",
     "toLightMode": "Passa al tema chiaro",
     "toDarkMode": "Passa al tema scuro",
-    "languageAria": "Lingua"
+    "languageAria": "Lingua",
+    "primaryAria": "Navigazione principale",
+    "skipToMain": "Vai al contenuto principale"
   },
   "hero": {
     "kicker": "Motore di esecuzione del ribilanciamento",
@@ -45,8 +47,19 @@
     "colTarget": "Target %",
     "colShares": "Quote",
     "colFee": "Commissione",
+    "colActions": "Azioni",
     "calculating": "Calcolo…",
-    "calculate": "Calcola ordine d'acquisto"
+    "calculate": "Calcola ordine d'acquisto",
+    "validation": {
+      "title": "Correggi questi campi prima del calcolo:",
+      "percentageSum": "Le percentuali obiettivo devono sommare a 100 (ora {total}%).",
+      "tickerRequired": "Asset {n}: inserisci un ticker.",
+      "percentageRange": "Asset {n}: il target deve essere tra 0 e 100.",
+      "sharesNegative": "Asset {n}: le quote non possono essere negative.",
+      "feeNegative": "Asset {n}: la commissione non può essere negativa.",
+      "feeCap": "Asset {n}: la commissione percentuale non può superare 100.",
+      "more": "E altri {n} problema/i."
+    }
   },
   "percentage": {
     "total": "Totale allocazione"
@@ -117,7 +130,7 @@
     "headlineLine2": "Per questo l'algoritmo è pubblico.",
     "text1": "PestoENGINE ha licenza MIT, è auto-ospitabile in due comandi ed è costruito su uno stack lineare: backend FastAPI, frontend Svelte, Yahoo Finance per i dati di mercato. Il tuo portafoglio non viene mai memorizzato: le richieste sono calcolate in memoria e scartate, e un'istanza self-hosted mantiene i tuoi dati interamente sulla tua macchina.",
     "text2": "Questo progetto fa bene una cosa sola. I contributi che ampliano sensibilmente lo scope verranno discussi prima dell'implementazione.",
-    "linkStar": "Metti una stella su GitHub",
+    "linkStar": "Stella su GitHub",
     "linkAlgo": "Leggi l'algoritmo",
     "linkContrib": "Guida ai contributi",
     "quickStart": "Avvio rapido"

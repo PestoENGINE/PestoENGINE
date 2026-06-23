@@ -2,7 +2,7 @@ import type { Settings, Asset, PortfolioExport, UiError } from './types';
 import { DEFAULT_SETTINGS } from './storage';
 import { percentagesSumTo100, uuid } from './util';
 
-export type ImportResult =
+type ImportResult =
   | { ok: true; settings: Settings; assets: Asset[]; sumWarning: boolean }
   | { ok: false; error: UiError };
 

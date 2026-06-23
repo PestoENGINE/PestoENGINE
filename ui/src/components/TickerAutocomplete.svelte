@@ -1,4 +1,3 @@
-<!-- ui/src/components/TickerAutocomplete.svelte -->
 <script lang="ts">
   import { createEventDispatcher, onDestroy } from 'svelte';
   import type { TickerResult } from '../types';
@@ -8,6 +7,7 @@
   export let value: string = '';
   export let id: string = '';
   export let cellStyle: boolean = false;
+  export let invalid: boolean = false;
 
   const dispatch = createEventDispatcher<{ change: { ticker: string; provider: string | null } }>();
 
@@ -60,7 +60,10 @@
         open = true;
       }
     } catch {
-      // network error - field remains manually editable
+      // Network error: keep the field manually editable, but show a lightweight hint.
+      if (seq !== searchSeq) return;
+      searchError = true;
+      open = true;
     }
   }
 
@@ -118,6 +121,7 @@
     aria-controls={listboxId}
     aria-autocomplete="list"
     aria-activedescendant={activeIndex >= 0 ? optionId(activeIndex) : undefined}
+    aria-invalid={invalid ? 'true' : undefined}
   />
   {#if open}
     <ul id={listboxId} class="autocomplete-dropdown" role="listbox">

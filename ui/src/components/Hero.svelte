@@ -3,7 +3,7 @@
 </script>
 
 <div class="hero">
-  <div class="hero-bg-text" aria-hidden="true">VAGF<br>VWCE<br>SWDA</div>
+  <div class="hero-bg-text" aria-hidden="true"></div>
   <div class="hero-inner">
     <div class="hero-kicker">{$t('hero.kicker')}</div>
     <h1 class="hero-headline">{$t('hero.headlineLine1')}<br>{$t('hero.headlineLine2')}</h1>
@@ -33,7 +33,11 @@
     user-select: none;
     line-height: 1.1;
   }
-  :global(html.dark) .hero-bg-text { color: rgba(26,156,163,0.08); }
+  .hero-bg-text::before {
+    content: 'VAGF\A VWCE\A SWDA';
+    white-space: pre;
+  }
+  :global(html.dark) .hero-bg-text { color: rgba(53,200,207,0.08); }
   .hero-inner { max-width: 700px; position: relative; }
   .hero-kicker {
     font-family: var(--mono);
@@ -41,7 +45,7 @@
     font-weight: 500;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--teal);
+    color: var(--teal-on-dark);
     margin-bottom: 1rem;
   }
   .hero-headline {

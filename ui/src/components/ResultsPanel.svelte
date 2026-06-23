@@ -60,7 +60,7 @@
     grid-column: 1 / -1;
     scroll-margin-top: calc(var(--nav-height) + var(--panel-gap));
   }
-  @media (max-width: 600px) {
+  @media (max-width: 700px) {
     .result-panel { grid-column: auto; }
   }
 

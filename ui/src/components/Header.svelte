@@ -21,7 +21,7 @@
 
 <svelte:window on:keydown={(e) => { if (langOpen && e.key === 'Escape') langOpen = false; }} />
 
-<nav>
+<nav aria-label={$t('nav.primaryAria')}>
   <img src="/brand-logo-nav.svg" alt="PestoENGINE" class="wordmark-logo" />
   <div class="nav-actions">
     <button type="button" class="nav-btn" on:click={() => dispatch('requestImport')}>{$t('nav.import')}</button>
@@ -74,7 +74,6 @@
       aria-label={dark ? $t('nav.toLightMode') : $t('nav.toDarkMode')}
     >
       {#if dark}
-        <!-- Sun icon -->
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="12" cy="12" r="4"/>
           <line x1="12" y1="2" x2="12" y2="4"/>
@@ -87,7 +86,6 @@
           <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
         </svg>
       {:else}
-        <!-- Moon icon -->
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
         </svg>
@@ -113,13 +111,15 @@
     height: 48px;
     width: auto;
     display: block;
+    flex: 0 0 auto;
   }
   .nav-actions {
     display: flex;
     gap: 1rem;
     align-items: center;
+    flex: 0 0 auto;
   }
-  @media (max-width: 500px) {
+  @media (max-width: 560px) {
     nav {
       height: auto;
       flex-direction: column;
@@ -129,24 +129,44 @@
       gap: 0.375rem;
     }
     :global(:root) { --nav-height: 102px; }
-    .nav-actions { padding-left: 5px; }
+    .nav-actions {
+      padding-left: 5px;
+      gap: 0.7rem;
+      flex-wrap: wrap;
+    }
   }
   .nav-btn {
     font-family: var(--sans);
     font-size: 0.8125rem;
-    color: rgba(255,255,255,0.5);
+    color: rgba(255,255,255,0.68);
     background: none;
     border: none;
     cursor: pointer;
     padding: 0.25rem 0;
+    flex: 0 0 auto;
   }
-  .nav-btn:hover:not(:disabled) { color: rgba(255,255,255,0.9); }
+  .nav-btn:hover:not(:disabled) { color: rgba(255,255,255,0.95); }
   .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-  .icon-btn { display: flex; align-items: center; padding: 0.25rem; }
+  .icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0.25rem;
+    flex-basis: 24px;
+  }
+  .icon-btn svg {
+    width: 16px;
+    height: 16px;
+    max-width: none;
+    flex: 0 0 auto;
+  }
   .nav-sep {
     width: 1px;
     height: 16px;
     background: rgba(255,255,255,0.12);
+    flex: 0 0 1px;
   }
   .lang-dd { position: relative; display: flex; align-items: center; }
   .lang-current { display: flex; align-items: center; gap: 0.2rem; }

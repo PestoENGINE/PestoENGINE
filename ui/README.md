@@ -6,13 +6,13 @@ Single-page application that consumes `POST /v1/rebalance` and `GET /v1/tickers/
 
 | Layer | Library | Version |
 |-------|---------|---------|
-| UI framework | Svelte | `^5.55.4` (components use the Svelte 4 compatible API: `$:` reactive statements, `createEventDispatcher`, `on:event` directives; no runes) |
-| Language | TypeScript | `~6.0.2` |
+| UI framework | Svelte | `^5.56.3` (components use the Svelte 4 compatible API: `$:` reactive statements, `createEventDispatcher`, `on:event` directives; no runes) |
+| Language | TypeScript | `~6.0.3` |
 | Styling | Hand-written CSS | Global `src/app.css` holds only cross-component concerns (reset, design tokens, shared primitives, the two table systems); each component owns its single-use styles in a scoped `<style>` block |
-| Build tool | Vite | `^8.0.10` |
-| Svelte plugin | `@sveltejs/vite-plugin-svelte` | `^7.0.0` |
-| Typecheck | `svelte-check` + `tsc` | `^4.4.6` / `~6.0.2` |
-| Tests | Vitest | `^4.1.7` (unit tests for the plain-TS logic modules) |
+| Build tool | Vite | `^8.1.0` |
+| Svelte plugin | `@sveltejs/vite-plugin-svelte` | `^7.1.2` |
+| Typecheck | `svelte-check` + `tsc` | `^4.7.0` / `~6.0.3` |
+| Tests | Vitest | `^4.1.9` (unit tests for the plain-TS logic modules) |
 
 ## Structure
 

@@ -7,6 +7,12 @@ img, svg { display: block; max-width: 100%; }
 ul, ol { list-style: none; padding: 0; }
 button:not(:disabled),
 [role="button"]:not(:disabled) { cursor: pointer; }
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 3px;
+}
 
 /* Design tokens */
 :root {
@@ -17,12 +23,13 @@ button:not(:disabled),
   --surface:    #ffffff;
   --border:     #e0ddd8;
   --text:       #1a1714;
-  --text-2:     #6b6660;
-  --text-3:     #aaa8a2;
+  --text-2:     #5f5a53;
+  --text-3:     #76716a;
 
   --teal:       #01696f;
   --teal-hover: #015a5f;
   --teal-light: #e6f4f4;
+  --teal-on-dark: #35c8cf;
 
   --error:        #881414;
   --error-bg:     #fdf3f3;
@@ -30,7 +37,7 @@ button:not(:disabled),
 
   --hero-bg:    #0c1e1e;
   --hero-text:  #f0ede8;
-  --hero-sub:   rgba(240,237,232,0.55);
+  --hero-sub:   rgba(240,237,232,0.72);
   --hero-border: rgba(255,255,255,0.06);
 
   --sans: 'Geist', system-ui, sans-serif;
@@ -44,12 +51,13 @@ html.dark {
   --surface:    #1e1d1b;
   --border:     #2e2c28;
   --text:       #f0ede8;
-  --text-2:     #a09d98;
-  --text-3:     #6b6860;
+  --text-2:     #b8b3aa;
+  --text-3:     #918b80;
 
-  --teal:       #1a9ca3;
-  --teal-hover: #15888f;
-  --teal-light: rgba(26,156,163,0.12);
+  --teal:       #35c8cf;
+  --teal-hover: #2fb2b9;
+  --teal-light: rgba(53,200,207,0.14);
+  --teal-on-dark: #35c8cf;
 
   --error:        #cc4444;
   --error-bg:     #2a1515;
@@ -129,7 +137,9 @@ body {
   appearance: none;
 }
 .field:focus        { border-color: var(--teal); }
-.field:out-of-range { color: var(--error); }
+.field:focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, var(--teal) 20%, transparent); }
+.field:out-of-range,
+.field[aria-invalid='true'] { color: var(--error); border-color: var(--error-border); }
 .field::placeholder { color: var(--text-3); }
 .field.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
@@ -168,9 +178,13 @@ input[type='checkbox']:checked::after {
   transform: rotate(45deg);
 }
 
-/* Assets table (PortfolioEditor header + AssetRow rows)
-   table-layout: fixed makes every column share the width equally. */
+/* Assets table (PortfolioEditor header + AssetRow rows) */
 .asset-table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-bottom: 0.75rem; }
+.asset-col-ticker { width: 28%; }
+.asset-col-target,
+.asset-col-shares { width: 17%; }
+.asset-col-fee { width: 26%; }
+.asset-col-actions { width: 2.5rem; }
 .asset-table th {
   font-size: 0.6875rem;
   font-weight: 700;
@@ -187,16 +201,67 @@ input[type='checkbox']:checked::after {
   font-size: 0.875rem;
 }
 .asset-table tbody tr:first-child td { border-top: none; }
-@media (max-width: 480px) {
-  .asset-table th,
-  .asset-table td { padding: 0.2rem 0.3rem; }
-  .asset-table td { font-size: 0.8125rem; }
-  /* Keep headers compact so the nowrap labels (e.g. "Target %") fit their column
-     instead of bleeding into the next one, and shrink the actions column so the
-     four data columns get the freed width. */
-  .asset-table th { font-size: 0.625rem; letter-spacing: 0.03em; }
-  .asset-table th:last-child,
-  .asset-table td:last-child { width: 2rem; padding-left: 0; padding-right: 0; }
+@media (max-width: 700px) {
+  .asset-table,
+  .asset-table colgroup,
+  .asset-table tbody,
+  .asset-table tr,
+  .asset-table td { display: block; }
+  .asset-table { table-layout: auto; border-collapse: separate; border-spacing: 0; }
+  .asset-table thead { display: none; }
+  .asset-table tbody { display: grid; gap: 0.75rem; }
+  .asset-table tr {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) clamp(5.75rem, 18vw, 7.25rem);
+    gap: 0.75rem 0.8rem;
+    padding: 0.95rem 3rem 0.95rem 0.95rem;
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    background: color-mix(in srgb, var(--surface) 92%, var(--bg));
+  }
+  .asset-table td {
+    border-top: none;
+    padding: 0;
+    min-width: 0;
+  }
+  .asset-table td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-3);
+  }
+  .asset-table td:first-child { grid-column: 1 / -1; }
+  .asset-table td:last-child {
+    position: absolute;
+    top: 0.85rem;
+    right: 0.85rem;
+    display: block;
+    padding: 0;
+  }
+  .asset-table td:last-child::before { content: ''; display: none; }
+  .asset-table .cell-input {
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    background: var(--surface);
+    padding: 0.45rem 0.55rem;
+    min-height: 2.25rem;
+  }
+  .asset-table .fee-cell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.45rem;
+  }
+}
+@media (max-width: 420px) {
+  .asset-table tr { grid-template-columns: minmax(0, 1fr); }
+  .asset-table td:not(:last-child) { grid-column: 1 / -1; }
+  .asset-table td:last-child { grid-column: auto; }
 }
 .ticker-input { text-transform: uppercase; }
 
@@ -228,7 +293,7 @@ input[type='checkbox']:checked::after {
 @media (max-width: 980px) {
   :root { --result-cols: 5.5rem 5.75rem minmax(0, 1fr); }
 }
-@media (max-width: 600px) {
+@media (max-width: 700px) {
   :root { --result-cols: 5.2rem 5.75rem minmax(0, 1fr); --result-gap: 0.5rem; }
 }
 @media (max-width: 480px) {
@@ -261,3 +326,14 @@ input[type='checkbox']:checked::after {
 
 /* Utilities */
 .hidden { display: none; }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

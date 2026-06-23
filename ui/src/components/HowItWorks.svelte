@@ -64,9 +64,11 @@
     gap: clamp(2rem, 5vw, 3.5rem);
     align-items: start;
   }
-  @media (max-width: 720px) { .how-grid { grid-template-columns: 1fr; } }
-  .how-steps { display: flex; flex-direction: column; gap: 2rem; }
-  .how-step { display: flex; gap: 1.125rem; }
+  @media (max-width: 720px) { .how-grid { grid-template-columns: minmax(0, 1fr); } }
+  .how-grid > * { min-width: 0; }
+  .how-steps { display: flex; flex-direction: column; gap: 2rem; min-width: 0; }
+  .how-step { display: flex; gap: 1.125rem; min-width: 0; }
+  .how-step > div:last-child { min-width: 0; }
   .how-num {
     font-family: var(--mono);
     font-size: 0.75rem;
@@ -80,29 +82,42 @@
   .how-step-text { font-size: 0.9375rem; color: var(--text-2); line-height: 1.6; }
 
   .code-block {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     background: #0c1e1e;
     border-radius: var(--r);
     font-family: var(--mono);
     font-size: 0.8125rem;
     line-height: 1.8;
-    overflow-x: auto;
+    overflow: hidden;
     border: 1px solid rgba(255,255,255,0.06);
   }
   .code-header {
     padding: 0.5rem 1rem;
     border-bottom: 1px solid rgba(255,255,255,0.06);
     font-size: 0.6875rem;
-    color: rgba(240,237,232,0.3);
+    color: rgba(240,237,232,0.72);
     letter-spacing: 0.06em;
     text-transform: uppercase;
   }
-  .code-body { padding: 1rem 1.25rem; }
-  .code-line { display: flex; gap: 0; min-height: 1.4em; }
-  .code-ln { width: 2ch; color: rgba(240,237,232,0.15); flex-shrink: 0; margin-right: 1.5rem; text-align: right; user-select: none; }
-  .code-content { color: rgba(240,237,232,0.8); }
+  .code-body { padding: 1rem 1.25rem; min-width: 0; }
+  .code-line { display: flex; gap: 0; min-height: 1.4em; min-width: 0; }
+  .code-ln { width: 2ch; color: rgba(240,237,232,0.72); flex-shrink: 0; margin-right: 1.5rem; text-align: right; user-select: none; }
+  .code-content { color: rgba(240,237,232,0.8); min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
   .ck { color: #7dd3d6; }
   .cv { color: #f4c97e; }
   .cs { color: #a8d8a8; }
   .cn { color: #c3a6ff; }
-  .ci { color: rgba(240,237,232,0.4); }
+  .ci { color: rgba(240,237,232,0.72); }
+
+  @media (max-width: 320px) {
+    .content-section { padding-left: 0.75rem; padding-right: 0.75rem; }
+    .how-step { gap: 0.75rem; }
+    .how-num { width: 1rem; }
+    .code-block { font-size: 0.6875rem; }
+    .code-header { padding: 0.45rem 0.75rem; }
+    .code-body { padding: 0.75rem; }
+    .code-ln { margin-right: 0.75rem; }
+  }
 </style>
