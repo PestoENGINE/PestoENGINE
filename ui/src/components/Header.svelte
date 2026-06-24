@@ -101,7 +101,7 @@
     z-index: 100;
     background: var(--hero-bg);
     padding: 0 clamp(1rem, 4vw, 2rem);
-    height: 64px;
+    height: var(--nav-height);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -110,7 +110,6 @@
   .wordmark-logo {
     height: 48px;
     width: auto;
-    display: block;
     flex: 0 0 auto;
   }
   .nav-actions {
@@ -136,12 +135,8 @@
     }
   }
   .nav-btn {
-    font-family: var(--sans);
     font-size: 0.8125rem;
     color: rgba(255,255,255,0.68);
-    background: none;
-    border: none;
-    cursor: pointer;
     padding: 0.25rem 0;
     flex: 0 0 auto;
   }
@@ -188,13 +183,9 @@
     box-shadow: 0 6px 16px rgba(0,0,0,0.18);
   }
   .lang-option {
-    font-family: var(--sans);
     font-size: 0.8125rem;
     text-align: left;
     color: var(--text-2);
-    background: none;
-    border: none;
-    cursor: pointer;
     padding: 0.3rem 0.5rem;
     border-radius: 3px;
   }

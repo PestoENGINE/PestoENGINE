@@ -256,7 +256,6 @@
   main:focus { outline: none; }
 
   .add-asset-btn {
-    font-family: var(--sans);
     font-size: 0.75rem;
     color: var(--teal);
     border: 1px solid color-mix(in srgb, var(--teal) 35%, transparent);
@@ -315,7 +314,6 @@
   footer a {
     font-size: 0.6875rem;
     color: rgba(240,237,232,0.62);
-    text-decoration: none;
   }
   footer a:hover { color: var(--teal-on-dark); }
   .footer-sep { color: rgba(240,237,232,0.25); }

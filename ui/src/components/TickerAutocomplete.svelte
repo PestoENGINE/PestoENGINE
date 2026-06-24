@@ -162,8 +162,6 @@
     top: calc(100% + 2px);
     left: 0;
     z-index: 10;
-    list-style: none;
-    margin: 0;
     padding: 2px 0;
     background: var(--surface);
     border: 1px solid var(--border);

@@ -68,7 +68,6 @@
     border: 1px solid color-mix(in srgb, var(--teal-on-dark) 45%, transparent);
     border-radius: var(--r);
     padding: 0.4rem 0.875rem;
-    text-decoration: none;
   }
   .oss-link:hover { border-color: var(--teal-on-dark); background: rgba(53,200,207,0.12); }
 

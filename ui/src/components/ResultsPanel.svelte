@@ -25,7 +25,7 @@
   <div class="panel-body tight-x">
     {#if result}
       <div class="result-list">
-        <div class="result-list-head">
+        <div class="result-list-head result-grid">
           <span>{$t('results.colTicker')}</span>
           <span>{$t('results.colBuy')}</span>
           <span>{$t('results.colResult')}</span>
@@ -84,9 +84,6 @@
 
   .result-list { width: 100%; min-width: 0; }
   .result-list-head {
-    display: grid;
-    grid-template-columns: var(--result-cols);
-    gap: var(--result-gap);
     padding: 0 0 0.625rem;
     font-size: 0.6875rem;
     font-weight: 700;

@@ -10,7 +10,7 @@
     : 0;
 </script>
 
-<div class="result-row">
+<div class="result-row result-grid">
   <div class="result-ticker">{asset.ticker}</div>
   <div class="result-buy" class:muted>{formatShares(asset.buy)}</div>
   <div class="result-meta">
@@ -26,9 +26,6 @@
 
 <style>
   .result-row {
-    display: grid;
-    grid-template-columns: var(--result-cols);
-    gap: var(--result-gap);
     align-items: center;
     padding: 0.625rem 0;
     border-top: 1px solid var(--border);

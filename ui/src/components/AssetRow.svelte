@@ -136,9 +136,7 @@
     height: 1.65rem;
     display: grid;
     place-items: center;
-    background: transparent;
     border: 1px solid transparent;
-    cursor: pointer;
     color: var(--text-3);
     font-size: 1.15rem;
     padding: 0;

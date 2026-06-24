@@ -59,7 +59,7 @@ html.dark {
   --teal-light: rgba(53,200,207,0.14);
   --teal-on-dark: #35c8cf;
 
-  --error:        #cc4444;
+  --error:        #e35b5b;
   --error-bg:     #2a1515;
   --error-border: #5a2828;
 
@@ -211,11 +211,13 @@ input[type='checkbox']:checked::after {
   .asset-table thead { display: none; }
   .asset-table tbody { display: grid; gap: 0.75rem; }
   .asset-table tr {
+    --asset-action-col: 1.65rem;
+    --asset-card-gap-x: 0.55rem;
     position: relative;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) clamp(5.75rem, 18vw, 7.25rem);
-    gap: 0.75rem 0.8rem;
-    padding: 0.95rem 3rem 0.95rem 0.95rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) var(--asset-action-col);
+    gap: 0.65rem var(--asset-card-gap-x);
+    padding: 0.85rem 0.75rem;
     border: 1px solid var(--border);
     border-radius: var(--r);
     background: color-mix(in srgb, var(--surface) 92%, var(--bg));
@@ -236,37 +238,6 @@ input[type='checkbox']:checked::after {
     color: var(--text-3);
     white-space: nowrap;
   }
-  .asset-table td:first-child { grid-column: 1 / -1; }
-  .asset-table td:last-child {
-    position: absolute;
-    top: 0.85rem;
-    right: 0.85rem;
-    display: block;
-    padding: 0;
-  }
-  .asset-table td:last-child::before { content: ''; display: none; }
-  .asset-table .cell-input {
-    border: 1px solid var(--border);
-    border-radius: var(--r);
-    background: var(--surface);
-    padding: 0.45rem 0.55rem;
-    min-height: 2.25rem;
-  }
-  .asset-table .fee-cell {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 0.45rem;
-  }
-}
-@media (max-width: 700px) {
-  .asset-table tr {
-    --asset-action-col: 1.65rem;
-    --asset-card-gap-x: 0.55rem;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) var(--asset-action-col);
-    gap: 0.65rem var(--asset-card-gap-x);
-    padding: 0.85rem 0.75rem;
-  }
   .asset-table td:first-child {
     grid-column: 1 / 4;
     padding-right: 0;
@@ -279,12 +250,22 @@ input[type='checkbox']:checked::after {
   }
   .asset-table td:last-child {
     position: static;
+    display: block;
     grid-column: 4;
     grid-row: 1;
     align-self: start;
     justify-self: center;
     width: var(--asset-action-col);
     height: 1.65rem;
+    padding: 0;
+  }
+  .asset-table td:last-child::before { content: ''; display: none; }
+  .asset-table .cell-input {
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    background: var(--surface);
+    padding: 0.45rem 0.55rem;
+    min-height: 2.25rem;
   }
   .asset-table .fee-cell.fee-cell {
     display: grid;
@@ -385,6 +366,11 @@ input[type='checkbox']:checked::after {
 }
 @media (max-width: 480px) {
   :root { --result-cols: 3.75rem 5rem minmax(0, 1fr); --result-gap: 0.3rem; }
+}
+.result-grid {
+  display: grid;
+  grid-template-columns: var(--result-cols);
+  gap: var(--result-gap);
 }
 
 /* Page sections (HowItWorks + AlgoSection) */

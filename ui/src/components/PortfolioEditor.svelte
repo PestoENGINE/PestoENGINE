@@ -136,13 +136,10 @@
     width: 100%;
     background: var(--teal);
     color: #fff;
-    border: none;
     border-radius: var(--r);
     padding: 0.7rem;
-    font-family: var(--sans);
     font-size: 0.9375rem;
     font-weight: 600;
-    cursor: pointer;
     margin-top: auto;
     transition: background 0.15s, opacity 0.15s;
     display: inline-flex;
