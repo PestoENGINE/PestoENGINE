@@ -47,10 +47,13 @@
     saveSettings(settings);
   }
 
-  function addAsset() {
+  async function addAsset() {
     const id = uuid();
     assets = [...assets, { id, ticker: '', provider: null, desiredPercentage: 0, shares: 0, fees: 0, percentageFee: false }];
     saveAssets(assets);
+
+    await tick();
+    document.getElementById(`ticker-${id}`)?.focus();
   }
 
   function removeAsset(id: string) {
