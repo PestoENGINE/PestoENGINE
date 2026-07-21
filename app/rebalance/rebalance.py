@@ -1,14 +1,30 @@
 """Core functions for portfolio rebalancing calculations."""
 
-# DP safety cap: above this change (in cents) fall back to greedy to avoid O(n*c) blowup.
+from decimal import ROUND_CEILING, Decimal
+
+from app.core.formatting import as_decimal
+
+# DP safety cap: above this many scaled units, fall back to greedy.
 MAX_CENTS: int = 1_000_000
+_ZERO = Decimal("0")
+_HUNDRED = Decimal("100")
+
+
+def _decimals(values: list[Decimal | int | float]) -> list[Decimal]:
+    return [as_decimal(value) for value in values]
+
+
+def _decimal_places(value: Decimal) -> int:
+    """Return significant fractional places without trailing zeroes."""
+    normalized = value.normalize()
+    return max(0, -normalized.as_tuple().exponent)
 
 
 def _redistribute_proportional_to_gap(
-    values: list[float],
-    percentages: list[float],
-    increment: float,
-) -> list[float]:
+    values: list[Decimal | int | float],
+    percentages: list[Decimal | int | float],
+    increment: Decimal | int | float,
+) -> list[Decimal]:
     """Distribute the increment proportionally to each asset's positive rebalance gap.
 
     Used in only_buy mode.
@@ -76,25 +92,31 @@ def _redistribute_proportional_to_gap(
         Allocation amounts per asset; overweight assets receive 0, underweight
         assets receive amounts summing exactly to increment.
     """
-    total_value = sum(values) + increment
-    gaps = [(total_value * p / 100.0) - v for p, v in zip(percentages, values)]
+    values_d = _decimals(values)
+    percentages_d = _decimals(percentages)
+    increment_d = as_decimal(increment)
+    total_value = sum(values_d) + increment_d
+    gaps = [
+        (total_value * p / _HUNDRED) - v
+        for p, v in zip(percentages_d, values_d)
+    ]
 
-    total_positive = sum(g for g in gaps if g > 0)
-    if total_positive == 0:
-        return [0.0] * len(values)
+    total_positive = sum(g for g in gaps if g > _ZERO)
+    if total_positive == _ZERO:
+        return [_ZERO] * len(values_d)
 
     return [
-        increment * (g / total_positive) if g > 0 else 0.0
+        increment_d * (g / total_positive) if g > _ZERO else _ZERO
         for g in gaps
     ]
 
 
 def calculate_rebalance(
     only_buy: bool,
-    increment: float,
-    values: list[float],
-    percentages: list[float],
-) -> list[float]:
+    increment: Decimal | int | float,
+    values: list[Decimal | int | float],
+    percentages: list[Decimal | int | float],
+) -> list[Decimal]:
     """Calculate the optimal rebalance amounts for each portfolio holding.
 
     Args:
@@ -110,17 +132,22 @@ def calculate_rebalance(
     """
     if only_buy:
         return _redistribute_proportional_to_gap(values, percentages, increment)
-    total_value = sum(values) + increment
-    return [(total_value * (p / 100.0)) - v for p, v in zip(percentages, values)]
+    values_d = _decimals(values)
+    percentages_d = _decimals(percentages)
+    total_value = sum(values_d) + as_decimal(increment)
+    return [
+        (total_value * p / _HUNDRED) - v
+        for p, v in zip(percentages_d, values_d)
+    ]
 
 
 def redistribute_change(
     buy_quantities: list[int],
-    ticker_prices: list[float],
-    current_percentages: list[float],
-    desired_percentages: list[float],
-    change: float,
-) -> tuple[list[int], float]:
+    ticker_prices: list[Decimal | int | float],
+    current_percentages: list[Decimal | int | float],
+    desired_percentages: list[Decimal | int | float],
+    change: Decimal | int | float,
+) -> tuple[list[int], Decimal]:
     """Redistribute leftover cash from discrete share purchases.
 
     After converting currency amounts to whole share counts via floor division,
@@ -173,24 +200,28 @@ def redistribute_change(
     Returns:
         A tuple of (updated buy quantities, remaining unallocated change).
     """
-    if change <= 0:
-        return list(buy_quantities), change
+    ticker_prices_d = _decimals(ticker_prices)
+    current_percentages_d = _decimals(current_percentages)
+    desired_percentages_d = _decimals(desired_percentages)
+    change_d = as_decimal(change)
+    if change_d <= _ZERO:
+        return list(buy_quantities), change_d
 
     # ε avoids division-by-zero; lower ratio = more underweight = higher priority.
-    epsilon = 0.01
+    epsilon = Decimal("0.01")
     priorities = [
-        current_percentages[i] / (desired_percentages[i] + epsilon)
+        current_percentages_d[i] / (desired_percentages_d[i] + epsilon)
         for i in range(len(buy_quantities))
     ]
     sorted_indices = sorted(range(len(buy_quantities)), key=lambda i: priorities[i])
 
     updated = list(buy_quantities)
-    remaining = change
+    remaining = change_d
     for i in sorted_indices:
         if updated[i] <= 0:
             continue
-        x_i = int(remaining // ticker_prices[i])
-        remaining -= x_i * ticker_prices[i]
+        x_i = int(remaining // ticker_prices_d[i])
+        remaining -= x_i * ticker_prices_d[i]
         updated[i] += x_i
 
     return updated, remaining
@@ -199,11 +230,11 @@ def redistribute_change(
 def redistribute_change_optimal(
     only_buy: bool,
     buy_quantities: list[int],
-    ticker_prices: list[float],
-    current_percentages: list[float],
-    desired_percentages: list[float],
-    change: float,
-) -> tuple[list[int], float]:
+    ticker_prices: list[Decimal | int | float],
+    current_percentages: list[Decimal | int | float],
+    desired_percentages: list[Decimal | int | float],
+    change: Decimal | int | float,
+) -> tuple[list[int], Decimal]:
     """Exact redistribution of leftover cash via bounded-knapsack dynamic programming.
 
     This is a drop-in, more powerful alternative to :func:`redistribute_change`.
@@ -231,8 +262,8 @@ def redistribute_change_optimal(
     Problem formulation:
         Variables:
             x_i in Z >= 0            -- extra shares bought for asset i.
-            p_i                      -- price of asset i, in cents (integer).
-            c                        -- change to redistribute, in cents.
+            p_i                      -- price of asset i, in scaled integer units.
+            c                        -- change in the same scaled units.
             w_i = desired_i - current_i  (tiebreaker weight).
             E                        -- eligibility set (see below).
 
@@ -244,7 +275,7 @@ def redistribute_change_optimal(
             E = E and { i : current_i < desired_i }          if only_buy=True.
 
     Dynamic programming (forward table of size c+1):
-        dp_spent[k]   = max cents spendable with capacity k.
+        dp_spent[k]   = max scaled units spendable with capacity k.
         dp_tie[k]     = best tiebreaker score achieved at that spent amount.
         parent[k]     = last item placed to reach dp_spent[k] (-1 = "copied
                         from k-1", no item placed).
@@ -262,27 +293,23 @@ def redistribute_change_optimal(
             to k - 1.
 
     Complexity:
-        Time  O(n * c),   space O(c),   where c = change_cents and n = |E|.
+        Time  O(n * c),   space O(c),   where c = change_units and n = |E|.
 
     Safety cap:
-        If ``change_cents`` exceeds :data:`MAX_CENTS` the function executes
+        If the scaled change exceeds :data:`MAX_CENTS` the function executes
         a fallback and delegates to the greedy :func:`redistribute_change`.
         This prevents pathological memory/time usage on very large leftover
         amounts (the realistic DCA leftover is at most a few hundred euros).
 
-    Float/cent conversion:
-        ``round(x * 100)`` converts prices and change to integer cents.
-        ``round`` is required (not ``int``) because floats like ``118.42``
-        are not exactly representable in binary, so ``118.42 * 100`` can
-        produce ``11841.999...`` and truncation would yield a wrong cent count.
-        The final remainder is computed entirely in integer cents and divided
-        by 100 once at the very end to minimise floating-point drift.
+    Decimal/scaled-unit conversion:
+        The integer scale preserves at least two decimal places and as much
+        quote precision as the safety cap permits. Prices are rounded up at
+        that scale so the selected combination cannot overspend exact cash.
 
     Args:
         only_buy: Selects the eligibility policy (see above).
         buy_quantities: Whole share counts already scheduled for each asset.
-        ticker_prices: Current price per share for each asset, pre-rounded
-            to 2 decimal places.
+        ticker_prices: Exact current price per share for each asset.
         current_percentages: Current portfolio weight of each asset (%).
         desired_percentages: Target portfolio weight of each asset (%).
         change: Leftover cash to redistribute, in portfolio currency units.
@@ -297,16 +324,20 @@ def redistribute_change_optimal(
         :func:`redistribute_change`: the original O(n log n) greedy heuristic.
     """
     n = len(buy_quantities)
+    ticker_prices_d = _decimals(ticker_prices)
+    current_percentages_d = _decimals(current_percentages)
+    desired_percentages_d = _decimals(desired_percentages)
+    change_d = as_decimal(change)
 
     # Fast exits: nothing to distribute, or no assets at all.
-    if n == 0 or change <= 0:
-        return list(buy_quantities), change
+    if n == 0 or change_d <= _ZERO:
+        return list(buy_quantities), change_d
 
     # Base eligibility (same contract as redistribute_change): only touch
     # assets that were already scheduled for purchase in this cycle.
     eligible = [i for i in range(n) if buy_quantities[i] > 0]
     if not eligible:
-        return list(buy_quantities), change
+        return list(buy_quantities), change_d
 
     # Stricter eligibility for only_buy mode: never push an asset further
     # above its target weight - exclude everything that is not STRICTLY
@@ -315,38 +346,48 @@ def redistribute_change_optimal(
     if only_buy:
         eligible = [
             i for i in eligible
-            if current_percentages[i] < desired_percentages[i]
+            if current_percentages_d[i] < desired_percentages_d[i]
         ]
         if not eligible:
-            return list(buy_quantities), change
+            return list(buy_quantities), change_d
 
-    change_cents = round(change * 100)
-    prices_cents = {
+    scale_places = max(
+        2,
+        *(_decimal_places(ticker_prices_d[i]) for i in eligible),
+    )
+    scale = Decimal(10) ** scale_places
+    while scale_places > 2 and int(change_d * scale) > MAX_CENTS:
+        scale_places -= 1
+        scale /= 10
+    change_units = int(change_d * scale)
+    prices_units = {
         i: p
         for i in eligible
-        if 0 < (p := round(ticker_prices[i] * 100)) <= change_cents
+        if 0 < (p := int((ticker_prices_d[i] * scale).to_integral_value(
+            rounding=ROUND_CEILING,
+        ))) <= change_units
     }
-    candidates = list(prices_cents.keys())
+    candidates = list(prices_units.keys())
     if not candidates:
-        return list(buy_quantities), change
+        return list(buy_quantities), change_d
 
     # Safety cap: very large leftovers silently fall back to the cheap
-    # greedy pass to avoid O(n * change_cents) memory/time blowups.
-    if change_cents > MAX_CENTS:
+    # greedy pass to avoid O(n * change_units) memory/time blowups.
+    if change_units > MAX_CENTS:
         return redistribute_change(
-            buy_quantities, ticker_prices,
-            current_percentages, desired_percentages, change,
+            buy_quantities, ticker_prices_d,
+            current_percentages_d, desired_percentages_d, change_d,
         )
 
     tie_score = {
-        i: desired_percentages[i] - current_percentages[i]
+        i: desired_percentages_d[i] - current_percentages_d[i]
         for i in candidates
     }
 
     # --- Dynamic programming: lexicographic max over (spent, tiebreaker) ----
-    size     = change_cents + 1
+    size     = change_units + 1
     dp_spent = [0] * size
-    dp_tie   = [0.0] * size
+    dp_tie   = [_ZERO] * size
     parent   = [-1] * size  # -1 = "carried forward from capacity k-1".
 
     for k in range(1, size):
@@ -355,7 +396,7 @@ def redistribute_change_optimal(
         best_item  = -1
 
         for i in candidates:
-            p = prices_cents[i]
+            p = prices_units[i]
             if p > k:
                 continue
             cand_spent = dp_spent[k - p] + p
@@ -375,23 +416,20 @@ def redistribute_change_optimal(
 
     # --- Backtracking: reconstruct per-asset extra-share counts --------------
     extra = [0] * n
-    k = change_cents
+    k = change_units
     while k > 0:
         item = parent[k]
         if item == -1:
-            # No item placed at capacity k: move one cent down.
+            # No item placed at capacity k: move one scaled unit down.
             k -= 1
         else:
             extra[item] += 1
-            k -= prices_cents[item]
+            k -= prices_units[item]
 
-    # Integer-cent arithmetic avoids FP drift; single /100 at the end.
+    # Recompute from exact Decimal prices so sub-minor quote precision survives.
     updated = list(buy_quantities)
-    spent_cents = 0
     for i in candidates:
         updated[i] += extra[i]
-        spent_cents += extra[i] * prices_cents[i]
-
-    remaining = (change_cents - spent_cents) / 100.0
+    remaining = change_d - sum(extra[i] * ticker_prices_d[i] for i in candidates)
 
     return updated, remaining

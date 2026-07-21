@@ -9,7 +9,13 @@
   export let cellStyle: boolean = false;
   export let invalid: boolean = false;
 
-  const dispatch = createEventDispatcher<{ change: { ticker: string; provider: string | null } }>();
+  const dispatch = createEventDispatcher<{
+    change: {
+      ticker: string;
+      provider: string | null;
+      currency: string | null;
+    };
+  }>();
 
   let results: TickerResult[] = [];
   let open = false;
@@ -26,7 +32,7 @@
   function onInput(e: Event) {
     const q = (e.target as HTMLInputElement).value.trim().toUpperCase();
     value = q;
-    dispatch('change', { ticker: q, provider: null });
+    dispatch('change', { ticker: q, provider: null, currency: null });
 
     clearTimeout(debounceTimer);
     // Bumped before the early return so an in-flight response for the old
@@ -69,7 +75,11 @@
 
   function select(result: TickerResult) {
     value = result.ticker;
-    dispatch('change', { ticker: result.ticker, provider: result.provider });
+    dispatch('change', {
+      ticker: result.ticker,
+      provider: result.provider,
+      currency: result.currency,
+    });
     open = false;
     results = [];
     activeIndex = -1;
@@ -140,7 +150,11 @@
             class:active={activeIndex === i}
           >
             <span class="autocomplete-ticker">{result.ticker}</span>
-            <span class="autocomplete-name">{result.name}{#if result.exchange}{' · '}{result.exchange}{/if}</span>
+            <span class="autocomplete-name">
+              {result.name}
+              {#if result.exchange}{' · '}{result.exchange}{/if}
+              {#if result.currency}{' · '}{result.currency}{/if}
+            </span>
           </li>
         {/each}
         {#if results.length === 0}

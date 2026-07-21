@@ -1,10 +1,16 @@
 import { describe, it, expect } from 'vitest';
-import { buildRebalanceBody, rebalanceError, runRebalance, searchTickers } from './api';
+import { buildRebalanceBody, loadBaseCurrencies, rebalanceError, runRebalance, searchTickers } from './api';
 import type { Asset, Settings, RebalanceResponse } from './types';
 
-const settings: Settings = { increment: 1000, onlyBuy: true, optimalRedistribute: false, fractionalShares: false };
+const settings: Settings = {
+  increment: 1000,
+  baseCurrency: 'USD',
+  onlyBuy: true,
+  optimalRedistribute: false,
+  fractionalShares: false,
+};
 const assets: Asset[] = [
-  { id: 'a1', ticker: 'VOO', provider: 'yahoo', desiredPercentage: 60, shares: 10, fees: 0.5, percentageFee: true },
+  { id: 'a1', ticker: 'VOO', provider: 'yahoo', currency: 'USD', desiredPercentage: 60, shares: 10, fees: 0.5, percentageFee: true },
 ];
 
 function jsonResponse(body: unknown, init: ResponseInit): Response {
@@ -14,22 +20,47 @@ function jsonResponse(body: unknown, init: ResponseInit): Response {
   });
 }
 
+describe('loadBaseCurrencies', () => {
+  it('maps the backend runtime currency contract', async () => {
+    const fetchFn = async () => jsonResponse({
+      base_currencies: ['CHF', 'USD', 'EUR'],
+    }, { status: 200 });
+
+    await expect(loadBaseCurrencies(fetchFn as typeof fetch))
+      .resolves.toEqual(['CHF', 'USD', 'EUR']);
+  });
+
+  it('rejects an invalid or unavailable runtime currency contract', async () => {
+    const invalid = async () => jsonResponse({
+      base_currencies: [],
+    }, { status: 200 });
+    const unavailable = async () => jsonResponse({}, { status: 503 });
+
+    await expect(loadBaseCurrencies(invalid as typeof fetch))
+      .rejects.toThrow('Invalid supported base currencies');
+    await expect(loadBaseCurrencies(unavailable as typeof fetch))
+      .rejects.toThrow('Configuration request failed with 503');
+  });
+});
+
 describe('buildRebalanceBody', () => {
   it('maps camelCase settings/assets to snake_case', () => {
     expect(buildRebalanceBody(settings, assets)).toEqual({
       only_buy: true,
       increment: 1000,
+      base_currency: 'USD',
       optimal_redistribute: false,
       fractional_shares: false,
       assets: [
-        { ticker: 'VOO', provider: 'yahoo', desired_percentage: 60, shares: 10, fees: 0.5, percentage_fee: true },
+        { ticker: 'VOO', provider: 'yahoo', currency: 'USD', desired_percentage: 60, shares: 10, fees: 0.5, percentage_fee: true },
       ],
     });
   });
 
   it('defaults a missing provider to null', () => {
-    const body = buildRebalanceBody(settings, [{ ...assets[0], provider: null }]);
+    const body = buildRebalanceBody(settings, [{ ...assets[0], provider: null, currency: null }]);
     expect(body.assets[0].provider).toBeNull();
+    expect(body.assets[0].currency).toBeNull();
   });
 });
 
@@ -118,7 +149,11 @@ describe('rebalanceError', () => {
 });
 
 describe('runRebalance', () => {
-  const data: RebalanceResponse = { results: [], total_fees: 0, change: 0 };
+  const data: RebalanceResponse = {
+    results: [],
+    total_fees: 0,
+    change: 0,
+  };
 
   it('returns the parsed data on 200', async () => {
     const fetchFn = async () => jsonResponse(data, { status: 200 });
@@ -140,7 +175,7 @@ describe('runRebalance', () => {
 
 describe('searchTickers', () => {
   it('returns the results on 200', async () => {
-    const results = [{ ticker: 'VOO', name: 'Vanguard S&P 500', exchange: 'NYSE', type: 'etf', provider: 'yahoo' }];
+    const results = [{ ticker: 'VOO', name: 'Vanguard S&P 500', exchange: 'NYSE', type: 'etf', provider: 'yahoo', currency: 'USD' }];
     const fetchFn = async () => jsonResponse({ results }, { status: 200 });
     expect(await searchTickers('vo', fetchFn as typeof fetch)).toEqual({ ok: true, results });
   });

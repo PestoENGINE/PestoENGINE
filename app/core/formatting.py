@@ -1,22 +1,22 @@
 """Shared numeric formatting helpers."""
 
 from decimal import ROUND_DOWN, Decimal
+from typing import TypeAlias
+
+DecimalInput: TypeAlias = Decimal | int | float | str
 
 
-def truncate(v: float, places: int = 2) -> float:
-    """Truncate a float to ``places`` decimals using ROUND_DOWN (toward zero).
+def as_decimal(v: DecimalInput) -> Decimal:
+    """Convert a boundary number to Decimal without inheriting float noise."""
+    return v if isinstance(v, Decimal) else Decimal(str(v))
 
-    Uses Decimal(str(v)) to bypass IEEE 754 representation errors that would
-    otherwise cause int(v * 100) / 100 to lose a cent on values like 0.29 or 0.58.
 
-    ROUND_DOWN never inflates the magnitude, so this is safe for both budgets
-    (a buy is never rounded up past what the cash affords) and quantities
-    (a sell is never rounded into selling more than intended).
-    """
+def truncate(v: DecimalInput, places: int = 2) -> Decimal:
+    """Truncate to ``places`` decimals using ROUND_DOWN."""
     quantum = Decimal(1).scaleb(-places)  # 10**-places, e.g. 0.01 or 0.000001
-    return float(Decimal(str(v)).quantize(quantum, rounding=ROUND_DOWN))
+    return as_decimal(v).quantize(quantum, rounding=ROUND_DOWN)
 
 
-def truncate2(v: float) -> float:
-    """Truncate a float to 2 decimal places (the response-currency precision)."""
+def truncate2(v: DecimalInput) -> Decimal:
+    """Truncate a number to two response-currency decimal places."""
     return truncate(v, 2)

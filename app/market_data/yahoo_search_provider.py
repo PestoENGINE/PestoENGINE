@@ -5,6 +5,7 @@ import logging
 import httpx
 
 from app.market_data.base import AbstractTickerSearchProvider
+from app.market_data.quote import try_normalize_currency
 
 logger = logging.getLogger(__name__)
 
@@ -39,5 +40,6 @@ class YahooTickerSearchProvider(AbstractTickerSearchProvider):
                 "exchange": item.get("exchDisp") or item.get("exchange", ""),
                 "type": qt,
                 "provider": "yahoo",
+                "currency": try_normalize_currency(item.get("currency")),
             })
         return results

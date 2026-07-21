@@ -4,7 +4,7 @@
   import {
     loadSettings, loadAssets, loadDarkMode,
     saveSettings, saveAssets, saveDarkMode,
-    DEFAULT_SETTINGS,
+    createDefaultSettings,
   } from './storage';
   import { t, tx } from './i18n';
 
@@ -22,10 +22,13 @@
   import { runRebalance as apiRunRebalance } from './api';
   import { parsePortfolio, buildExport } from './portfolio-io';
 
-  let settings: Settings = DEFAULT_SETTINGS;
+  export let baseCurrencies: string[];
+
+  const defaultSettings = createDefaultSettings(baseCurrencies[0]);
+  let settings: Settings = defaultSettings;
   let assets: Asset[] = [];
   let lastResult: RebalanceResponse | null = null;
-  let resultSettings: Settings = DEFAULT_SETTINGS;
+  let resultSettings: Settings = defaultSettings;
   let error: UiError | null = null;
   let loading = false;
   let dark = false;
@@ -36,7 +39,7 @@
   $: document.title = $t('meta.title');
 
   onMount(() => {
-    settings = loadSettings();
+    settings = loadSettings(baseCurrencies);
     assets = loadAssets();
     dark = loadDarkMode();
     document.documentElement.classList.toggle('dark', dark);
@@ -49,7 +52,16 @@
 
   async function addAsset() {
     const id = uuid();
-    assets = [...assets, { id, ticker: '', provider: null, desiredPercentage: 0, shares: 0, fees: 0, percentageFee: false }];
+    assets = [...assets, {
+      id,
+      ticker: '',
+      provider: null,
+      currency: null,
+      desiredPercentage: 0,
+      shares: 0,
+      fees: 0,
+      percentageFee: false,
+    }];
     saveAssets(assets);
 
     await tick();
@@ -73,10 +85,11 @@
     // is a visible flash + layout jump. Update state only once the outcome is
     // known so a re-click just updates the message in place.
     try {
-      const r = await apiRunRebalance(settings, assets);
+      const submittedSettings = { ...settings };
+      const r = await apiRunRebalance(submittedSettings, assets);
       if (r.ok) {
         error = null;
-        resultSettings = { ...settings };
+        resultSettings = submittedSettings;
         lastResult = r.data;
         await tick();
         document.getElementById('results')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -123,7 +136,7 @@
   }
 
   function applyImport(text: string) {
-    const result = parsePortfolio(text);
+    const result = parsePortfolio(text, baseCurrencies);
     if (!result.ok) {
       error = result.error;
       return;
@@ -185,6 +198,8 @@
         <div class="panel-body">
           <GlobalSettings
             increment={settings.increment}
+            baseCurrency={settings.baseCurrency}
+            {baseCurrencies}
             onlyBuy={settings.onlyBuy}
             optimalRedistribute={settings.optimalRedistribute}
             fractionalShares={settings.fractionalShares}

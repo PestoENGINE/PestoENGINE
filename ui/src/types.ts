@@ -2,6 +2,7 @@ export interface Asset {
   id: string;
   ticker: string;
   provider: string | null;
+  currency: string | null;
   desiredPercentage: number;
   shares: number;
   fees: number;
@@ -14,10 +15,12 @@ export interface TickerResult {
   exchange: string;
   type: string;
   provider: string;
+  currency: string | null;
 }
 
 export interface Settings {
   increment: number;
+  baseCurrency: string;
   onlyBuy: boolean;
   optimalRedistribute: boolean;
   fractionalShares: boolean;
@@ -60,7 +63,7 @@ export interface RebalanceResponse {
 }
 
 export interface PortfolioExport {
-  version: 1;
+  version: 2;
   exportedAt: string;
   settings: Settings;
   assets: Omit<Asset, 'id'>[];

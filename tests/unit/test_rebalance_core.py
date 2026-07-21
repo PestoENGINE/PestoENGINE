@@ -1,6 +1,7 @@
 """Unit tests for the rebalance module."""
 
 import unittest
+from decimal import Decimal
 
 from app.rebalance import (
     calculate_rebalance,
@@ -542,6 +543,30 @@ class TestRedistributeChangeOptimalShared(unittest.TestCase):
                 )
                 self.assertEqual(updated, [1, 1])
                 self.assertAlmostEqual(remaining, 100.0, places=2)
+
+    def test_sub_cent_quote_is_not_rounded_to_zero_in_dp(self):
+        updated, remaining = redistribute_change_optimal(
+            True,
+            [1],
+            [0.0049],
+            [0],
+            [100],
+            0.0098,
+        )
+        self.assertEqual(updated, [3])
+        self.assertEqual(remaining, 0)
+
+    def test_long_fx_precision_does_not_force_greedy_fallback(self):
+        updated, remaining = redistribute_change_optimal(
+            True,
+            [1, 1],
+            [Decimal("60.123456789012345678"), Decimal("45.123456789012345678")],
+            [30, 30],
+            [50, 50],
+            100,
+        )
+        self.assertEqual(updated, [1, 3])
+        self.assertGreaterEqual(remaining, 0)
 
 
 if __name__ == "__main__":

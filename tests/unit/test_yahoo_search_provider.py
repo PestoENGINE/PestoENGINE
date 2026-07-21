@@ -18,12 +18,12 @@ def _resp(quotes: list) -> MagicMock:
 def test_normalizes_output_fields(mock_get):
     mock_get.return_value = _resp([
         {"symbol": "AAPL", "shortname": "Apple Inc.", "exchange": "NMS",
-         "exchDisp": "NASDAQ", "quoteType": "EQUITY"},
+         "exchDisp": "NASDAQ", "quoteType": "EQUITY", "currency": "USD"},
     ])
     provider = YahooTickerSearchProvider()
     results = provider.search("AAPL")
     assert results == [
-        {"symbol": "AAPL", "name": "YF · Apple Inc.", "exchange": "NASDAQ", "type": "EQUITY", "provider": "yahoo"},
+        {"symbol": "AAPL", "name": "YF · Apple Inc.", "exchange": "NASDAQ", "type": "EQUITY", "provider": "yahoo", "currency": "USD"},
     ]
 
 

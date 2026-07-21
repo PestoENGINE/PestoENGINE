@@ -24,13 +24,14 @@ def client(mock_search_provider: MagicMock) -> TestClient:
     app.dependency_overrides.clear()
 
 
-def _result(symbol: str, name: str, exchange: str, type_: str, provider: str = "yahoo") -> dict:
-    return {"symbol": symbol, "name": name, "exchange": exchange, "type": type_, "provider": provider}
+def _result(symbol, name, exchange, type_, provider="yahoo", currency=None) -> dict:
+    return {"symbol": symbol, "name": name, "exchange": exchange,
+            "type": type_, "provider": provider, "currency": currency}
 
 
 def test_returns_matching_results(client, mock_search_provider):
     mock_search_provider.search.return_value = [
-        _result("VWCE.DE", "YF · Vanguard FTSE All-World", "XETRA", "ETF")
+        _result("VWCE.DE", "YF · Vanguard FTSE All-World", "XETRA", "ETF", currency="EUR")
     ]
     resp = client.get("/v1/tickers/search?q=VWCE")
     assert resp.status_code == 200
@@ -41,6 +42,7 @@ def test_returns_matching_results(client, mock_search_provider):
     assert results[0]["exchange"] == "XETRA"
     assert results[0]["type"] == "ETF"
     assert results[0]["provider"] == "yahoo"
+    assert results[0]["currency"] == "EUR"
 
 
 def test_provider_field_passed_through(client, mock_search_provider):

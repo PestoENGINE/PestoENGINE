@@ -33,6 +33,7 @@
   },
   "settings": {
     "cashToDeploy": "Liquidità da investire",
+    "baseCurrency": "Valuta base",
     "onlyBuy": "Solo acquisti",
     "onlyBuyHint": "Non vendere mai le posizioni esistenti",
     "fractional": "Quote frazionate",
@@ -85,8 +86,9 @@
     "colBuy": "Acquista",
     "colResult": "Risultato",
     "allocated": "Allocato",
-    "totalFees": "Commissioni totali",
+    "totalFees": "Fees",
     "change": "Resto",
+    "currency": "Valuta",
     "empty": "Esegui il calcolo per vedere i risultati."
   },
   "trust": {
@@ -158,10 +160,11 @@
     "io": {
       "notJson": "Il file non è un JSON valido.",
       "invalidFile": "File di portafoglio non valido.",
-      "unsupportedVersion": "Versione di export non supportata. Attesa la versione 1.",
+      "unsupportedVersion": "Versione di export non supportata. Attesa la versione 2.",
       "missingSettings": "File di portafoglio non valido: impostazioni mancanti.",
       "assetsNotArray": "File di portafoglio non valido: assets deve essere un array non vuoto.",
       "invalidIncrement": "File di portafoglio non valido: increment non valido.",
+      "invalidBaseCurrency": "File di portafoglio non valido: baseCurrency è obbligatoria e deve essere una tra: {allowed}.",
       "assetMissingTicker": "File di portafoglio non valido: asset {n} senza ticker.",
       "assetInvalidPercentage": "File di portafoglio non valido: asset {n} desiredPercentage non valido.",
       "assetInvalidShares": "File di portafoglio non valido: asset {n} shares non valido.",

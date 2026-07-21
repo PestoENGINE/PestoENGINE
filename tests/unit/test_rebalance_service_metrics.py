@@ -12,6 +12,7 @@ from app.schemas.request import AssetIn, RebalanceRequest
 from opentelemetry.sdk.trace import TracerProvider as SdkTracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+from tests.helpers import make_quotes
 
 
 def _make_otel():
@@ -35,6 +36,7 @@ def _simple_request(n_assets: int = 2, optimal: bool = False) -> RebalanceReques
     return RebalanceRequest(
         only_buy=True,
         increment=1000.0,
+        base_currency="EUR",
         optimal_redistribute=optimal,
         assets=[
             AssetIn(ticker=f"T{i}", desired_percentage=pct, shares=0.0, fees=0.0)
@@ -45,7 +47,8 @@ def _simple_request(n_assets: int = 2, optimal: bool = False) -> RebalanceReques
 
 def _run(request, mp):
     mock = MagicMock(spec=ProviderRegistry)
-    mock.get_prices_for_assets.return_value = {f"T{i}": 10.0 for i in range(len(request.assets))}
+    mock.get_quotes_for_assets.return_value = make_quotes(
+        {f"T{i}": 10.0 for i in range(len(request.assets))})
     return _svc.run_rebalance(request, mock, meter_provider=mp)
 
 
@@ -100,7 +103,7 @@ def test_rebalance_compute_creates_span_with_attributes():
     tp.add_span_processor(SimpleSpanProcessor(exporter))
     reader, mp = _make_otel()
     mock = MagicMock(spec=ProviderRegistry)
-    mock.get_prices_for_assets.return_value = {"T0": 10.0, "T1": 10.0}
+    mock.get_quotes_for_assets.return_value = make_quotes({"T0": 10.0, "T1": 10.0})
     _svc.run_rebalance(
         _simple_request(optimal=False),
         mock,

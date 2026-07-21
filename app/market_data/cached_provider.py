@@ -7,10 +7,11 @@ from opentelemetry import trace as _otel_trace
 
 from app.market_data.base import AbstractMarketDataProvider
 from app.market_data.cache import AbstractCache
+from app.market_data.quote import MarketQuote
 
 logger = logging.getLogger(__name__)
 
-_KEY_PREFIX = "market:price:"
+_KEY_PREFIX = "market:quote:v2:"
 
 
 class CachedMarketDataProvider(AbstractMarketDataProvider):
@@ -27,7 +28,7 @@ class CachedMarketDataProvider(AbstractMarketDataProvider):
     def __init__(
         self,
         provider: AbstractMarketDataProvider,
-        cache: AbstractCache,
+        cache: AbstractCache[MarketQuote],
         *,
         provider_id: str,
         meter_provider: _metrics.MeterProvider | None = None,
@@ -51,7 +52,13 @@ class CachedMarketDataProvider(AbstractMarketDataProvider):
             else _otel_trace.get_tracer("pestoengine.cache")
         )
 
-    def get_prices(self, tickers: list[str]) -> dict[str, float]:
+    def get_quotes(
+        self,
+        tickers: list[str],
+        *,
+        currency_hints: dict[str, str] | None = None,
+    ) -> dict[str, MarketQuote]:
+        hints = currency_hints or {}
         with self._tracer.start_as_current_span(
             "cache_lookup",
             attributes={
@@ -60,12 +67,14 @@ class CachedMarketDataProvider(AbstractMarketDataProvider):
                 "tickers.count": len(tickers),
             },
         ) as span:
-            prices: dict[str, float] = {}
+            quotes: dict[str, MarketQuote] = {}
             misses: list[str] = []
             for ticker in tickers:
-                cached = self._cache.get(self._key_prefix + ticker)
+                hint = hints.get(ticker)
+                cache_key = self._key_prefix + ticker + ":" + (hint or "_")
+                cached = self._cache.get(cache_key)
                 if cached is not None:
-                    prices[ticker] = cached
+                    quotes[ticker] = cached
                     self._cache_ops.add(1, {"backend": self._backend, "result": "hit"})
                 else:
                     misses.append(ticker)
@@ -73,8 +82,17 @@ class CachedMarketDataProvider(AbstractMarketDataProvider):
             span.set_attribute("cache.hits", len(tickers) - len(misses))
             span.set_attribute("cache.misses", len(misses))
             if misses:
-                fresh = self._provider.get_prices(misses)
-                for ticker, price in fresh.items():
-                    self._cache.set(self._key_prefix + ticker, price)
-                    prices[ticker] = price
-            return prices
+                fresh = self._provider.get_quotes(
+                    misses,
+                    currency_hints={
+                        ticker: hints[ticker]
+                        for ticker in misses
+                        if ticker in hints
+                    },
+                )
+                for ticker, quote in fresh.items():
+                    hint = hints.get(ticker)
+                    cache_key = self._key_prefix + ticker + ":" + (hint or "_")
+                    self._cache.set(cache_key, quote)
+                    quotes[ticker] = quote
+            return quotes

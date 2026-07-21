@@ -4,17 +4,20 @@ import threading
 import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable
+from typing import Generic, TypeVar
+
+T = TypeVar("T")
 
 
-class AbstractCache(ABC):
+class AbstractCache(ABC, Generic[T]):
     @abstractmethod
-    def get(self, key: str) -> float | None: ...
+    def get(self, key: str) -> T | None: ...
 
     @abstractmethod
-    def set(self, key: str, value: float) -> None: ...
+    def set(self, key: str, value: T) -> None: ...
 
 
-class LocalCache(AbstractCache):
+class LocalCache(AbstractCache[T]):
     """Thread-safe in-memory cache with TTL.
 
     Two invariants:
@@ -28,12 +31,12 @@ class LocalCache(AbstractCache):
         ttl_seconds: int,
         clock: Callable[[], float] = time.monotonic,
     ) -> None:
-        self._store: dict[str, tuple[float, float]] = {}
+        self._store: dict[str, tuple[T, float]] = {}
         self._lock = threading.Lock()
         self._ttl = ttl_seconds
         self._clock = clock
 
-    def get(self, key: str) -> float | None:
+    def get(self, key: str) -> T | None:
         with self._lock:
             entry = self._store.get(key)
             if entry is None:
@@ -44,6 +47,6 @@ class LocalCache(AbstractCache):
                 return None
             return value
 
-    def set(self, key: str, value: float) -> None:
+    def set(self, key: str, value: T) -> None:
         with self._lock:
             self._store[key] = (value, self._clock() + self._ttl)

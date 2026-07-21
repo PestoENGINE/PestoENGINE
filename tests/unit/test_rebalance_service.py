@@ -1,5 +1,6 @@
 """Unit tests for run_rebalance() - market provider mocked out."""
 
+from decimal import Decimal
 import pytest
 from unittest.mock import MagicMock
 
@@ -7,6 +8,7 @@ from app.market_data.provider_registry import ProviderRegistry
 from app.schemas.request import AssetIn, RebalanceRequest
 from app.schemas.result import RebalanceResponse
 from app.services.rebalance_service import run_rebalance
+from tests.helpers import make_quotes
 
 
 def _request(
@@ -19,6 +21,7 @@ def _request(
     return RebalanceRequest(
         only_buy=only_buy,
         increment=increment,
+        base_currency="EUR",
         optimal_redistribute=optimal_redistribute,
         fractional_shares=fractional_shares,
         assets=[
@@ -36,7 +39,7 @@ def _request(
 
 def _run(request: RebalanceRequest, prices: dict[str, float]) -> RebalanceResponse:
     registry = MagicMock(spec=ProviderRegistry)
-    registry.get_prices_for_assets.return_value = prices
+    registry.get_quotes_for_assets.return_value = make_quotes(prices)
     return run_rebalance(request, registry)
 
 
@@ -78,7 +81,7 @@ def test_fee_larger_than_allocation_buy_zero_fee_excluded():
     assert by_ticker["A"].buy == 0
     assert by_ticker["B"].buy == 5
     assert out.total_fees == 0.0
-    assert out.change == 0.0
+    assert Decimal("0") <= out.change < Decimal("0.01")
 
 
 def test_flat_fee_exceeds_budget_no_shares_no_fee():
@@ -374,8 +377,8 @@ def test_percentage_fee_allow_sell():
     ])
     out = _run(req, {"A": 20.0})
     assert out.results[0].buy == 4
-    assert out.total_fees == pytest.approx(1.6, abs=0.01)
-    assert out.change == pytest.approx(18.4, abs=0.01)
+    assert out.total_fees == Decimal("1.60")
+    assert out.change == Decimal("18.40")
 
 
 # ---------------------------------------------------------------------------
@@ -394,10 +397,10 @@ def test_fractional_only_buy_deploys_full_increment():
     ], fractional_shares=True)
     out = _run(req, {"A": 300.0})
     r = out.results[0]
-    assert r.buy == pytest.approx(3.333333, abs=1e-6)
-    assert isinstance(r.buy, float)
+    assert r.buy == Decimal("3.333333")
+    assert isinstance(r.buy, Decimal)
     assert r.buy % 1 != 0  # not a whole share
-    assert out.change == 0.0
+    assert Decimal("0") <= out.change < Decimal("0.01")
 
 
 def test_fractional_allow_sell_hits_exact_target():
@@ -432,7 +435,7 @@ def test_fractional_flat_fee_applied():
     ], fractional_shares=True)
     out = _run(req, {"A": 300.0})
     r = out.results[0]
-    assert r.buy == pytest.approx(3.3, abs=1e-6)
+    assert r.buy == Decimal("3.300000")
     assert out.total_fees == 10.0
     assert out.change == 0.0
 
@@ -451,9 +454,12 @@ def test_fractional_percentage_fee_applied():
     ], fractional_shares=True)
     out = _run(req, {"A": 300.0})
     r = out.results[0]
-    assert r.buy == pytest.approx(3.30033, abs=1e-5)
-    assert out.total_fees == pytest.approx(9.90, abs=0.01)
-    assert out.change == pytest.approx(0.0, abs=0.01)
+    assert r.buy == Decimal("3.300330")
+    assert out.total_fees == pytest.approx(
+        Decimal("9.90"),
+        abs=Decimal("0.01"),
+    )
+    assert Decimal("0") <= out.change < Decimal("0.01")
 
 
 def test_fractional_ignores_optimal_redistribute_flag():
@@ -471,28 +477,3 @@ def test_fractional_ignores_optimal_redistribute_flag():
     out_on = _run(_request(True, 100.0, assets_def, fractional_shares=True, optimal_redistribute=True), prices)
     assert {r.ticker: r.buy for r in out_off.results} == {r.ticker: r.buy for r in out_on.results}
     assert all(r.buy % 1 != 0 for r in out_off.results)  # genuinely fractional
-
-
-# ---------------------------------------------------------------------------
-# Error handling tests
-# ---------------------------------------------------------------------------
-
-def test_missing_ticker_in_prices_raises_market_data_error():
-    """get_prices returning a partial dict raises MarketDataError."""
-    from app.core.exceptions import MarketDataError
-    req = _request(True, 100.0, [
-        {"ticker": "A", "desired_percentage": 60.0, "shares": 0, "fees": 0},
-        {"ticker": "B", "desired_percentage": 40.0, "shares": 0, "fees": 0},
-    ])
-    with pytest.raises(MarketDataError, match="Price missing for ticker"):
-        _run(req, {"A": 50.0})
-
-
-def test_zero_price_raises_market_data_error():
-    """A zero price from the provider raises MarketDataError."""
-    from app.core.exceptions import MarketDataError
-    req = _request(True, 100.0, [
-        {"ticker": "A", "desired_percentage": 100.0, "shares": 0, "fees": 0},
-    ])
-    with pytest.raises(MarketDataError, match="Invalid price"):
-        _run(req, {"A": 0.0})

@@ -14,7 +14,7 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from app.api.deps import get_rate_limit_store
-from app.api.v1.routes import health, rebalance, tickers
+from app.api.v1.routes import config, health, rebalance, tickers
 from app.core.config import get_settings
 from app.core.exceptions import MarketDataError, market_data_error_handler
 from app.core.log_config import setup_logging
@@ -141,6 +141,7 @@ if _settings.trusted_proxies:
 app.add_middleware(_SecurityHeadersMiddleware)
 
 app.add_exception_handler(MarketDataError, market_data_error_handler)
+app.include_router(config.router, prefix="/v1")
 app.include_router(health.router, prefix="/v1")
 app.include_router(rebalance.router, prefix="/v1")
 app.include_router(tickers.router, prefix="/v1")

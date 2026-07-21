@@ -15,8 +15,8 @@ def _resp(body: dict) -> MagicMock:
 
 
 _SAMPLE_MATCHES = [
-    {"1. symbol": "IBM", "2. name": "International Business Machines", "3. type": "Equity", "4. region": "United States"},
-    {"1. symbol": "IVVB11.SAO", "2. name": "iShares Core S&P 500 ETF", "3. type": "ETF", "4. region": "Brazil/Sao Paolo"},
+    {"1. symbol": "IBM", "2. name": "International Business Machines", "3. type": "Equity", "4. region": "United States", "8. currency": "USD"},
+    {"1. symbol": "IVVB11.SAO", "2. name": "iShares Core S&P 500 ETF", "3. type": "ETF", "4. region": "Brazil/Sao Paolo", "8. currency": "BRL"},
 ]
 
 
@@ -31,7 +31,7 @@ def test_normalizes_output_fields(mock_get):
     provider = AlphaVantageSearchProvider("key")
     results = provider.search("IBM")
     assert results == [
-        {"symbol": "IBM", "name": "AV · International Business Machines", "exchange": "United States", "type": "EQUITY", "provider": "alphavantage"},
+        {"symbol": "IBM", "name": "AV · International Business Machines", "exchange": "United States", "type": "EQUITY", "provider": "alphavantage", "currency": "USD"},
     ]
 
 

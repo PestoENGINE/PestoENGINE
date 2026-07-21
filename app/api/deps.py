@@ -4,11 +4,14 @@ from functools import lru_cache
 from typing import Callable
 
 from app.core.config import Settings, get_settings
+from app.fx.ecb_provider import EcbFxProvider, EcbReferenceRate
 from app.market_data.base import AbstractMarketDataProvider, AbstractTickerSearchProvider
 from app.market_data.cache import AbstractCache, LocalCache
 from app.market_data.cached_provider import CachedMarketDataProvider
 from app.market_data.instrumented_provider import InstrumentedMarketDataProvider
 from app.market_data.provider_registry import ProviderRegistry
+from app.market_data.quote import MarketQuote
+from app.market_data.redis_cache import RedisCache
 from app.market_data.alpha_vantage_provider import AlphaVantageProvider
 from app.market_data.alpha_vantage_search_provider import AlphaVantageSearchProvider
 from app.market_data.yahoo_finance_provider import YahooFinanceProvider
@@ -26,18 +29,16 @@ SEARCH_BUILDERS: dict[str, Callable[[Settings], AbstractTickerSearchProvider]] =
 }
 
 
-@lru_cache(maxsize=1)
-def _build_cache() -> AbstractCache:
-    s = get_settings()
-    if s.cache_backend == "redis":
-        if not s.redis_url:
-            raise ValueError(
-                "REDIS_URL must be set when CACHE_BACKEND=redis. "
-                "Pass it as an environment variable."
-            )
-        from app.market_data.redis_cache import RedisCache
-        return RedisCache(url=s.redis_url, ttl_seconds=s.cache_ttl_seconds)
-    return LocalCache(ttl_seconds=s.cache_ttl_seconds)
+def _build_cache() -> AbstractCache[MarketQuote]:
+    settings = get_settings()
+    if settings.cache_backend == "redis":
+        return RedisCache(
+            url=settings.redis_url,  # validated by Settings
+            ttl_seconds=settings.cache_ttl_seconds,
+            encode=MarketQuote.to_cache_dict,
+            decode=MarketQuote.from_cache_dict,
+        )
+    return LocalCache(ttl_seconds=settings.cache_ttl_seconds)
 
 
 @lru_cache(maxsize=1)
@@ -53,6 +54,25 @@ def _build_registry() -> ProviderRegistry:
             provider_id=pid,
         )
     return ProviderRegistry(chains, list(settings.market_data_providers))
+
+
+@lru_cache(maxsize=1)
+def get_fx_provider() -> EcbFxProvider:
+    settings = get_settings()
+    cache: AbstractCache[EcbReferenceRate]
+    if settings.cache_backend == "redis":
+        cache = RedisCache(
+            url=settings.redis_url,  # validated by Settings
+            ttl_seconds=settings.fx_cache_ttl_seconds,
+            encode=EcbReferenceRate.to_cache_dict,
+            decode=EcbReferenceRate.from_cache_dict,
+        )
+    else:
+        cache = LocalCache(ttl_seconds=settings.fx_cache_ttl_seconds)
+    return EcbFxProvider(
+        cache,
+        max_age_days=settings.ecb_fx_max_age_days,
+    )
 
 
 @lru_cache(maxsize=1)

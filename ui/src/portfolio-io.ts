@@ -1,5 +1,6 @@
 import type { Settings, Asset, PortfolioExport, UiError } from './types';
-import { DEFAULT_SETTINGS } from './storage';
+import { normalizeBaseCurrency, normalizeQuoteCurrency } from './currency';
+import { createDefaultSettings } from './storage';
 import { percentagesSumTo100, uuid } from './util';
 
 type ImportResult =
@@ -12,7 +13,10 @@ type ImportResult =
  * `sumWarning` flags target percentages that do not add up to 100. The caller
  * decides whether to confirm and apply.
  */
-export function parsePortfolio(text: string): ImportResult {
+export function parsePortfolio(
+  text: string,
+  supportedBaseCurrencies: readonly string[],
+): ImportResult {
   let data: unknown;
   try {
     data = JSON.parse(text);
@@ -23,12 +27,28 @@ export function parsePortfolio(text: string): ImportResult {
   if (typeof data !== 'object' || data === null) return { ok: false, error: { kind: 'key', key: 'errors.io.invalidFile' } };
   const d = data as Record<string, unknown>;
 
-  if (d.version !== 1) return { ok: false, error: { kind: 'key', key: 'errors.io.unsupportedVersion' } };
+  if (d.version !== 2) {
+    return { ok: false, error: { kind: 'key', key: 'errors.io.unsupportedVersion' } };
+  }
   if (typeof d.settings !== 'object' || d.settings === null) return { ok: false, error: { kind: 'key', key: 'errors.io.missingSettings' } };
   if (!Array.isArray(d.assets) || d.assets.length === 0) return { ok: false, error: { kind: 'key', key: 'errors.io.assetsNotArray' } };
 
   const s = d.settings as Record<string, unknown>;
   if (typeof s.increment !== 'number' || s.increment < 0) return { ok: false, error: { kind: 'key', key: 'errors.io.invalidIncrement' } };
+  const baseCurrency = normalizeBaseCurrency(
+    s.baseCurrency,
+    supportedBaseCurrencies,
+  );
+  if (baseCurrency === null) {
+    return {
+      ok: false,
+      error: {
+        kind: 'key',
+        key: 'errors.io.invalidBaseCurrency',
+        params: { allowed: supportedBaseCurrencies.join(', ') },
+      },
+    };
+  }
 
   for (let i = 0; i < d.assets.length; i++) {
     const a = d.assets[i] as Record<string, unknown>;
@@ -43,17 +63,20 @@ export function parsePortfolio(text: string): ImportResult {
   const sum = (d.assets as Array<{ desiredPercentage: number }>).reduce((acc, a) => acc + a.desiredPercentage, 0);
   const sumWarning = !percentagesSumTo100(sum);
 
+  const defaults = createDefaultSettings(baseCurrency);
   const settings: Settings = {
     increment: s.increment as number,
-    onlyBuy: typeof s.onlyBuy === 'boolean' ? s.onlyBuy : DEFAULT_SETTINGS.onlyBuy,
-    optimalRedistribute: typeof s.optimalRedistribute === 'boolean' ? s.optimalRedistribute : DEFAULT_SETTINGS.optimalRedistribute,
-    fractionalShares: typeof s.fractionalShares === 'boolean' ? s.fractionalShares : DEFAULT_SETTINGS.fractionalShares,
+    baseCurrency,
+    onlyBuy: typeof s.onlyBuy === 'boolean' ? s.onlyBuy : defaults.onlyBuy,
+    optimalRedistribute: typeof s.optimalRedistribute === 'boolean' ? s.optimalRedistribute : defaults.optimalRedistribute,
+    fractionalShares: typeof s.fractionalShares === 'boolean' ? s.fractionalShares : defaults.fractionalShares,
   };
 
   const assets: Asset[] = (d.assets as Array<Record<string, unknown>>).map(a => ({
     id: uuid(),
     ticker: a.ticker as string,
     provider: typeof a.provider === 'string' ? a.provider : null,
+    currency: normalizeQuoteCurrency(a.currency),
     desiredPercentage: a.desiredPercentage as number,
     shares: a.shares as number,
     fees: a.fees as number,
@@ -66,7 +89,7 @@ export function parsePortfolio(text: string): ImportResult {
 /** Builds the versioned export payload (assets stripped of their local id). */
 export function buildExport(settings: Settings, assets: Asset[]): PortfolioExport {
   return {
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     settings,
     assets: assets.map(({ id: _id, ...rest }) => rest),

@@ -37,6 +37,7 @@ async def search_tickers(
                 exchange=r["exchange"],
                 type=r["type"],
                 provider=r["provider"],
+                currency=r.get("currency"),
             ))
 
     if all_failed and search_providers:

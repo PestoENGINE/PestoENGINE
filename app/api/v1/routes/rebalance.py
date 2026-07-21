@@ -5,8 +5,9 @@ import logging
 
 from fastapi import APIRouter, Depends
 
-from app.api.deps import get_registry
+from app.api.deps import get_fx_provider, get_registry
 from app.core.exceptions import MarketDataError
+from app.fx.ecb_provider import EcbFxProvider
 from app.market_data.provider_registry import ProviderRegistry
 from app.schemas.request import RebalanceRequest
 from app.schemas.result import RebalanceResponse
@@ -20,10 +21,11 @@ logger = logging.getLogger(__name__)
 async def rebalance(
     payload: RebalanceRequest,
     registry: ProviderRegistry = Depends(get_registry),
+    fx_provider: EcbFxProvider = Depends(get_fx_provider),
 ) -> RebalanceResponse:
     loop = asyncio.get_running_loop()
     try:
-        return await loop.run_in_executor(None, run_rebalance, payload, registry)
+        return await loop.run_in_executor(None, run_rebalance, payload, registry, fx_provider)
     except MarketDataError:
         raise
     except Exception:

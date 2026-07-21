@@ -1,8 +1,11 @@
 """Unit tests for Pydantic schema validation (AssetIn, RebalanceRequest)."""
 
+from decimal import Decimal
+
 import pytest
 from pydantic import ValidationError
 
+from app.core.config import get_settings
 from app.schemas.request import AssetIn, RebalanceRequest
 
 
@@ -14,6 +17,7 @@ def _request(**kwargs) -> dict:
     return {
         "only_buy": True,
         "increment": 100.0,
+        "base_currency": "EUR",
         "assets": [_asset()],
         **kwargs,
     }
@@ -70,6 +74,12 @@ def test_asset_default_percentage_fee_is_false():
     assert a.percentage_fee is False
 
 
+def test_asset_currency_is_normalized_and_invalid_code_is_rejected():
+    assert AssetIn(**_asset(currency=" eur ")).currency == "EUR"
+    with pytest.raises(ValidationError):
+        AssetIn(**_asset(currency="EURO"))
+
+
 # ---------------------------------------------------------------------------
 # RebalanceRequest validation
 # ---------------------------------------------------------------------------
@@ -79,6 +89,7 @@ def test_request_percentages_not_summing_to_100_raises():
         RebalanceRequest(
             only_buy=True,
             increment=100.0,
+            base_currency="EUR",
             assets=[
                 AssetIn(ticker="A", desired_percentage=60.0, shares=0, fees=0),
                 AssetIn(ticker="B", desired_percentage=30.0, shares=0, fees=0),
@@ -91,6 +102,7 @@ def test_percentage_sum_error_carries_stable_code_and_total():
         RebalanceRequest(
             only_buy=True,
             increment=100.0,
+            base_currency="EUR",
             assets=[
                 AssetIn(ticker="A", desired_percentage=60.0, shares=0, fees=0),
                 AssetIn(ticker="B", desired_percentage=30.0, shares=0, fees=0),
@@ -105,6 +117,7 @@ def test_request_percentages_summing_to_100_is_valid():
     req = RebalanceRequest(
         only_buy=True,
         increment=100.0,
+        base_currency="EUR",
         assets=[
             AssetIn(ticker="A", desired_percentage=60.0, shares=0, fees=0),
             AssetIn(ticker="B", desired_percentage=40.0, shares=0, fees=0),
@@ -136,3 +149,34 @@ def test_request_default_fractional_shares_is_false():
 def test_request_fractional_shares_accepts_true():
     req = RebalanceRequest(**_request(fractional_shares=True))
     assert req.fractional_shares is True
+
+
+def test_request_uses_decimal_for_every_monetary_input():
+    req = RebalanceRequest(**_request(increment=0.1))
+    assert isinstance(req.increment, Decimal)
+    assert isinstance(req.assets[0].shares, Decimal)
+    assert isinstance(req.assets[0].fees, Decimal)
+    assert isinstance(req.assets[0].desired_percentage, Decimal)
+    assert req.increment == Decimal("0.1")
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_request_rejects_non_finite_numbers(value):
+    with pytest.raises(ValidationError):
+        RebalanceRequest(**_request(increment=value))
+
+
+def test_base_currency_is_normalized():
+    req = RebalanceRequest(**_request(base_currency=" eur "))
+    assert req.base_currency == "EUR"
+
+
+def test_base_currency_policy_is_loaded_from_backend_environment(monkeypatch):
+    monkeypatch.setenv("BASE_CURRENCY", '["CHF"]')
+    get_settings.cache_clear()
+    try:
+        assert RebalanceRequest(**_request(base_currency="CHF")).base_currency == "CHF"
+        with pytest.raises(ValidationError):
+            RebalanceRequest(**_request(base_currency="EUR"))
+    finally:
+        get_settings.cache_clear()

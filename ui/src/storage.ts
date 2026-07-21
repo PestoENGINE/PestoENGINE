@@ -1,4 +1,5 @@
 import type { Asset, Settings } from './types';
+import { normalizeBaseCurrency, normalizeQuoteCurrency } from './currency';
 
 const KEYS = {
   settings: 'pesto_engine_settings',
@@ -6,12 +7,15 @@ const KEYS = {
   darkMode: 'pesto_engine_dark_mode',
 } as const;
 
-export const DEFAULT_SETTINGS: Settings = {
-  increment: 1000,
-  onlyBuy: true,
-  optimalRedistribute: false,
-  fractionalShares: false,
-};
+export function createDefaultSettings(baseCurrency: string): Settings {
+  return {
+    increment: 1000,
+    baseCurrency,
+    onlyBuy: true,
+    optimalRedistribute: false,
+    fractionalShares: false,
+  };
+}
 
 function tryParse<T>(key: string, fallback: T): T {
   try {
@@ -23,11 +27,27 @@ function tryParse<T>(key: string, fallback: T): T {
   }
 }
 
-export function loadSettings(): Settings {
-  return { ...DEFAULT_SETTINGS, ...tryParse<Partial<Settings>>(KEYS.settings, {}) };
+export function loadSettings(baseCurrencies: readonly string[]): Settings {
+  const defaultCurrency = baseCurrencies[0];
+  const defaults = createDefaultSettings(defaultCurrency);
+  const stored = tryParse<Partial<Settings> | null>(KEYS.settings, null);
+  if (stored === null) return defaults;
+  const baseCurrency =
+    normalizeBaseCurrency(
+      stored.baseCurrency,
+      baseCurrencies,
+    ) ?? defaultCurrency;
+  return {
+    ...defaults,
+    ...stored,
+    baseCurrency,
+  };
 }
 
-type StoredAsset = Omit<Asset, 'provider'> & { provider?: string | null };
+type StoredAsset = Omit<Asset, 'provider' | 'currency'> & {
+  provider?: string | null;
+  currency?: string | null;
+};
 
 function isValidAsset(a: unknown): a is StoredAsset {
   if (typeof a !== 'object' || a === null) return false;
@@ -51,7 +71,11 @@ export function loadAssets(): Asset[] {
     console.warn('Stored assets failed validation, resetting to empty.');
     return [];
   }
-  return val.map(a => ({ ...a, provider: a.provider ?? null }));
+  return val.map(a => ({
+    ...a,
+    provider: a.provider ?? null,
+    currency: normalizeQuoteCurrency(a.currency),
+  }));
 }
 
 export function saveSettings(s: Settings): void {

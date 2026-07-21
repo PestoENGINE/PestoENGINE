@@ -1,28 +1,34 @@
 import { describe, it, expect } from 'vitest';
-import { parsePortfolio, buildExport } from './portfolio-io';
+import { parsePortfolio as parseConfiguredPortfolio, buildExport } from './portfolio-io';
 import type { Asset, Settings } from './types';
+
+const supportedBaseCurrencies = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD'];
+
+function parsePortfolio(text: string) {
+  return parseConfiguredPortfolio(text, supportedBaseCurrencies);
+}
 
 function fileWith(overrides: Record<string, unknown> = {}): string {
   return JSON.stringify({
-    version: 1,
+    version: 2,
     exportedAt: '2026-05-25T10:00:00Z',
-    settings: { increment: 1000, onlyBuy: true, optimalRedistribute: false },
+    settings: { increment: 1000, baseCurrency: 'EUR', onlyBuy: true, optimalRedistribute: false },
     assets: [
-      { ticker: 'VOO', provider: null, desiredPercentage: 60, shares: 10, fees: 0.5, percentageFee: true },
-      { ticker: 'BND', provider: null, desiredPercentage: 40, shares: 5, fees: 0, percentageFee: false },
+      { ticker: 'VOO', provider: null, currency: null, desiredPercentage: 60, shares: 10, fees: 0.5, percentageFee: true },
+      { ticker: 'BND', provider: null, currency: null, desiredPercentage: 40, shares: 5, fees: 0, percentageFee: false },
     ],
     ...overrides,
   });
 }
 
 describe('parsePortfolio', () => {
-  it('accepts a valid v1 file and assigns fresh unique ids', () => {
+  it('accepts a valid v2 file and assigns fresh unique ids', () => {
     const r = parsePortfolio(fileWith());
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.settings).toEqual({ increment: 1000, onlyBuy: true, optimalRedistribute: false, fractionalShares: false });
+    expect(r.settings).toEqual({ increment: 1000, baseCurrency: 'EUR', onlyBuy: true, optimalRedistribute: false, fractionalShares: false });
     expect(r.assets).toHaveLength(2);
-    expect(r.assets[0]).toMatchObject({ ticker: 'VOO', desiredPercentage: 60, shares: 10, fees: 0.5, percentageFee: true });
+    expect(r.assets[0]).toMatchObject({ ticker: 'VOO', currency: null, desiredPercentage: 60, shares: 10, fees: 0.5, percentageFee: true });
     expect(typeof r.assets[0].id).toBe('string');
     expect(r.assets[0].id).not.toBe('');
     expect(r.assets[0].id).not.toBe(r.assets[1].id);
@@ -30,15 +36,15 @@ describe('parsePortfolio', () => {
   });
 
   it('defaults onlyBuy/optimalRedistribute/fractionalShares when missing', () => {
-    const r = parsePortfolio(fileWith({ settings: { increment: 500 } }));
+    const r = parsePortfolio(fileWith({ settings: { increment: 500, baseCurrency: 'EUR' } }));
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.settings).toEqual({ increment: 500, onlyBuy: true, optimalRedistribute: false, fractionalShares: false });
+    expect(r.settings).toEqual({ increment: 500, baseCurrency: 'EUR', onlyBuy: true, optimalRedistribute: false, fractionalShares: false });
   });
 
   it('reads fractionalShares from the file when present', () => {
     const r = parsePortfolio(fileWith({
-      settings: { increment: 1000, onlyBuy: true, optimalRedistribute: false, fractionalShares: true },
+      settings: { increment: 1000, baseCurrency: 'EUR', onlyBuy: true, optimalRedistribute: false, fractionalShares: true },
     }));
     expect(r.ok).toBe(true);
     if (!r.ok) return;
@@ -47,7 +53,7 @@ describe('parsePortfolio', () => {
 
   it('flags sumWarning when targets do not sum to 100', () => {
     const r = parsePortfolio(fileWith({
-      assets: [{ ticker: 'VOO', provider: null, desiredPercentage: 30, shares: 0, fees: 0, percentageFee: false }],
+      assets: [{ ticker: 'VOO', provider: null, currency: null, desiredPercentage: 30, shares: 0, fees: 0, percentageFee: false }],
     }));
     expect(r.ok).toBe(true);
     if (!r.ok) return;
@@ -63,10 +69,49 @@ describe('parsePortfolio', () => {
   });
 
   it('rejects an unsupported version', () => {
-    expect(parsePortfolio(fileWith({ version: 2 }))).toEqual({
+    expect(parsePortfolio(fileWith({ version: 3 }))).toEqual({
       ok: false, error: { kind: 'key', key: 'errors.io.unsupportedVersion' },
     });
   });
+
+  it('reads and normalizes currency metadata from a v2 file', () => {
+    const r = parsePortfolio(fileWith({
+      version: 2,
+      settings: {
+        increment: 1000,
+        baseCurrency: 'usd',
+        onlyBuy: true,
+        optimalRedistribute: false,
+        fractionalShares: false,
+      },
+      assets: [
+        { ticker: 'VOO', provider: 'yahoo', currency: 'usd', desiredPercentage: 100, shares: 10, fees: 0, percentageFee: false },
+      ],
+    }));
+
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.settings.baseCurrency).toBe('USD');
+    expect(r.assets[0].currency).toBe('USD');
+  });
+
+  it.each([null, 'SEK'])(
+    'rejects missing or unsupported v2 base currency metadata: %s',
+    (baseCurrency) => {
+      const r = parsePortfolio(fileWith({
+        settings: { increment: 1000, baseCurrency },
+      }));
+
+      expect(r).toEqual({
+        ok: false,
+        error: {
+          kind: 'key',
+          key: 'errors.io.invalidBaseCurrency',
+          params: { allowed: supportedBaseCurrencies.join(', ') },
+        },
+      });
+    },
+  );
 
   it('rejects missing settings', () => {
     expect(parsePortfolio(fileWith({ settings: null }))).toEqual({
@@ -89,8 +134,8 @@ describe('parsePortfolio', () => {
   it('reports the offending asset index for a missing ticker', () => {
     const r = parsePortfolio(fileWith({
       assets: [
-        { ticker: 'VOO', provider: null, desiredPercentage: 50, shares: 0, fees: 0, percentageFee: false },
-        { ticker: 123, provider: null, desiredPercentage: 50, shares: 0, fees: 0, percentageFee: false },
+        { ticker: 'VOO', provider: null, currency: null, desiredPercentage: 50, shares: 0, fees: 0, percentageFee: false },
+        { ticker: 123, provider: null, currency: null, desiredPercentage: 50, shares: 0, fees: 0, percentageFee: false },
       ],
     }));
     expect(r).toEqual({ ok: false, error: { kind: 'key', key: 'errors.io.assetMissingTicker', params: { n: 2 } } });
@@ -98,29 +143,29 @@ describe('parsePortfolio', () => {
 
   it('rejects negative shares', () => {
     const r = parsePortfolio(fileWith({
-      assets: [{ ticker: 'VOO', provider: null, desiredPercentage: 100, shares: -3, fees: 0, percentageFee: false }],
+      assets: [{ ticker: 'VOO', provider: null, currency: null, desiredPercentage: 100, shares: -3, fees: 0, percentageFee: false }],
     }));
     expect(r).toEqual({ ok: false, error: { kind: 'key', key: 'errors.io.assetInvalidShares', params: { n: 1 } } });
   });
 
   it('rejects a non-boolean percentageFee', () => {
     const r = parsePortfolio(fileWith({
-      assets: [{ ticker: 'VOO', provider: null, desiredPercentage: 100, shares: 0, fees: 0, percentageFee: 'yes' }],
+      assets: [{ ticker: 'VOO', provider: null, currency: null, desiredPercentage: 100, shares: 0, fees: 0, percentageFee: 'yes' }],
     }));
     expect(r).toEqual({ ok: false, error: { kind: 'key', key: 'errors.io.assetInvalidPercentageFee', params: { n: 1 } } });
   });
 });
 
 describe('buildExport / round-trip', () => {
-  const settings: Settings = { increment: 250, onlyBuy: false, optimalRedistribute: true, fractionalShares: true };
+  const settings: Settings = { increment: 250, baseCurrency: 'EUR', onlyBuy: false, optimalRedistribute: true, fractionalShares: true };
   const assets: Asset[] = [
-    { id: 'local-1', ticker: 'VWCE', provider: 'yahoo', desiredPercentage: 70, shares: 12, fees: 1, percentageFee: false },
-    { id: 'local-2', ticker: 'AGGH', provider: null, desiredPercentage: 30, shares: 3, fees: 0, percentageFee: true },
+    { id: 'local-1', ticker: 'VWCE', provider: 'yahoo', currency: 'EUR', desiredPercentage: 70, shares: 12, fees: 1, percentageFee: false },
+    { id: 'local-2', ticker: 'AGGH', provider: null, currency: 'EUR', desiredPercentage: 30, shares: 3, fees: 0, percentageFee: true },
   ];
 
-  it('strips local ids and stamps version 1', () => {
+  it('strips local ids and stamps version 2', () => {
     const out = buildExport(settings, assets);
-    expect(out.version).toBe(1);
+    expect(out.version).toBe(2);
     expect(out.settings).toEqual(settings);
     expect(out.assets).toHaveLength(2);
     expect(out.assets[0]).not.toHaveProperty('id');

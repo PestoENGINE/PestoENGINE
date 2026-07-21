@@ -5,6 +5,8 @@
   import { t } from '../i18n';
 
   export let increment: number;
+  export let baseCurrency: string;
+  export let baseCurrencies: string[];
   export let onlyBuy: boolean;
   export let optimalRedistribute: boolean;
   export let fractionalShares: boolean;
@@ -14,15 +16,29 @@
 
 <div class="field-group">
   <label class="field-label" for="increment">{$t('settings.cashToDeploy')}</label>
-  <input
-    id="increment"
-    type="number"
-    min="0"
-    step="any"
-    value={increment}
-    on:change={e => dispatch('update', { increment: inputNumber(e) })}
-    class="field mono"
-  />
+  <div class="field-with-unit">
+    <input
+      id="increment"
+      type="number"
+      min="0"
+      step="any"
+      value={increment}
+      on:change={e => dispatch('update', { increment: inputNumber(e) })}
+      class="field mono"
+    />
+    <select
+      value={baseCurrency}
+      on:change={e => dispatch('update', {
+        baseCurrency: (e.target as HTMLSelectElement).value,
+      })}
+      class="currency-select"
+      aria-label={$t('settings.baseCurrency')}
+    >
+      {#each baseCurrencies as currency}
+        <option value={currency}>{currency}</option>
+      {/each}
+    </select>
+  </div>
 </div>
 
 <label class="check-row">
@@ -66,6 +82,25 @@
 
 <style>
   .field-group { margin-bottom: 1rem; }
+  .field-with-unit { position: relative; }
+  .field-with-unit .field { padding-right: 6rem; }
+  .field-with-unit:focus-within .field { border-color: var(--teal); }
+  .currency-select {
+    background: var(--surface);
+    border: 0;
+    border-left: 1px solid var(--border);
+    border-radius: 0 calc(var(--r) - 1px) calc(var(--r) - 1px) 0;
+    color: var(--text-2);
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    inset: 1px 1px 1px auto;
+    outline: none;
+    padding: 0 0.35rem 0 0.6rem;
+    position: absolute;
+    width: 5.25rem;
+  }
   .field-label {
     font-size: 0.75rem;
     font-weight: 600;

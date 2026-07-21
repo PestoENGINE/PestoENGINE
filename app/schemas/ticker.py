@@ -10,6 +10,7 @@ class TickerResult(BaseModel):
     exchange: str   # human-readable market label (Yahoo display name, AV region)
     type: str
     provider: str   # provider ID for round-trip to /v1/rebalance
+    currency: str | None = None
 
 
 class TickerSearchResponse(BaseModel):

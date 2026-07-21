@@ -26,6 +26,7 @@ app/
 ├── services/       # rebalance_service: orchestration + two-pass fee math
 ├── rebalance/      # Pure algorithms (greedy + knapsack DP)
 ├── market_data/    # Provider abstractions, Yahoo/AV adapters, cache, decorators
+├── fx/             # ECB open-data adapter, Decimal triangulation, FX cache
 └── core/           # Config, exceptions, formatting, JSON logging, OTel telemetry
 ```
 
@@ -40,26 +41,40 @@ ProviderRegistry
               └── YahooFinanceProvider | AlphaVantageProvider   # raw HTTP via httpx
 ```
 
-Only cache misses reach the instrumented layer, so `pestoengine_market_fetch_duration_seconds` measures real API latency and not cache hits. Cache keys use the prefix `market:price:{provider_id}:{ticker}`.
+Only cache misses reach the instrumented layer. Cache entries contain a decimal
+price and its currency.
 
 `ProviderRegistry` routes assets in two modes:
 
 - Assets with an explicit `provider` field are batched per provider and fail fast (the whole batch raises if the provider raises).
-- Assets with `provider: null` go through the per-ticker fallback chain (in `MARKET_DATA_PROVIDERS` order); the first provider that returns a price wins.
+- Assets with `provider: null` go through the per-ticker fallback chain (in `MARKET_DATA_PROVIDERS` order); the first provider that returns a complete quote wins.
+
+Yahoo supplies quote currency in its chart metadata. Alpha Vantage
+`GLOBAL_QUOTE` does not supply a reliable currency, so Alpha Vantage assets must
+carry `assets[].currency` (normally round-tripped from ticker search). The
+backend never infers currency from a ticker.
+
+## ECB FX stack
+
+`EcbFxProvider` reads public daily EXR rates, triangulates through EUR and uses
+the configured local or Redis cache. There is no private FX fallback. Missing
+or stale observations fail closed. The mandatory portfolio currency must be in
+`BASE_CURRENCY`.
 
 ## Request flow: `POST /v1/rebalance`
 
 ```
 HTTP request
   → FastAPI route (async)
-  → loop.run_in_executor(None, run_rebalance, payload, registry)
+  → loop.run_in_executor(None, run_rebalance, payload, registry, fx_provider)
   → run_rebalance()                                      [span: rebalance_compute]
-      → registry.get_prices_for_assets(assets)
-          → CachedMarketDataProvider.get_prices()        [span: cache_lookup]
-              hit  → return cached price
-              miss → InstrumentedMarketDataProvider.get_prices()    [span: market_fetch]
+      → registry.get_quotes_for_assets(assets)
+          → CachedMarketDataProvider.get_quotes()        [span: cache_lookup]
+              hit  → return cached MarketQuote
+              miss → InstrumentedMarketDataProvider.get_quotes()    [span: market_fetch]
                        → raw provider (httpx)
                        → set cache
+      → EcbFxProvider.get_rates(quote currencies, base currency)  # cached ECB EXR conversion
       → calculate_rebalance()                            (pure math; only_buy switches gap redistribution vs. full rebalance)
       → _apply_fee() per asset → buy_quantities (floor div by ticker_price, or exact 6-dp fraction when fractional_shares=true)
       → redistribute_change() | redistribute_change_optimal()    (knapsack DP when optimal_redistribute=true; skipped when fractional_shares=true)
@@ -77,11 +92,12 @@ Request:
 {
   "only_buy": true,
   "increment": 1000,
+  "base_currency": "EUR",
   "optimal_redistribute": false,
   "fractional_shares": false,
   "assets": [
-    {"ticker": "VWCE.DE", "provider": null, "desired_percentage": 60, "shares": 10, "fees": 0.5, "percentage_fee": true},
-    {"ticker": "VAGF.DE", "provider": null, "desired_percentage": 40, "shares": 5,  "fees": 1.5, "percentage_fee": false}
+    {"ticker": "VOO", "provider": "yahoo", "currency": "USD", "desired_percentage": 60, "shares": 10, "fees": 0.5, "percentage_fee": true},
+    {"ticker": "VAGF.DE", "provider": "yahoo", "currency": "EUR", "desired_percentage": 40, "shares": 5, "fees": 1.5, "percentage_fee": false}
   ]
 }
 ```
@@ -89,13 +105,15 @@ Request:
 | Field | Type | Description |
 |-------|------|-------------|
 | `only_buy` | bool | When `true`, never sell; distribute the increment among underweight assets only |
-| `increment` | float ≥0 | Cash to deploy this period |
+| `increment` | JSON number ≥0 | Cash to deploy this period; parsed as `Decimal` |
+| `base_currency` | required string | Calculation currency; must be included in the backend's `BASE_CURRENCY` list. Differing quotes are converted with ECB reference rates when the required series exists |
 | `optimal_redistribute` | bool (default `false`) | Use knapsack DP for the leftover-change step |
 | `fractional_shares` | bool (default `false`) | Buy exact fractional quantities (6 dp) instead of whole shares; each asset lands on its target and the leftover-change step is skipped |
 | `assets[].ticker` | string (non-empty) | Symbol recognized by the chosen provider |
 | `assets[].provider` | string \| null | `"yahoo"` / `"alphavantage"` for direct routing; `null` to use the fallback chain |
-| `assets[].desired_percentage` | float 0..100 | All assets must sum to exactly `100` |
-| `assets[].shares` | float ≥0 | Shares currently held |
+| `assets[].currency` | ISO code \| null | Quote-currency metadata. Required for Alpha Vantage; never guessed from the ticker |
+| `assets[].desired_percentage` | JSON number 0..100 | All assets must sum to exactly `100`; parsed as `Decimal` |
+| `assets[].shares` | JSON number ≥0 | Shares currently held; parsed as `Decimal` |
 | `assets[].percentage_fee` | bool (default `false`) | `false`: flat fee; `true`: % of transaction value |
 | `assets[].fees` | float ≥0 | Absolute amount when `percentage_fee=false`; `0..100` when `true` |
 
@@ -104,8 +122,8 @@ Response (`200 OK`):
 ```json
 {
   "results": [
-    {"id": 0, "ticker": "VWCE.DE", "current_percentage": 37.45, "desired_percentage": 60.0,
-     "shares": 10, "allocated": 594.05, "ticker_price": 118.42, "fees": 2.97, "buy": 5.0},
+    {"id": 0, "ticker": "VOO", "current_percentage": 37.45, "desired_percentage": 60.0,
+     "shares": 10, "allocated": 594.05, "ticker_price": 118.81, "fees": 2.97, "buy": 5.0},
     {"id": 1, "ticker": "VAGF.DE", "current_percentage": 62.55, "desired_percentage": 40.0,
      "shares": 5, "allocated": 398.5, "ticker_price": 23.18, "fees": 1.5, "buy": 17.0}
   ],
@@ -114,13 +132,16 @@ Response (`200 OK`):
 }
 ```
 
-`buy` is a float: an integer-valued share count in whole-share mode (`5.0`), or a
+`buy` is a JSON number: an integer-valued share count in whole-share mode (`5.0`), or a
 fractional quantity truncated to 6 decimals when `fractional_shares=true`.
+
+Calculations use `Decimal`. Monetary response fields are expressed in the
+request's `base_currency` and serialized to two decimal places.
 
 Errors:
 
-- `422`: schema validation failed. Body is FastAPI's standard `{"detail": [{type, loc, msg, ctx}, ...]}`. Each item carries a stable `type` code a client can localize without parsing prose: Pydantic's own (`greater_than_equal`, `less_than_equal`, `string_too_short`, `too_short`, ...) plus two custom domain codes, `percentage_sum` (ctx `{total}`) and `percentage_fee_cap` (ctx `{ticker, fees}`). `msg` stays English as a fallback.
-- `502`: market data fetch failed; body is `{"detail": "..."}` (raised as `MarketDataError`)
+- `422`: request validation failed; `base_currency` is mandatory.
+- `502`: quote or ECB data fetch failed, or the latest ECB observation violated the configured staleness policy; body is `{"detail": "..."}`.
 
 ### `GET /v1/tickers/search`
 
@@ -130,17 +151,30 @@ Query parameters: `q` (string, min length 2). Calls all configured search provid
 {
   "results": [
     {"ticker": "VWCE.DE", "name": "YF · Vanguard FTSE All-World UCITS ETF",
-     "exchange": "XETRA", "type": "ETF", "provider": "yahoo"}
+     "exchange": "XETRA", "type": "ETF", "provider": "yahoo", "currency": "EUR"}
   ]
 }
 ```
 
-`type` is one of: `EQUITY`, `ETF`, `MUTUALFUND`, `CRYPTOCURRENCY`, `CURRENCY`. Indices, futures, and options are filtered out. `name` is prefixed with a provider label (`YF · ...`, `AV · ...`). `exchange` is a human-readable market label (Yahoo's exchange display name such as `XETRA`/`Milan`/`NASDAQ`, falling back to its code; Alpha Vantage's region). `provider` round-trips to `POST /v1/rebalance`.
+`type` is one of: `EQUITY`, `ETF`, `MUTUALFUND`, `CRYPTOCURRENCY`, `CURRENCY`. Indices, futures, and options are filtered out. `provider` and `currency` round-trip to `POST /v1/rebalance`.
 
 Errors:
 
 - `422`: `q` absent or shorter than 2 characters
 - `503`: all configured search providers failed
+
+### `GET /v1/config`
+
+Returns the backend-owned currency policy consumed by the frontend at startup:
+
+```json
+{
+  "base_currencies": ["EUR", "USD", "GBP", "CHF", "JPY", "CAD", "AUD"]
+}
+```
+
+`BASE_CURRENCY` is an ordered JSON list; the frontend uses its first item as the
+initial selection and renders the full list.
 
 ### `GET /v1/health`, `GET /v1/ready`
 
@@ -153,9 +187,12 @@ Read from `.env` (see [`.env.example`](../.env.example)):
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
+| `BASE_CURRENCY` | `["EUR","USD","GBP","CHF","JPY","CAD","AUD"]` | Ordered JSON list of three-letter portfolio currencies; the first is the initial selection and the full list is exposed through `GET /v1/config` |
 | `LOG_LEVEL` | `INFO` | `DEBUG` / `INFO` / `WARNING` / `ERROR` / `CRITICAL` |
 | `CACHE_BACKEND` | `local` | `local`: per-process dict; `redis`: shared across workers |
 | `CACHE_TTL_SECONDS` | `300` | Price cache TTL |
+| `FX_CACHE_TTL_SECONDS` | `3600` | ECB reference-observation cache TTL |
+| `ECB_FX_MAX_AGE_DAYS` | `7` | Maximum accepted observation age in calendar days; stale data fails closed |
 | `REDIS_URL` | unset | Required when `CACHE_BACKEND=redis` |
 | `CORS_ORIGINS` | unset | Comma-separated list; only needed when the frontend is on a different origin |
 | `MARKET_DATA_PROVIDERS` | `["yahoo"]` | JSON list of provider IDs, in fallback order |
@@ -231,7 +268,8 @@ pytest -q --tb=short      # CI style
 Fixtures in `tests/conftest.py`:
 
 - `mock_registry`: `MagicMock(spec=ProviderRegistry)`
-- `client`: `TestClient(app)` with `get_registry` overridden to return `mock_registry`
+- `mock_fx_provider`: `MagicMock(spec=EcbFxProvider)`
+- `client`: `TestClient(app)` with both data dependencies overridden
 
 No real HTTP calls are made in tests.
 
@@ -242,7 +280,7 @@ No real HTTP calls are made in tests.
 ```bash
 curl -X POST http://localhost:8000/v1/rebalance \
      -H "Content-Type: application/json" \
-     -d @../portfolios/portfolio.json | jq
+     -d '{"only_buy":true,"increment":1000,"base_currency":"EUR","assets":[{"ticker":"VWCE.DE","desired_percentage":100,"shares":0,"fees":0}]}' | jq
 ```
 
 ### Python (`httpx`)
@@ -253,10 +291,11 @@ import httpx
 payload = {
     "only_buy": True,
     "increment": 1000,
+    "base_currency": "EUR",
     "optimal_redistribute": False,
     "assets": [
-        {"ticker": "VWCE.DE", "provider": None, "desired_percentage": 60, "shares": 10, "fees": 0.5, "percentage_fee": True},
-        {"ticker": "VAGF.DE", "provider": None, "desired_percentage": 40, "shares": 5,  "fees": 1.5, "percentage_fee": False},
+        {"ticker": "VWCE.DE", "provider": "yahoo", "currency": "EUR", "desired_percentage": 60, "shares": 10, "fees": 0.5, "percentage_fee": True},
+        {"ticker": "VAGF.DE", "provider": "yahoo", "currency": "EUR", "desired_percentage": 40, "shares": 5, "fees": 1.5, "percentage_fee": False},
     ],
 }
 

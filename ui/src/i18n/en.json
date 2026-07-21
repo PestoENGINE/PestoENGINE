@@ -33,6 +33,7 @@
   },
   "settings": {
     "cashToDeploy": "Cash to deploy",
+    "baseCurrency": "Base currency",
     "onlyBuy": "Only buy",
     "onlyBuyHint": "Never sell existing positions",
     "fractional": "Fractional shares",
@@ -85,8 +86,9 @@
     "colBuy": "Buy",
     "colResult": "Result",
     "allocated": "Allocated",
-    "totalFees": "Total fees",
+    "totalFees": "Fees",
     "change": "Change",
+    "currency": "Currency",
     "empty": "Run the calculator to see results."
   },
   "trust": {
@@ -158,10 +160,11 @@
     "io": {
       "notJson": "File is not valid JSON.",
       "invalidFile": "Invalid portfolio file.",
-      "unsupportedVersion": "Unsupported export version. Expected version 1.",
+      "unsupportedVersion": "Unsupported export version. Expected version 2.",
       "missingSettings": "Invalid portfolio file: missing settings.",
       "assetsNotArray": "Invalid portfolio file: assets must be a non-empty array.",
       "invalidIncrement": "Invalid portfolio file: invalid increment.",
+      "invalidBaseCurrency": "Invalid portfolio file: baseCurrency is required and must be one of: {allowed}.",
       "assetMissingTicker": "Invalid portfolio file: asset {n} missing ticker.",
       "assetInvalidPercentage": "Invalid portfolio file: asset {n} invalid desiredPercentage.",
       "assetInvalidShares": "Invalid portfolio file: asset {n} invalid shares.",

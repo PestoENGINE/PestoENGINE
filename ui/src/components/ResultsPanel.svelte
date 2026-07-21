@@ -48,6 +48,10 @@
           <div class="stat-label">{$t('results.change')}</div>
           <div class="stat-val">{result.change.toFixed(2)}</div>
         </div>
+        <div>
+          <div class="stat-label">{$t('results.currency')}</div>
+          <div class="stat-val">{settings.baseCurrency}</div>
+        </div>
       </div>
     {:else}
       <div class="result-empty">{$t('results.empty')}</div>
@@ -95,7 +99,7 @@
   .results-summary {
     border-top: 1px solid var(--border);
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.5rem;
     padding: 0.875rem 0 0;
     margin-top: 0.5rem;
@@ -122,9 +126,11 @@
     font-size: 0.875rem;
     color: var(--text-3);
   }
-
   @media (max-width: 480px) {
     .stat-val { font-size: 0.875rem; }
-    .results-summary { gap: 0.25rem; }
+    .results-summary {
+      gap: 0.75rem 0.5rem;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 </style>

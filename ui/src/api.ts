@@ -1,13 +1,31 @@
 import type { Asset, Settings, RebalanceResponse, TickerResult, UiError, UiErrorItem } from './types';
 
+/** Load and validate the backend-owned runtime configuration. */
+export async function loadBaseCurrencies(
+  fetchFn: typeof fetch = fetch,
+): Promise<string[]> {
+  const res = await fetchFn('/v1/config');
+  if (!res.ok) throw new Error(`Configuration request failed with ${res.status}`);
+
+  const { base_currencies: baseCurrencies } = await res.json() as {
+    base_currencies?: string[];
+  };
+  if (!Array.isArray(baseCurrencies) || baseCurrencies.length === 0) {
+    throw new Error('Invalid supported base currencies');
+  }
+  return baseCurrencies;
+}
+
 interface RebalanceBody {
   only_buy: boolean;
   increment: number;
+  base_currency: string;
   optimal_redistribute: boolean;
   fractional_shares: boolean;
   assets: Array<{
     ticker: string;
     provider: string | null;
+    currency: string | null;
     desired_percentage: number;
     shares: number;
     fees: number;
@@ -20,11 +38,13 @@ export function buildRebalanceBody(settings: Settings, assets: Asset[]): Rebalan
   return {
     only_buy: settings.onlyBuy,
     increment: settings.increment,
+    base_currency: settings.baseCurrency,
     optimal_redistribute: settings.optimalRedistribute,
     fractional_shares: settings.fractionalShares,
     assets: assets.map(a => ({
       ticker: a.ticker,
       provider: a.provider ?? null,
+      currency: a.currency,
       desired_percentage: a.desiredPercentage,
       shares: a.shares,
       fees: a.fees,
@@ -43,8 +63,8 @@ interface PydanticError {
 
 /**
  * Maps one Pydantic 422 error to a translatable item. Standard field
- * constraints are routed by (type, field); the two custom domain rules carry
- * their own stable codes (`percentage_sum`, `percentage_fee_cap`). Anything
+ * constraints are routed by (type, field); custom validation rules carry
+ * stable codes. Anything
  * unmapped falls back to the generic key wrapping the backend's English `msg`.
  */
 function mapValidationError(d: PydanticError): UiErrorItem {

@@ -3,7 +3,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ProviderId = Literal["yahoo", "alphavantage"]
@@ -13,8 +13,11 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
+    base_currency: list[str] = ["EUR", "USD", "GBP", "CHF", "JPY", "CAD", "AUD"]
     cache_backend: Literal["local", "redis"] = "local"
     cache_ttl_seconds: int = 300
+    fx_cache_ttl_seconds: int = Field(default=3600, gt=0)
+    ecb_fx_max_age_days: int = Field(default=7, ge=0)
     redis_url: str | None = None
     cors_origins: str | None = None
     otel_enabled: bool = False
@@ -27,6 +30,19 @@ class Settings(BaseSettings):
     rate_limit_providers_per_min: int | None = None
     trusted_proxies: str | None = None
     fastapi_docs: bool = True
+
+    @field_validator("base_currency")
+    @classmethod
+    def _normalize_base_currency(cls, value: list[str]) -> list[str]:
+        normalized = [item.strip().upper() for item in value]
+        if not normalized or any(
+            len(item) != 3 or not item.isascii() or not item.isalpha()
+            for item in normalized
+        ):
+            raise ValueError("BASE_CURRENCY must contain three-letter currency codes")
+        if len(set(normalized)) != len(normalized):
+            raise ValueError("BASE_CURRENCY entries must be unique")
+        return normalized
 
     @model_validator(mode="after")
     def _check_required_settings(self) -> "Settings":

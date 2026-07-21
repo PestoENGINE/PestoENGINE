@@ -4,6 +4,7 @@ from opentelemetry import metrics as _metrics
 
 from app.core.exceptions import MarketDataError
 from app.market_data.base import AbstractMarketDataProvider
+from app.market_data.quote import MarketQuote
 
 
 class ProviderRegistry:
@@ -30,40 +31,54 @@ class ProviderRegistry:
             description="Provider failures during price fetch",
         )
 
-    def get_prices_for_assets(self, assets: list) -> dict[str, float]:
-        """Return {ticker: price} for all assets.
+    def get_quotes_for_assets(self, assets: list) -> dict[str, MarketQuote]:
+        """Return a complete currency-aware quote for every asset.
 
         Args:
-            assets: objects with .ticker (str) and .provider (str | None).
+            assets: objects with .ticker, .provider and optional .currency.
         """
-        prices: dict[str, float] = {}
+        quotes: dict[str, MarketQuote] = {}
 
         # --- Explicit provider assets: batch by provider, fail-fast ---
-        by_provider: dict[str, list[str]] = {}
-        fallback_tickers: list[str] = []
+        by_provider: dict[str, list] = {}
+        fallback_assets: list = []
 
         for asset in assets:
             if asset.provider:
-                by_provider.setdefault(asset.provider, []).append(asset.ticker)
+                by_provider.setdefault(asset.provider, []).append(asset)
             else:
-                fallback_tickers.append(asset.ticker)
+                fallback_assets.append(asset)
 
-        for pid, tickers in by_provider.items():
+        for pid, provider_assets in by_provider.items():
             if pid not in self._providers:
                 raise MarketDataError(f"Provider '{pid}' is not configured.")
+            tickers = [asset.ticker for asset in provider_assets]
+            currency_hints = {
+                asset.ticker: asset.currency
+                for asset in provider_assets
+                if asset.currency
+            }
             try:
-                prices.update(self._providers[pid].get_prices(tickers))
+                quotes.update(self._providers[pid].get_quotes(
+                    tickers,
+                    currency_hints=currency_hints,
+                ))
             except MarketDataError as e:
                 self._errors.add(1, {"provider": pid, "error_type": "explicit"})
                 raise MarketDataError(f"[{pid}] {e}") from e
 
         # --- Fallback chain: per-ticker, first provider to return wins ---
-        for ticker in fallback_tickers:
+        for asset in fallback_assets:
+            ticker = asset.ticker
             resolved = False
+            currency_hints = {ticker: asset.currency} if asset.currency else {}
             for pid in self._fallback_order:
                 try:
-                    result = self._providers[pid].get_prices([ticker])
-                    prices[ticker] = result[ticker]
+                    quote = self._providers[pid].get_quotes(
+                        [ticker],
+                        currency_hints=currency_hints,
+                    )[ticker]
+                    quotes[ticker] = quote
                     resolved = True
                     break
                 except MarketDataError:
@@ -75,4 +90,4 @@ class ProviderRegistry:
                     f"Ticker '{ticker}' not found in any configured provider ({tried})."
                 )
 
-        return prices
+        return quotes

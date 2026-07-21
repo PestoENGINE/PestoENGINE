@@ -48,8 +48,9 @@
             <div class="code-line"><span class="code-ln">9</span><span class="code-content">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ck">"shares"</span><span class="ci">:</span> <span class="cn">10</span><span class="ci">,</span></span></div>
             <div class="code-line"><span class="code-ln">10</span><span class="code-content">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ck">"fees"</span><span class="ci">:</span> <span class="cn">3.95</span></span></div>
             <div class="code-line"><span class="code-ln">11</span><span class="code-content">&nbsp;&nbsp;&nbsp;&nbsp;<span class="ci">&#125;</span></span></div>
-            <div class="code-line"><span class="code-ln">12</span><span class="code-content">&nbsp;&nbsp;<span class="ci">]</span></span></div>
-            <div class="code-line"><span class="code-ln">13</span><span class="code-content ci">&#125;</span></div>
+            <div class="code-line"><span class="code-ln">12</span><span class="code-content">&nbsp;&nbsp;<span class="ci">],</span></span></div>
+            <div class="code-line"><span class="code-ln">13</span><span class="code-content">&nbsp;&nbsp;<span class="ck">"base_currency"</span><span class="ci">:</span> <span class="cs">"EUR"</span></span></div>
+            <div class="code-line"><span class="code-ln">14</span><span class="code-content ci">&#125;</span></div>
           </div>
         </div>
       </div>

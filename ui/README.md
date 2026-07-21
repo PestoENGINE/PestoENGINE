@@ -1,6 +1,6 @@
 # PestoENGINE – Frontend
 
-Single-page application that consumes `POST /v1/rebalance` and `GET /v1/tickers/search`. Renders the input editor, calls the backend, and displays the resulting buy/sell orders. Persists state in `localStorage` only; no server-side storage.
+Single-page application that consumes the backend runtime configuration, `POST /v1/rebalance`, and `GET /v1/tickers/search`. Renders the input editor, calls the backend, and displays the resulting buy/sell orders. Persists state in `localStorage` only; no server-side storage.
 
 ## Stack
 
@@ -39,8 +39,8 @@ All state lives in `App.svelte` (Svelte 4 compatible reactivity: `let` + assignm
 
 | Key | Type | Default |
 |-----|------|---------|
-| `pesto_engine_settings` | `{ increment, onlyBuy, optimalRedistribute, fractionalShares }` | `{ 1000, true, false, false }` |
-| `pesto_engine_assets` | `Asset[]` (`id`, `ticker`, `provider`, `desiredPercentage`, `shares`, `fees`, `percentageFee`) | `[]` |
+| `pesto_engine_settings` | `{ increment, baseCurrency, onlyBuy, optimalRedistribute, fractionalShares }` | `{ 1000, BASE_CURRENCY, true, false, false }`, where `BASE_CURRENCY` comes from `/v1/config` |
+| `pesto_engine_assets` | `Asset[]` (`id`, `ticker`, `provider`, `currency`, `desiredPercentage`, `shares`, `fees`, `percentageFee`) | `[]` |
 | `pesto_engine_dark_mode` | `boolean` | `false` |
 | `pesto_engine_locale` | `'en' \| 'it'` | auto-detected from `navigator.language`, else `en` |
 
@@ -63,6 +63,7 @@ UI strings are translated with a small hand-rolled module in `src/i18n/` (no lib
 
 | Endpoint | Method | Triggered by |
 |----------|--------|--------------|
+| `/v1/config` | `GET` | Before mounting the SPA; supplies the ordered base-currency list |
 | `/v1/rebalance` | `POST` | "Calculate buy order" button in `PortfolioEditor` |
 | `/v1/tickers/search?q=` | `GET` | Live as the user types in `TickerAutocomplete` |
 
@@ -73,7 +74,7 @@ Error mapping in `App.svelte:runRebalance`:
 | `200` | Render `ResultsPanel`, scroll to `#results` |
 | `422` | Map each `detail[]` item (its stable `type` + `loc`) to a translated message; unknown types fall back to a generic translated wrapper around the backend `msg` |
 | `429` | Translated "Too many requests" message, with seconds from `Retry-After` when present (a string `detail` without the header is passed through verbatim) |
-| `502` | Translated generic market-data message (`errors.marketData`) |
+| `502` | Translated generic quote/ECB-data message (`errors.marketData`) |
 | other / network | Translated generic "Request failed" message |
 
 Request payload converts UI camelCase to backend snake_case:
@@ -85,6 +86,8 @@ Request payload converts UI camelCase to backend snake_case:
 | `onlyBuy` | `only_buy` |
 | `optimalRedistribute` | `optimal_redistribute` |
 | `fractionalShares` | `fractional_shares` |
+| `baseCurrency` | `base_currency` |
+| `assets[].currency` | `assets[].currency` |
 
 ## Import / Export
 
@@ -92,16 +95,19 @@ Request payload converts UI camelCase to backend snake_case:
 
 ```json
 {
-  "version": 1,
-  "exportedAt": "2026-05-25T10:00:00Z",
-  "settings": { "increment": 1000, "onlyBuy": true, "optimalRedistribute": false, "fractionalShares": false },
+  "version": 2,
+  "exportedAt": "2026-07-20T10:30:00Z",
+  "settings": { "increment": 1000, "baseCurrency": "EUR", "onlyBuy": true, "optimalRedistribute": false, "fractionalShares": false },
   "assets": [
-    { "ticker": "VOO", "provider": null, "desiredPercentage": 60, "shares": 10, "fees": 0.5, "percentageFee": true }
+    { "ticker": "VWCE.DE", "provider": "yahoo", "currency": "EUR", "desiredPercentage": 100, "shares": 10, "fees": 0.5, "percentageFee": true }
   ]
 }
 ```
 
-Sample portfolio: [`../portfolios/portfolio.json`](../portfolios/portfolio.json).
+Only version 2 is accepted. `baseCurrency` is mandatory and must be one of the
+currencies returned by `GET /v1/config`; version 1 is rejected because
+migrating it would require guessing a portfolio currency. Version 2 persists
+both base and per-asset quote currency.
 
 ## Design tokens
 

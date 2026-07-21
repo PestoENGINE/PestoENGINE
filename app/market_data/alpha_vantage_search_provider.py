@@ -5,6 +5,7 @@ import logging
 import httpx
 
 from app.market_data.base import AbstractTickerSearchProvider
+from app.market_data.quote import try_normalize_currency
 
 logger = logging.getLogger(__name__)
 
@@ -58,5 +59,6 @@ class AlphaVantageSearchProvider(AbstractTickerSearchProvider):
                 "exchange": m.get("4. region", ""),
                 "type": mapped_type,
                 "provider": "alphavantage",
+                "currency": try_normalize_currency(m.get("8. currency")),
             })
         return results

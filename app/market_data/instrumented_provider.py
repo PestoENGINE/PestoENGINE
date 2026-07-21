@@ -6,6 +6,7 @@ from opentelemetry import metrics as _metrics
 from opentelemetry import trace as _otel_trace
 
 from app.market_data.base import AbstractMarketDataProvider
+from app.market_data.quote import MarketQuote
 
 FETCH_DURATION_METRIC = "pestoengine_market_fetch_duration_seconds"
 
@@ -44,7 +45,12 @@ class InstrumentedMarketDataProvider(AbstractMarketDataProvider):
             else _otel_trace.get_tracer("pestoengine.market_data")
         )
 
-    def get_prices(self, tickers: list[str]) -> dict[str, float]:
+    def get_quotes(
+        self,
+        tickers: list[str],
+        *,
+        currency_hints: dict[str, str] | None = None,
+    ) -> dict[str, MarketQuote]:
         start = time.perf_counter()
         outcome = "success"
         with self._tracer.start_as_current_span(
@@ -55,7 +61,10 @@ class InstrumentedMarketDataProvider(AbstractMarketDataProvider):
             },
         ) as span:
             try:
-                result = self._provider.get_prices(tickers)
+                result = self._provider.get_quotes(
+                    tickers,
+                    currency_hints=currency_hints,
+                )
                 return result
             except Exception as exc:
                 outcome = "error"

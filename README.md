@@ -19,6 +19,9 @@ Enter your targets, current holdings, and the cash you want to deploy. PestoENGI
 
 No accounts. No data stored. Self-hostable. MIT licensed.
 
+The portfolio currency is mandatory. Quotes in another currency are converted
+with public ECB reference rates; no private FX provider is used.
+
 ## How it works
 
 **01 - Set your target allocation**  
@@ -91,7 +94,7 @@ For frontend details (structure, state, build) see [`ui/README.md`](ui/README.md
 
 - **Backend**: FastAPI, Python 3.11+, Pydantic v2, httpx, OpenTelemetry
 - **Frontend**: Svelte 5, TypeScript, hand-written CSS, Vite
-- **Market data**: Yahoo Finance and Alpha Vantage (configurable fallback chain), cached 5 minutes (local in-memory or Redis)
+- **Market data**: configurable quote-provider fallback chain, plus ECB Data Portal daily reference rates for FX; local or Redis caching
 - **Observability**: OTLP/HTTP export of metrics, traces, and logs (Loki-compatible via Grafana Alloy)
 
 ---
