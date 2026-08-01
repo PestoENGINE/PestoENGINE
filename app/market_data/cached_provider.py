@@ -1,15 +1,11 @@
 """Caching decorator for AbstractMarketDataProvider."""
 
-import logging
-
 from opentelemetry import metrics as _metrics
 from opentelemetry import trace as _otel_trace
 
 from app.market_data.base import AbstractMarketDataProvider
 from app.market_data.cache import AbstractCache
 from app.market_data.quote import MarketQuote
-
-logger = logging.getLogger(__name__)
 
 _KEY_PREFIX = "market:quote:v2:"
 
@@ -37,14 +33,13 @@ class CachedMarketDataProvider(AbstractMarketDataProvider):
         self._provider = provider
         self._cache = cache
         self._key_prefix = f"{_KEY_PREFIX}{provider_id}:"
-        backend = type(cache).__name__.removesuffix("Cache").lower()
+        self._backend = type(cache).__name__.removesuffix("Cache").lower()
         mp = meter_provider if meter_provider is not None else _metrics.get_meter_provider()
         meter = mp.get_meter("pestoengine.cache")
         self._cache_ops = meter.create_counter(
             "pestoengine_cache_ops_total",
             description="Cache lookup outcomes per ticker",
         )
-        self._backend = backend
         self._provider_id = provider_id
         self._tracer = (
             tracer_provider.get_tracer("pestoengine.cache")

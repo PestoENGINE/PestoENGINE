@@ -112,6 +112,6 @@ def test_redis_expire_not_set_on_subsequent_calls():
 
 
 def test_redis_returns_incr_value():
-    store, client = _make_redis_store(incr_return=5)
+    store, _ = _make_redis_store(incr_return=5)
     result = store.increment("key", 60)
     assert result == 5

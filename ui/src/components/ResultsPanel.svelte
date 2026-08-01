@@ -5,10 +5,6 @@
 
   export let result: RebalanceResponse | null;
   export let settings: Settings;
-
-  $: totalAllocated = result
-    ? result.results.reduce((s, r) => s + r.allocated, 0)
-    : 0;
 </script>
 
 <div class="panel result-panel" id="results">
@@ -38,7 +34,7 @@
       <div class="results-summary">
         <div>
           <div class="stat-label">{$t('results.allocated')}</div>
-          <div class="stat-val">{totalAllocated.toFixed(2)}</div>
+          <div class="stat-val">{result.results.reduce((sum, asset) => sum + asset.allocated, 0).toFixed(2)}</div>
         </div>
         <div>
           <div class="stat-label">{$t('results.totalFees')}</div>

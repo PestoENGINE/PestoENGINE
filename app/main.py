@@ -110,8 +110,7 @@ if _tracer_provider is not None:
 
 app.add_middleware(_AccessLogMiddleware)
 
-_cors = get_settings().cors_origins
-_origins = [o.strip() for o in _cors.split(",") if o.strip()] if _cors else []
+_origins = [o.strip() for o in (_settings.cors_origins or "").split(",") if o.strip()]
 if _origins:
     app.add_middleware(
         CORSMiddleware,

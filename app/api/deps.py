@@ -1,6 +1,6 @@
 """FastAPI dependency injection for shared resources."""
 
-from functools import lru_cache
+from functools import cache
 from typing import Callable
 
 from app.core.config import Settings, get_settings
@@ -41,8 +41,8 @@ def _build_cache() -> AbstractCache[MarketQuote]:
     return LocalCache(ttl_seconds=settings.cache_ttl_seconds)
 
 
-@lru_cache(maxsize=1)
-def _build_registry() -> ProviderRegistry:
+@cache
+def get_registry() -> ProviderRegistry:
     settings = get_settings()
     cache = _build_cache()
     chains: dict[str, AbstractMarketDataProvider] = {}
@@ -56,7 +56,7 @@ def _build_registry() -> ProviderRegistry:
     return ProviderRegistry(chains, list(settings.market_data_providers))
 
 
-@lru_cache(maxsize=1)
+@cache
 def get_fx_provider() -> EcbFxProvider:
     settings = get_settings()
     cache: AbstractCache[EcbReferenceRate]
@@ -75,21 +75,13 @@ def get_fx_provider() -> EcbFxProvider:
     )
 
 
-@lru_cache(maxsize=1)
-def _build_search_providers() -> list[AbstractTickerSearchProvider]:
+@cache
+def get_search_providers() -> list[AbstractTickerSearchProvider]:
     settings = get_settings()
     return [SEARCH_BUILDERS[pid](settings) for pid in settings.market_data_providers]
 
 
-def get_registry() -> ProviderRegistry:
-    return _build_registry()
-
-
-def get_search_providers() -> list[AbstractTickerSearchProvider]:
-    return _build_search_providers()
-
-
-@lru_cache(maxsize=1)
+@cache
 def get_rate_limit_store() -> AbstractRateLimitStore | None:
     from app.rate_limit.local_store import LocalRateLimitStore
     settings = get_settings()
@@ -98,6 +90,5 @@ def get_rate_limit_store() -> AbstractRateLimitStore | None:
     if settings.cache_backend == "redis":
         import redis
         from app.rate_limit.redis_store import RedisRateLimitStore
-        client = redis.Redis.from_url(settings.redis_url)
-        return RedisRateLimitStore(client)
+        return RedisRateLimitStore(redis.Redis.from_url(settings.redis_url))
     return LocalRateLimitStore()

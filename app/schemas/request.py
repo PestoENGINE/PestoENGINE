@@ -28,7 +28,7 @@ class AssetIn(BaseModel):
 
     @model_validator(mode="after")
     def check_percentage_fee_cap(self) -> "AssetIn":
-        if self.percentage_fee and self.fees > Decimal("100"):
+        if self.percentage_fee and self.fees > 100:
             # Stable code + ctx so the client can localize without parsing prose.
             raise PydanticCustomError(
                 "percentage_fee_cap",
@@ -65,7 +65,7 @@ class RebalanceRequest(BaseModel):
     @model_validator(mode="after")
     def check_percentages_sum(self) -> "RebalanceRequest":
         total = sum(a.desired_percentage for a in self.assets)
-        if round(total, 2) != Decimal("100.00"):
+        if round(total, 2) != 100:
             # Stable code + ctx so the client can localize without parsing prose.
             raise PydanticCustomError(
                 "percentage_sum",

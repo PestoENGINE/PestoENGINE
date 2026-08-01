@@ -5,7 +5,7 @@ const KEYS = {
   settings: 'pesto_engine_settings',
   assets: 'pesto_engine_assets',
   darkMode: 'pesto_engine_dark_mode',
-} as const;
+};
 
 export function createDefaultSettings(baseCurrency: string): Settings {
   return {

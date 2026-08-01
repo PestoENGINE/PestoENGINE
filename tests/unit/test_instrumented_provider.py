@@ -33,7 +33,7 @@ def _points(reader, name):
 
 def test_delegates_to_underlying_provider():
     from app.market_data.instrumented_provider import InstrumentedMarketDataProvider
-    reader, mp = _make_otel()
+    _, mp = _make_otel()
     mock = MagicMock(spec=AbstractMarketDataProvider)
     mock.get_quotes.return_value = make_quotes({"AAPL": 150.0, "MSFT": 300.0})
     provider = InstrumentedMarketDataProvider(mock, provider_id="yahoo", meter_provider=mp)

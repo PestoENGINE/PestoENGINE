@@ -5,7 +5,6 @@
   export let sum: number;
 
   $: valid = percentagesSumTo100(sum);
-  $: pct = Math.min(sum, 100);
 </script>
 
 <div class="pct-label">
@@ -13,7 +12,7 @@
   <span class="pct-value" class:over={!valid}>{sum.toFixed(2)}%</span>
 </div>
 <div class="pct-bar">
-  <div class="pct-fill" class:over={!valid} style="width:{pct}%"></div>
+  <div class="pct-fill" class:over={!valid} style="width:{Math.min(sum, 100)}%"></div>
 </div>
 
 <style>

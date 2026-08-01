@@ -73,7 +73,6 @@
 
   .quickstart {
     width: 100%;
-    max-width: 100%;
     min-width: 0;
     background: rgba(255,255,255,0.04);
     border: 1px solid rgba(255,255,255,0.08);

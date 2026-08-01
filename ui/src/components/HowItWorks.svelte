@@ -1,5 +1,7 @@
 <script lang="ts">
   import { t } from '../i18n';
+
+  const steps = [1, 2, 3] as const;
 </script>
 
 <div class="section-divider">
@@ -9,27 +11,15 @@
 
     <div class="how-grid">
       <div class="how-steps">
-        <div class="how-step">
-          <div class="how-num">01</div>
-          <div>
-            <div class="how-step-title">{$t('howItWorks.step1Title')}</div>
-            <div class="how-step-text">{$t('howItWorks.step1Text')}</div>
+        {#each steps as step}
+          <div class="how-step">
+            <div class="how-num">0{step}</div>
+            <div>
+              <div class="how-step-title">{$t(`howItWorks.step${step}Title`)}</div>
+              <div class="how-step-text">{$t(`howItWorks.step${step}Text`)}</div>
+            </div>
           </div>
-        </div>
-        <div class="how-step">
-          <div class="how-num">02</div>
-          <div>
-            <div class="how-step-title">{$t('howItWorks.step2Title')}</div>
-            <div class="how-step-text">{$t('howItWorks.step2Text')}</div>
-          </div>
-        </div>
-        <div class="how-step">
-          <div class="how-num">03</div>
-          <div>
-            <div class="how-step-title">{$t('howItWorks.step3Title')}</div>
-            <div class="how-step-text">{$t('howItWorks.step3Text')}</div>
-          </div>
-        </div>
+        {/each}
       </div>
 
       <div>
@@ -84,7 +74,6 @@
 
   .code-block {
     width: 100%;
-    max-width: 100%;
     min-width: 0;
     background: #0c1e1e;
     border-radius: var(--r);

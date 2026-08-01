@@ -94,9 +94,7 @@ locale.subscribe((value) => {
   void loadLocale(value);
 });
 
-export function setLocale(value: Locale): void {
-  locale.set(value);
-}
+export const setLocale = locale.set;
 
 /** Reactive translator for markup: `{$t('settings.onlyBuy')}`. Re-renders as locales load. */
 export const t = derived([locale, revision], ([$locale]) =>

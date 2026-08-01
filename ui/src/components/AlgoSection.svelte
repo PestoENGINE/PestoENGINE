@@ -6,6 +6,12 @@
   // static markup (and keeps its scoped CSS), instead of using {@html}.
   $: buyonlyUseParts = $t('algo.buyonlyUse').split('{code}');
   $: noteParts = $t('algo.note').split('{code}');
+
+  const modes = [
+    { key: 'greedy', complexity: 'O(n log n)' },
+    { key: 'knapsack', complexity: 'O(n × W)' },
+    { key: 'buyonly', complexity: 'O(n)' },
+  ] as const;
 </script>
 
 <div class="section-divider">
@@ -24,24 +30,20 @@
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td data-label={$t('algo.colMode')}>{$t('algo.greedyName')}</td>
-            <td data-label={$t('algo.colComplexity')}>O(n log n)</td>
-            <td data-label={$t('algo.colDeployment')}>{$t('algo.greedyDeploy')}</td>
-            <td data-label={$t('algo.colUseWhen')}>{$t('algo.greedyUse')}</td>
-          </tr>
-          <tr>
-            <td data-label={$t('algo.colMode')}>{$t('algo.knapsackName')}</td>
-            <td data-label={$t('algo.colComplexity')}>O(n × W)</td>
-            <td data-label={$t('algo.colDeployment')}>{$t('algo.knapsackDeploy')}</td>
-            <td data-label={$t('algo.colUseWhen')}>{$t('algo.knapsackUse')}</td>
-          </tr>
-          <tr>
-            <td data-label={$t('algo.colMode')}>{$t('algo.buyonlyName')}</td>
-            <td data-label={$t('algo.colComplexity')}>O(n)</td>
-            <td data-label={$t('algo.colDeployment')}>{$t('algo.buyonlyDeploy')}</td>
-            <td data-label={$t('algo.colUseWhen')}>{buyonlyUseParts[0]}<span class="inline-code">only_buy: true</span>{buyonlyUseParts[1] ?? ''}</td>
-          </tr>
+          {#each modes as mode}
+            <tr>
+              <td data-label={$t('algo.colMode')}>{$t(`algo.${mode.key}Name`)}</td>
+              <td data-label={$t('algo.colComplexity')}>{mode.complexity}</td>
+              <td data-label={$t('algo.colDeployment')}>{$t(`algo.${mode.key}Deploy`)}</td>
+              <td data-label={$t('algo.colUseWhen')}>
+                {#if mode.key === 'buyonly'}
+                  {buyonlyUseParts[0]}<span class="inline-code">only_buy: true</span>{buyonlyUseParts[1] ?? ''}
+                {:else}
+                  {$t(`algo.${mode.key}Use`)}
+                {/if}
+              </td>
+            </tr>
+          {/each}
         </tbody>
       </table>
     </div>
@@ -54,7 +56,6 @@
 
 <style>
   .table-scroll {
-    overflow-x: visible;
     padding-bottom: 0.25rem;
   }
 

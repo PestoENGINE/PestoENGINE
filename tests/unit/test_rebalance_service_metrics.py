@@ -101,7 +101,7 @@ def test_rebalance_compute_creates_span_with_attributes():
     exporter = InMemorySpanExporter()
     tp = SdkTracerProvider()
     tp.add_span_processor(SimpleSpanProcessor(exporter))
-    reader, mp = _make_otel()
+    _, mp = _make_otel()
     mock = MagicMock(spec=ProviderRegistry)
     mock.get_quotes_for_assets.return_value = make_quotes({"T0": 10.0, "T1": 10.0})
     _svc.run_rebalance(

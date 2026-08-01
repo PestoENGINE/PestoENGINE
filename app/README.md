@@ -14,7 +14,7 @@ Python 3.11+ required (3.12 in the production Docker image).
 | Cache (optional) | redis ≥5 | lazy import; only loaded when `CACHE_BACKEND=redis` |
 | Observability | OpenTelemetry SDK ≥1.25 | metrics + traces + logs via OTLP/HTTP |
 | ASGI server | uvicorn[standard] ≥0.29 | |
-| Tests | pytest ≥9.0 | `testpaths=tests`, `pythonpath=app` (see `pytest.ini`) |
+| Tests | pytest ≥9.0 | `testpaths=tests` (see `pytest.ini`) |
 
 ## Structure
 
@@ -32,7 +32,7 @@ app/
 
 ## Provider stack (decorator chain)
 
-Each configured market data provider is wrapped at startup (`api/deps.py:_build_registry`):
+Each configured market data provider is wrapped at startup (`api/deps.py:get_registry`):
 
 ```
 ProviderRegistry

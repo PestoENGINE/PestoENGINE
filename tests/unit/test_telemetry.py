@@ -1,7 +1,5 @@
 """Unit tests for telemetry helpers."""
 
-import pytest
-
 from opentelemetry.sdk._logs import LoggerProvider as SdkLoggerProvider
 from opentelemetry.sdk.trace import TracerProvider as SdkTracerProvider
 

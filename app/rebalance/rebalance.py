@@ -5,9 +5,9 @@ from decimal import ROUND_CEILING, Decimal
 from app.core.formatting import as_decimal
 
 # DP safety cap: above this many scaled units, fall back to greedy.
-MAX_CENTS: int = 1_000_000
-_ZERO = Decimal("0")
-_HUNDRED = Decimal("100")
+MAX_CENTS = 1_000_000
+_ZERO = Decimal(0)
+_HUNDRED = Decimal(100)
 
 
 def _decimals(values: list[Decimal | int | float]) -> list[Decimal]:
@@ -209,11 +209,10 @@ def redistribute_change(
 
     # ε avoids division-by-zero; lower ratio = more underweight = higher priority.
     epsilon = Decimal("0.01")
-    priorities = [
-        current_percentages_d[i] / (desired_percentages_d[i] + epsilon)
-        for i in range(len(buy_quantities))
-    ]
-    sorted_indices = sorted(range(len(buy_quantities)), key=lambda i: priorities[i])
+    sorted_indices = sorted(
+        range(len(buy_quantities)),
+        key=lambda i: current_percentages_d[i] / (desired_percentages_d[i] + epsilon),
+    )
 
     updated = list(buy_quantities)
     remaining = change_d
@@ -329,27 +328,20 @@ def redistribute_change_optimal(
     desired_percentages_d = _decimals(desired_percentages)
     change_d = as_decimal(change)
 
-    # Fast exits: nothing to distribute, or no assets at all.
-    if n == 0 or change_d <= _ZERO:
+    if change_d <= _ZERO:
         return list(buy_quantities), change_d
 
-    # Base eligibility (same contract as redistribute_change): only touch
-    # assets that were already scheduled for purchase in this cycle.
-    eligible = [i for i in range(n) if buy_quantities[i] > 0]
+    eligible = [
+        i
+        for i in range(n)
+        if buy_quantities[i] > 0
+        and (
+            not only_buy
+            or current_percentages_d[i] < desired_percentages_d[i]
+        )
+    ]
     if not eligible:
         return list(buy_quantities), change_d
-
-    # Stricter eligibility for only_buy mode: never push an asset further
-    # above its target weight - exclude everything that is not STRICTLY
-    # underweight.  This preserves the portfolio-balance guarantee promised by
-    # buy-only mode even in the redistribution phase.
-    if only_buy:
-        eligible = [
-            i for i in eligible
-            if current_percentages_d[i] < desired_percentages_d[i]
-        ]
-        if not eligible:
-            return list(buy_quantities), change_d
 
     scale_places = max(
         2,
@@ -367,7 +359,7 @@ def redistribute_change_optimal(
             rounding=ROUND_CEILING,
         ))) <= change_units
     }
-    candidates = list(prices_units.keys())
+    candidates = list(prices_units)
     if not candidates:
         return list(buy_quantities), change_d
 
@@ -427,9 +419,10 @@ def redistribute_change_optimal(
             k -= prices_units[item]
 
     # Recompute from exact Decimal prices so sub-minor quote precision survives.
-    updated = list(buy_quantities)
-    for i in candidates:
-        updated[i] += extra[i]
+    updated = [
+        quantity + extra_shares
+        for quantity, extra_shares in zip(buy_quantities, extra)
+    ]
     remaining = change_d - sum(extra[i] * ticker_prices_d[i] for i in candidates)
 
     return updated, remaining

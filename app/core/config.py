@@ -1,6 +1,6 @@
 """Application settings loaded from environment variables."""
 
-from functools import lru_cache
+from functools import cache
 from typing import Literal
 
 from pydantic import Field, field_validator, model_validator
@@ -65,6 +65,6 @@ class Settings(BaseSettings):
         return self
 
 
-@lru_cache(maxsize=1)
+@cache
 def get_settings() -> Settings:
     return Settings()

@@ -1,12 +1,11 @@
 /* Minimal style reset */
 * { margin: 0; }
 button { font: inherit; color: inherit; background: none; border: none; }
-input, select, textarea { font: inherit; }
+input, select { font: inherit; }
 a { color: inherit; text-decoration: none; }
 img, svg { display: block; max-width: 100%; }
-ul, ol { list-style: none; padding: 0; }
-button:not(:disabled),
-[role="button"]:not(:disabled) { cursor: pointer; }
+ul { list-style: none; padding: 0; }
+button:not(:disabled) { cursor: pointer; }
 button:focus-visible,
 a:focus-visible,
 input:focus-visible {
@@ -71,7 +70,6 @@ html.dark {
 *, *::before, *::after { box-sizing: border-box; }
 html { font-size: 16px; }
 body {
-  margin: 0;
   font-family: var(--sans);
   background: var(--bg);
   color: var(--text);
@@ -124,7 +122,6 @@ body {
 
 /* Form primitives (shared across inputs) */
 .field {
-  font-family: var(--sans);
   font-size: 0.9375rem;
   color: var(--text);
   background: var(--surface);
@@ -249,15 +246,12 @@ input[type='checkbox']:checked::after {
     padding-right: 0;
   }
   .asset-table td:last-child {
-    position: static;
-    display: block;
     grid-column: 4;
     grid-row: 1;
     align-self: start;
     justify-self: center;
     width: var(--asset-action-col);
     height: 1.65rem;
-    padding: 0;
   }
   .asset-table td:last-child::before { content: ''; display: none; }
   .asset-table .cell-input {
@@ -296,12 +290,9 @@ input[type='checkbox']:checked::after {
 @media (max-width: 300px) {
   .asset-table tr { grid-template-columns: repeat(2, minmax(0, 1fr)) var(--asset-action-col); }
   .asset-table td:first-child { grid-column: 1 / 3; }
-  .asset-table td:nth-child(2) { grid-column: 1; }
-  .asset-table td:nth-child(3) { grid-column: 2; }
   .asset-table td:nth-child(4) { grid-column: 1 / 4; }
   .asset-table td:last-child {
     grid-column: 3;
-    grid-row: 1;
   }
 }
 @media (max-width: 280px) {
@@ -347,7 +338,6 @@ input[type='checkbox']:checked::after {
 }
 .cell-input.ticker { font-weight: 600; }
 .cell-input::placeholder { color: var(--text-3); font-weight: 400; text-transform: none; }
-.cell-input:out-of-range { color: var(--error); }
 
 /* Results grid contract (ResultsPanel head + AssetResult rows)
    The two components live in separate files but render one table. The only

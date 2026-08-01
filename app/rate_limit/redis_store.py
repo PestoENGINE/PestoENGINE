@@ -1,13 +1,8 @@
 """Redis-backed rate limit store."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+from redis import Redis
 
 from app.rate_limit.base import AbstractRateLimitStore
-
-if TYPE_CHECKING:
-    import redis as _redis
 
 
 class RedisRateLimitStore(AbstractRateLimitStore):
@@ -19,7 +14,7 @@ class RedisRateLimitStore(AbstractRateLimitStore):
     strict atomicity is required.
     """
 
-    def __init__(self, client: "_redis.Redis") -> None:
+    def __init__(self, client: Redis) -> None:
         self._client = client
 
     def increment(self, key: str, window_seconds: int) -> int:

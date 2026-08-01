@@ -16,25 +16,8 @@ export async function loadBaseCurrencies(
   return baseCurrencies;
 }
 
-interface RebalanceBody {
-  only_buy: boolean;
-  increment: number;
-  base_currency: string;
-  optimal_redistribute: boolean;
-  fractional_shares: boolean;
-  assets: Array<{
-    ticker: string;
-    provider: string | null;
-    currency: string | null;
-    desired_percentage: number;
-    shares: number;
-    fees: number;
-    percentage_fee: boolean;
-  }>;
-}
-
 /** Maps the camelCase UI model to the snake_case backend payload. */
-export function buildRebalanceBody(settings: Settings, assets: Asset[]): RebalanceBody {
+export function buildRebalanceBody(settings: Settings, assets: Asset[]) {
   return {
     only_buy: settings.onlyBuy,
     increment: settings.increment,
@@ -101,13 +84,10 @@ function mapValidationError(d: PydanticError): UiErrorItem {
 
 /** Drops items that translate to the same key+params (e.g. two assets out of range). */
 function dedupeItems(items: UiErrorItem[]): UiErrorItem[] {
-  const seen = new Set<string>();
-  return items.filter((it) => {
-    const id = `${it.key}:${JSON.stringify(it.params ?? {})}`;
-    if (seen.has(id)) return false;
-    seen.add(id);
-    return true;
-  });
+  return [...new Map(items.map(it => [
+    `${it.key}:${JSON.stringify(it.params ?? {})}`,
+    it,
+  ])).values()];
 }
 
 /**
@@ -135,9 +115,7 @@ export async function rebalanceError(res: Response): Promise<UiError> {
     if (typeof data.detail === 'string') return { kind: 'raw', text: data.detail };
     return { kind: 'key', key: 'errors.tooManyRequests' };
   }
-  if (res.status === 502) {
-    return { kind: 'key', key: 'errors.marketData' };
-  }
+  if (res.status === 502) return { kind: 'key', key: 'errors.marketData' };
   return { kind: 'key', key: 'errors.requestFailedRetry' };
 }
 

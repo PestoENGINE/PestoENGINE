@@ -126,7 +126,6 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 0.5rem;
   }
 
   .fee-cell { display: flex; align-items: center; gap: 0.375rem; }
@@ -151,6 +150,5 @@
   :global(.cell-input[aria-invalid='true']) { color: var(--error); }
   @media (max-width: 700px) {
     .fee-cell .cell-input { width: 100%; flex: 1 1 auto; }
-    .asset-actions { justify-content: flex-end; }
   }
 </style>

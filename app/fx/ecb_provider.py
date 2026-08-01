@@ -24,6 +24,7 @@ _RETRIES = 3
 _RETRY_DELAY = 1.0
 _TIMEOUT_SECONDS = 10.0
 _EUR = "EUR"
+_ONE = Decimal(1)
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,7 +70,7 @@ def _major_unit(currency: str) -> tuple[str, Decimal]:
     normalized = normalize_currency(currency)
     if normalized == "GBX":
         return "GBP", Decimal("0.01")
-    return normalized, Decimal("1")
+    return normalized, _ONE
 
 
 class EcbFxProvider:
@@ -121,18 +122,18 @@ class EcbFxProvider:
             source_major, source_factor = source_units[source]
             if source_major != target:
                 source_per_eur = (
-                    Decimal("1")
+                    _ONE
                     if source_major == _EUR
                     else references[source_major].units_per_eur
                 )
                 target_per_eur = (
-                    Decimal("1")
+                    _ONE
                     if target == _EUR
                     else references[target].units_per_eur
                 )
                 major_rate = target_per_eur / source_per_eur
             else:
-                major_rate = Decimal("1")
+                major_rate = _ONE
             rates[source] = source_factor * major_rate
         return rates
 
@@ -149,7 +150,10 @@ class EcbFxProvider:
             missing: set[str] = set()
             for currency in currencies:
                 cached = self._cache.get(f"{_CACHE_PREFIX}:{currency}")
-                if cached is not None and self._is_fresh(cached):
+                if (
+                    cached is not None
+                    and 0 <= (self._today() - cached.as_of).days <= self._max_age_days
+                ):
                     references[currency] = cached
                 else:
                     missing.add(currency)
@@ -161,10 +165,6 @@ class EcbFxProvider:
                     self._cache.set(f"{_CACHE_PREFIX}:{currency}", reference)
                     references[currency] = reference
             return references
-
-    def _is_fresh(self, reference: EcbReferenceRate) -> bool:
-        age_days = (self._today() - reference.as_of).days
-        return 0 <= age_days <= self._max_age_days
 
     def _assert_fresh(self, reference: EcbReferenceRate) -> None:
         age_days = (self._today() - reference.as_of).days
@@ -237,7 +237,9 @@ class EcbFxProvider:
                 units_per_eur=Decimal(row["OBS_VALUE"]),
                 as_of=date.fromisoformat(row["TIME_PERIOD"]),
             )
-            current = parsed.get(currency)
-            if current is None or candidate.as_of > current.as_of:
+            if (
+                (current := parsed.get(currency)) is None
+                or candidate.as_of > current.as_of
+            ):
                 parsed[currency] = candidate
         return parsed

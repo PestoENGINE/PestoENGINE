@@ -61,11 +61,10 @@ class InstrumentedMarketDataProvider(AbstractMarketDataProvider):
             },
         ) as span:
             try:
-                result = self._provider.get_quotes(
+                return self._provider.get_quotes(
                     tickers,
                     currency_hints=currency_hints,
                 )
-                return result
             except Exception as exc:
                 outcome = "error"
                 span.set_status(_otel_trace.Status(_otel_trace.StatusCode.ERROR))

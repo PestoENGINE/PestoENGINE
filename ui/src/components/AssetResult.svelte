@@ -4,7 +4,6 @@
 
   export let asset: AssetResultOut;
 
-  $: muted = asset.buy === 0;
   $: driftWidth = asset.desired_percentage > 0
     ? Math.min((asset.current_percentage / asset.desired_percentage) * 100, 100)
     : 0;
@@ -12,7 +11,7 @@
 
 <div class="result-row result-grid">
   <div class="result-ticker">{asset.ticker}</div>
-  <div class="result-buy" class:muted>{formatShares(asset.buy)}</div>
+  <div class="result-buy" class:muted={asset.buy === 0}>{formatShares(asset.buy)}</div>
   <div class="result-meta">
     <div class="result-drift">
       <div class="delta-bar">

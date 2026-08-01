@@ -70,7 +70,6 @@ class ProviderRegistry:
         # --- Fallback chain: per-ticker, first provider to return wins ---
         for asset in fallback_assets:
             ticker = asset.ticker
-            resolved = False
             currency_hints = {ticker: asset.currency} if asset.currency else {}
             for pid in self._fallback_order:
                 try:
@@ -79,15 +78,13 @@ class ProviderRegistry:
                         currency_hints=currency_hints,
                     )[ticker]
                     quotes[ticker] = quote
-                    resolved = True
                     break
                 except MarketDataError:
                     self._errors.add(1, {"provider": pid, "error_type": "fallback"})
-                    continue
-            if not resolved:
-                tried = ", ".join(self._fallback_order)
+            else:
                 raise MarketDataError(
-                    f"Ticker '{ticker}' not found in any configured provider ({tried})."
+                    f"Ticker '{ticker}' not found in any configured provider "
+                    f"({', '.join(self._fallback_order)})."
                 )
 
         return quotes

@@ -16,13 +16,10 @@ try {
 }
 
 const target = document.getElementById('app')!
-let app = null
 try {
   const baseCurrencies = await loadBaseCurrencies()
-  app = mount(App, { target, props: { baseCurrencies } })
+  mount(App, { target, props: { baseCurrencies } })
 } catch {
   target.setAttribute('role', 'alert')
   target.textContent = tx('errors.requestFailed')
 }
-
-export default app

@@ -1,9 +1,8 @@
 """Shared numeric formatting helpers."""
 
 from decimal import ROUND_DOWN, Decimal
-from typing import TypeAlias
 
-DecimalInput: TypeAlias = Decimal | int | float | str
+DecimalInput = Decimal | int | float | str
 
 
 def as_decimal(v: DecimalInput) -> Decimal:

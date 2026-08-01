@@ -20,8 +20,7 @@
   let results: TickerResult[] = [];
   let open = false;
   let activeIndex = -1;
-  let rateLimited = false;
-  let searchError = false;
+  let searchFailure: 'rateLimited' | 'error' | null = null;
   let debounceTimer: ReturnType<typeof setTimeout>;
   let searchSeq = 0;
 
@@ -39,8 +38,7 @@
     // query cannot reopen the dropdown after the field was cleared.
     const seq = ++searchSeq;
     results = [];
-    rateLimited = false;
-    searchError = false;
+    searchFailure = null;
     open = false;
 
     if (q.length < 2) return;
@@ -54,21 +52,17 @@
       if (seq !== searchSeq) return; // stale: a newer keystroke happened since
       if (outcome.ok) {
         results = outcome.results;
-        rateLimited = false;
-        searchError = false;
+        searchFailure = null;
         activeIndex = -1;
         open = true;
-      } else if (outcome.rateLimited) {
-        rateLimited = true;
-        open = true;
       } else {
-        searchError = true;
+        searchFailure = outcome.rateLimited ? 'rateLimited' : 'error';
         open = true;
       }
     } catch {
       // Network error: keep the field manually editable, but show a lightweight hint.
       if (seq !== searchSeq) return;
-      searchError = true;
+      searchFailure = 'error';
       open = true;
     }
   }
@@ -135,9 +129,9 @@
   />
   {#if open}
     <ul id={listboxId} class="autocomplete-dropdown" role="listbox">
-      {#if rateLimited}
+      {#if searchFailure === 'rateLimited'}
         <li role="presentation" class="autocomplete-empty">{$t('autocomplete.rateLimited')}</li>
-      {:else if searchError}
+      {:else if searchFailure === 'error'}
         <li role="presentation" class="autocomplete-empty">{$t('autocomplete.error')}</li>
       {:else}
         {#each results as result, i (`${result.ticker}:${result.exchange}`)}
