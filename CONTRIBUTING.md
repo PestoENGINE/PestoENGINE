@@ -30,6 +30,19 @@ uvicorn app.main:app --reload
 cd ui && npm install && npm run dev
 ```
 
+### Updating Python dependencies
+
+Edit `requirements.in` or `requirements-dev.in`, then regenerate the committed
+universal lock files (Python 3.11+) with:
+
+```bash
+uv pip compile requirements.in --universal --python-version 3.11 -o requirements.txt
+uv pip compile requirements-dev.in --universal --python-version 3.11 -o requirements-dev.txt
+```
+
+Do not edit the generated `requirements*.txt` files by hand. Use `--upgrade` to
+refresh every dependency, or `--upgrade-package <name>` for one dependency.
+
 ## Running tests and checks
 
 Backend (Python):

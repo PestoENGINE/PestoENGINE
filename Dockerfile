@@ -13,7 +13,7 @@ WORKDIR /app
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
     uv venv .venv && \
-    uv pip install --python .venv/bin/python -r requirements.txt
+    uv pip sync --python .venv/bin/python requirements.txt
 
 # Remove test directories before compiling (avoid generating bytecode for code we discard)
 RUN find .venv/lib -type d \( -name "tests" -o -name "test" \) -prune -exec rm -rf {} + 2>/dev/null || true
