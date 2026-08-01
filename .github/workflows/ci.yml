@@ -23,12 +23,10 @@ jobs:
           cache-dependency-glob: "requirements*.txt"
 
       - name: Install dev dependencies
-        run: |
-          uv venv --python 3.12
-          uv pip sync requirements-dev.txt
+        run: uv pip install -r requirements-dev.txt
 
       - name: Run tests
-        run: .venv/bin/python -m pytest --tb=short -q
+        run: uv run pytest --tb=short -q
 
   test-frontend:
     runs-on: ubuntu-latest
