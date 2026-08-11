@@ -1,7 +1,7 @@
 fastapi>=0.111
-uvicorn[standard]>=0.29
+uvicorn[standard]>=0.52.1
 pydantic>=2.7
-pydantic-settings>=2.3
+pydantic-settings>=2.15.0
 httpx>=0.28
 redis>=5
 opentelemetry-sdk>=1.25
