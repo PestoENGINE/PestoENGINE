@@ -1,0 +1,221 @@
+name: Publish merged Dependabot update
+
+on:
+  workflow_run:
+    workflows: ["Build and publish Docker image"]
+    types: [completed]
+
+concurrency:
+  group: dependabot-merge-publish
+  cancel-in-progress: false
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  merge-and-publish:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      (github.event.workflow_run.event == 'pull_request' ||
+       (github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_branch == 'master') ||
+       (github.event.workflow_run.event == 'workflow_dispatch' &&
+        (github.event.workflow_run.head_branch == 'master' ||
+         startsWith(github.event.workflow_run.head_branch, 'dependabot/'))))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Merge the tested minor or patch update
+        id: merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          RUN_EVENT: ${{ github.event.workflow_run.event }}
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+
+          refresh_only=false
+          if [ "$RUN_BRANCH" = "master" ] && \
+             { [ "$RUN_EVENT" = "push" ] || [ "$RUN_EVENT" = "workflow_dispatch" ]; }; then
+            PR_NUMBER=""
+            while read -r candidate; do
+              [ -n "$candidate" ] || continue
+
+              mapfile -t pending < <(
+                gh api "repos/$REPOSITORY/pulls/$candidate" --jq '
+                  .user.login,
+                  .head.sha,
+                  .base.ref,
+                  (.auto_merge.enabled_by.login // ""),
+                  .state
+                '
+              )
+
+              if [ "${pending[0]}" != "dependabot[bot]" ] || \
+                 [ "${pending[2]}" != "master" ] || \
+                 [ "${pending[3]}" != "github-actions[bot]" ] || \
+                 [ "${pending[4]}" != "open" ]; then
+                continue
+              fi
+
+              merge_state="$(
+                gh pr view "$candidate" --repo "$REPOSITORY" \
+                  --json mergeStateStatus --jq '.mergeStateStatus'
+              )"
+              if [ "$merge_state" = "BEHIND" ]; then
+                PR_NUMBER="$candidate"
+                TESTED_SHA="${pending[1]}"
+                refresh_only=true
+                break
+              fi
+            done < <(
+              gh api \
+                "repos/$REPOSITORY/pulls?state=open&base=master&sort=created&direction=asc&per_page=100" \
+                --jq '.[].number'
+            )
+
+            if [ -z "$PR_NUMBER" ]; then
+              echo "No outdated Dependabot pull request needs revalidation."
+              exit 0
+            fi
+          elif [ -z "$PR_NUMBER" ]; then
+            PR_NUMBER="$(
+              gh api "repos/$REPOSITORY/commits/$TESTED_SHA/pulls" --jq '
+                [.[] | select(
+                  .user.login == "dependabot[bot]" and .base.ref == "master"
+                )][0].number // empty
+              '
+            )"
+          fi
+
+          if [ -z "$PR_NUMBER" ]; then
+            echo "No Dependabot pull request is associated with this CI run."
+            exit 0
+          fi
+
+          mapfile -t pr < <(
+            gh api "repos/$REPOSITORY/pulls/$PR_NUMBER" --jq '
+              .user.login,
+              .head.sha,
+              .head.ref,
+              .base.ref,
+              (.auto_merge.enabled_by.login // ""),
+              (.merged | tostring),
+              .state
+            '
+          )
+
+          author="${pr[0]}"
+          head_sha="${pr[1]}"
+          head_ref="${pr[2]}"
+          base_ref="${pr[3]}"
+          auto_merge_by="${pr[4]}"
+          merged="${pr[5]}"
+          state="${pr[6]}"
+
+          if [ "$author" != "dependabot[bot]" ] || [ "$base_ref" != "master" ]; then
+            echo "Ignoring a non-Dependabot or non-master pull request."
+            exit 0
+          fi
+
+          if [ "$head_sha" != "$TESTED_SHA" ]; then
+            echo "Ignoring stale CI results for $TESTED_SHA; current head is $head_sha."
+            exit 0
+          fi
+
+          # Only minor/patch PRs reach this state: the metadata workflow is the
+          # component that enables auto-merge after verifying the update type.
+          if [ "$auto_merge_by" != "github-actions[bot]" ]; then
+            echo "Auto-merge was not enabled by the verified Dependabot workflow."
+            exit 0
+          fi
+
+          if [ "$merged" = "true" ]; then
+            if [ "$refresh_only" = "true" ]; then
+              exit 0
+            fi
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "$state" != "open" ]; then
+            echo "Pull request closed without merging; nothing to publish."
+            exit 0
+          fi
+
+          for attempt in $(seq 1 6); do
+            mapfile -t merge_status < <(
+              gh pr view "$PR_NUMBER" --repo "$REPOSITORY" \
+                --json state,mergedAt,mergeStateStatus --jq '
+                  .state,
+                  (.mergedAt // ""),
+                  .mergeStateStatus
+                '
+            )
+
+            if [ -n "${merge_status[1]}" ]; then
+              break
+            fi
+
+            if [ "${merge_status[2]}" = "BEHIND" ]; then
+              gh api --method PUT \
+                "repos/$REPOSITORY/pulls/$PR_NUMBER/update-branch" \
+                -f expected_head_sha="$TESTED_SHA"
+
+              updated_sha=""
+              for _ in $(seq 1 12); do
+                updated_sha="$(
+                  gh api "repos/$REPOSITORY/pulls/$PR_NUMBER" --jq '.head.sha'
+                )"
+                if [ "$updated_sha" != "$TESTED_SHA" ]; then
+                  break
+                fi
+                sleep 5
+              done
+
+              if [ -z "$updated_sha" ] || [ "$updated_sha" = "$TESTED_SHA" ]; then
+                echo "::error::Timed out while updating the Dependabot branch."
+                exit 1
+              fi
+
+              # GITHUB_TOKEN updates do not emit another PR workflow, so run
+              # the same CI explicitly on the new SHA without publishing it.
+              gh workflow run ci.yml --repo "$REPOSITORY" \
+                --ref "$head_ref" -f publish=false
+              echo "Updated $head_ref to $updated_sha and dispatched CI."
+              exit 0
+            fi
+
+            if [ "$refresh_only" = "true" ]; then
+              echo "The pending pull request no longer needs a branch refresh."
+              exit 0
+            fi
+
+            if gh pr merge "$PR_NUMBER" --repo "$REPOSITORY" \
+              --squash --match-head-commit "$TESTED_SHA"; then
+              break
+            fi
+
+            if [ "$attempt" = "6" ]; then
+              echo "::error::The tested Dependabot pull request could not be merged."
+              exit 1
+            fi
+
+            sleep 5
+          done
+
+          echo "publish=true" >> "$GITHUB_OUTPUT"
+
+      - name: Publish the merged master image
+        if: steps.merge.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+        run: >-
+          gh workflow run ci.yml --repo "$REPOSITORY" --ref master
+          -f publish=true
