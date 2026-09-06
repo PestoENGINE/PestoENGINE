@@ -1,17 +1,17 @@
 """Unit tests for InstrumentedMarketDataProvider."""
 
-import pytest
 from unittest.mock import MagicMock
 
+import pytest
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import InMemoryMetricReader
-
-from app.market_data.base import AbstractMarketDataProvider
-from app.market_data.instrumented_provider import FETCH_DURATION_METRIC
-from app.core.exceptions import MarketDataError
 from opentelemetry.sdk.trace import TracerProvider as SdkTracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
+from app.core.exceptions import MarketDataError
+from app.market_data.base import AbstractMarketDataProvider
+from app.market_data.instrumented_provider import FETCH_DURATION_METRIC
 from tests.helpers import make_quotes
 
 
@@ -127,6 +127,7 @@ def test_market_fetch_creates_span_with_attributes():
 
 def test_market_fetch_span_error_on_exception():
     from opentelemetry.trace import StatusCode
+
     from app.market_data.instrumented_provider import InstrumentedMarketDataProvider
     exporter = InMemorySpanExporter()
     tp = SdkTracerProvider()

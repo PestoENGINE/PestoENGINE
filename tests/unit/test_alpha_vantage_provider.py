@@ -1,16 +1,19 @@
 """Unit tests for AlphaVantageProvider."""
 
-from unittest.mock import MagicMock, patch
+from datetime import UTC, datetime
 from decimal import Decimal
+from unittest.mock import MagicMock, patch
 
-import pytest
 import httpx
+import pytest
 
-from app.market_data.alpha_vantage_provider import AlphaVantageProvider
 from app.core.exceptions import MarketDataError
+from app.market_data.alpha_vantage_provider import AlphaVantageProvider
 
 
 def _resp(body: dict, status_code: int = 200) -> MagicMock:
+    if isinstance(body.get("Global Quote"), dict) and body["Global Quote"]:
+        body["Global Quote"].setdefault("07. latest trading day", datetime.now(UTC).date().isoformat())
     m = MagicMock()
     m.raise_for_status.return_value = None
     m.json.return_value = body
@@ -80,10 +83,10 @@ def test_empty_global_quote_raises(mock_get):
         provider.get_quotes(["UNKNOWN"], currency_hints={"UNKNOWN": "USD"})
 
 
-@patch("app.market_data.alpha_vantage_provider.time.sleep")
+@patch("app.core.http.time.sleep")
 @patch("app.market_data.alpha_vantage_provider.httpx.get")
 def test_http_error_retries_then_raises(mock_get, mock_sleep):
-    mock_get.side_effect = httpx.HTTPError("timeout")
+    mock_get.side_effect = httpx.ReadTimeout("timeout")
     provider = AlphaVantageProvider("key")
     with pytest.raises(MarketDataError, match="3 attempts"):
         provider.get_quotes(["AAPL"], currency_hints={"AAPL": "USD"})
@@ -91,7 +94,7 @@ def test_http_error_retries_then_raises(mock_get, mock_sleep):
     assert mock_sleep.call_count == 2
 
 
-@patch("app.market_data.alpha_vantage_provider.time.sleep")
+@patch("app.core.http.time.sleep")
 @patch("app.market_data.alpha_vantage_provider.httpx.get")
 def test_http_status_error_does_not_leak_api_key(mock_get, mock_sleep):
     provider = AlphaVantageProvider(api_key="SECRET_KEY_123")

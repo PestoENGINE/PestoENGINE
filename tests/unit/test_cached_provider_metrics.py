@@ -10,7 +10,7 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanE
 
 from app.market_data.base import AbstractMarketDataProvider
 from app.market_data.cache import LocalCache
-from app.market_data.cached_provider import CachedMarketDataProvider, _KEY_PREFIX
+from app.market_data.cached_provider import _KEY_PREFIX, CachedMarketDataProvider
 from tests.helpers import make_quote, make_quotes
 
 _TEST_KEY_PREFIX = _KEY_PREFIX + "test:"

@@ -11,7 +11,7 @@ from opentelemetry.sdk.metrics import MeterProvider
 from app.fx.ecb_provider import EcbReferenceRate
 from app.market_data.base import AbstractMarketDataProvider
 from app.market_data.cache import LocalCache
-from app.market_data.cached_provider import CachedMarketDataProvider, _KEY_PREFIX
+from app.market_data.cached_provider import _KEY_PREFIX, CachedMarketDataProvider
 from app.market_data.quote import MarketQuote
 from app.market_data.redis_cache import RedisCache
 from tests.helpers import make_quote, make_quotes

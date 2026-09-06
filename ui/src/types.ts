@@ -54,12 +54,15 @@ export interface AssetResultOut {
   ticker_price: number;
   fees: number;
   buy: number;
+  quote_as_of?: string | null;
 }
 
 export interface RebalanceResponse {
   results: AssetResultOut[];
   total_fees: number;
   change: number;
+  base_currency?: string | null;
+  fx_as_of?: string | null;
 }
 
 export interface PortfolioExport {

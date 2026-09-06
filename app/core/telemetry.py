@@ -12,7 +12,7 @@ from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.metrics.view import ExplicitBucketHistogramAggregation, View
-from opentelemetry.sdk.resources import Resource, SERVICE_NAME
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
@@ -37,6 +37,8 @@ def setup_telemetry(
     endpoint: str,
     export_interval_ms: int,
     headers_raw: str | None = None,
+    *,
+    register_global: bool = True,
 ) -> tuple[MeterProvider, TracerProvider, LoggerProvider]:
     resource = Resource.create({SERVICE_NAME: service_name})
     parsed_headers = _parse_headers(headers_raw)
@@ -55,7 +57,8 @@ def setup_telemetry(
         )
     ]
     meter_provider = MeterProvider(resource=resource, metric_readers=[reader], views=views)
-    metrics.set_meter_provider(meter_provider)
+    if register_global:
+        metrics.set_meter_provider(meter_provider)
 
     span_exporter = OTLPSpanExporter(
         endpoint=f"{endpoint}/v1/traces",
@@ -63,7 +66,8 @@ def setup_telemetry(
     )
     tracer_provider = TracerProvider(resource=resource)
     tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
-    trace.set_tracer_provider(tracer_provider)
+    if register_global:
+        trace.set_tracer_provider(tracer_provider)
 
     log_exporter = OTLPLogExporter(
         endpoint=f"{endpoint}/v1/logs",
@@ -71,6 +75,7 @@ def setup_telemetry(
     )
     logger_provider = LoggerProvider(resource=resource)
     logger_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
-    set_logger_provider(logger_provider)
+    if register_global:
+        set_logger_provider(logger_provider)
 
     return meter_provider, tracer_provider, logger_provider

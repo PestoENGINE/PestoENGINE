@@ -38,7 +38,7 @@ describe('percentagesSumTo100', () => {
     expect(percentagesSumTo100(100)).toBe(true);
   });
 
-  it('accepts FP noise that rounds to 100.00', () => {
+  it('accepts binary floating-point summation noise', () => {
     expect(percentagesSumTo100(33.333 + 33.333 + 33.334)).toBe(true);
   });
 
@@ -74,4 +74,11 @@ describe('uuid', () => {
     expect(a).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
     expect(a).not.toBe(b);
   });
+});
+
+
+it('rejects weight differences hidden by rounding to two decimals', () => {
+  expect(percentagesSumTo100(50.004 + 50)).toBe(false);
+  expect(percentagesSumTo100(99.999999)).toBe(false);
+  expect(percentagesSumTo100(Infinity)).toBe(false);
 });

@@ -2,10 +2,12 @@
 
 import logging
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
+from redis import RedisError
 
-from app.core.config import get_settings
+from app.api.deps import get_resources
+from app.api.resources import AppResources
 
 router = APIRouter(tags=["health"])
 logger = logging.getLogger(__name__)
@@ -17,17 +19,11 @@ async def health() -> JSONResponse:
 
 
 @router.api_route("/ready", methods=["GET", "HEAD"], include_in_schema=False)
-def ready() -> JSONResponse:
-    settings = get_settings()
-    if settings.cache_backend == "redis":
+def ready(resources: AppResources = Depends(get_resources)) -> JSONResponse:
+    if resources.redis_client is not None:
         try:
-            import redis
-            redis.from_url(
-                settings.redis_url,
-                socket_connect_timeout=2,
-                socket_timeout=2,
-            ).ping()
-        except Exception as exc:
-            logger.warning("Readiness check failed: %s", exc)
+            resources.redis_client.ping()
+        except RedisError:
+            logger.warning("Readiness check failed: Redis unavailable")
             return JSONResponse(status_code=503, content={"status": "redis_unavailable"})
     return JSONResponse(content={"status": "ok"})

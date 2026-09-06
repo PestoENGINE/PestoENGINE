@@ -1,5 +1,6 @@
 """Rate limiting middleware for provider-heavy endpoints."""
 
+import asyncio
 import logging
 import time
 
@@ -19,13 +20,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     def __init__(
         self,
         app,
-        store: AbstractRateLimitStore,
         limit: int,
+        store: AbstractRateLimitStore | None = None,
         meter_provider: _metrics.MeterProvider | None = None,
     ) -> None:
         super().__init__(app)
         self.store = store
         self.limit = limit
+        self._meter_provider = meter_provider
+        self._active_provider = None
         mp = meter_provider if meter_provider is not None else _metrics.get_meter_provider()
         meter = mp.get_meter("pestoengine.rate_limit")
         self._counter = meter.create_counter(
@@ -38,6 +41,16 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if request.url.path not in _RATE_LIMITED_PATHS or request.method == "OPTIONS":
             return await call_next(request)
 
+        resources = getattr(request.app.state, "resources", None)
+        store = self.store if self.store is not None else resources.rate_limit_store
+        mp = self._meter_provider or (resources.meter_provider if resources else None)
+        if mp is not None and mp is not self._active_provider:
+            self._counter = mp.get_meter("pestoengine.rate_limit").create_counter(
+                "pestoengine_rate_limit_total",
+                unit="requests",
+                description="Rate limit decisions by outcome and endpoint",
+            )
+            self._active_provider = mp
         ip = request.client.host if request.client else "unknown"
         now = int(time.time())
         epoch_minute = now // 60
@@ -45,7 +58,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         endpoint = "rebalance" if "/rebalance" in request.url.path else "search"
 
         try:
-            count = self.store.increment(key, window_seconds=60)
+            count = await asyncio.to_thread(store.increment, key, window_seconds=60)
         except Exception as exc:
             # Store unavailable; fail-open to preserve service availability.
             # A deterrent limiter must never cause a production outage.
@@ -58,7 +71,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             self._counter.add(1, {"outcome": "denied", "endpoint": endpoint})
             return JSONResponse(
                 status_code=429,
-                content={"detail": f"Rate limit exceeded. Try again in {seconds_remaining} seconds."},
+                content={
+                    "detail": f"Rate limit exceeded. Try again in {seconds_remaining} seconds."
+                },
                 headers={"Retry-After": str(seconds_remaining)},
             )
 

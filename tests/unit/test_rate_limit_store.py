@@ -1,9 +1,13 @@
 """Unit tests for LocalRateLimitStore and RedisRateLimitStore."""
 
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import MagicMock
 
+import fakeredis
+
 from app.rate_limit.local_store import LocalRateLimitStore
+from app.rate_limit.redis_store import RedisRateLimitStore
 
 
 def _make_store(now: float = 0.0):
@@ -81,37 +85,20 @@ def test_thread_safety():
     assert sorted(results) == list(range(1, 51))
 
 
-# RedisRateLimitStore
-
-from app.rate_limit.redis_store import RedisRateLimitStore
-
-
-def _make_redis_store(incr_return: int = 1):
-    client = MagicMock()
-    client.incr.return_value = incr_return
+def test_redis_atomic_increment_and_ttl():
+    client = fakeredis.FakeRedis()
     store = RedisRateLimitStore(client)
-    return store, client
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        counts = list(pool.map(lambda _: store.increment("key", 60), range(50)))
+    assert sorted(counts) == list(range(1, 51))
+    assert 0 < client.ttl("key") <= 60
+    client.expire("key", 20)
+    assert store.increment("key", 60) == 51
+    assert 0 < client.ttl("key") <= 20
 
 
-def test_redis_incr_called_on_every_increment():
-    store, client = _make_redis_store(incr_return=1)
-    store.increment("key", 60)
-    client.incr.assert_called_once_with("key")
-
-
-def test_redis_expire_set_on_first_insert():
-    store, client = _make_redis_store(incr_return=1)
-    store.increment("key", 60)
-    client.expire.assert_called_once_with("key", 60)
-
-
-def test_redis_expire_not_set_on_subsequent_calls():
-    store, client = _make_redis_store(incr_return=2)
-    store.increment("key", 60)
-    client.expire.assert_not_called()
-
-
-def test_redis_returns_incr_value():
-    store, _ = _make_redis_store(incr_return=5)
-    result = store.increment("key", 60)
-    assert result == 5
+def test_redis_repairs_a_counter_without_expiry():
+    client = fakeredis.FakeRedis()
+    client.set("key", 7)
+    assert RedisRateLimitStore(client).increment("key", 60) == 8
+    assert 0 < client.ttl("key") <= 60

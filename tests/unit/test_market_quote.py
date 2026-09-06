@@ -17,7 +17,7 @@ def test_quote_normalizes_currency_and_preserves_decimal_price():
 
 @pytest.mark.parametrize("price", ["0", "-1", "NaN", "Infinity"])
 def test_quote_rejects_invalid_prices(price):
-    with pytest.raises(ValueError, match="finite and positive"):
+    with pytest.raises(ValueError, match="finite and between"):
         MarketQuote(price=Decimal(price), currency="EUR")
 
 

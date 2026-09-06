@@ -1,17 +1,18 @@
 """Unit tests for run_rebalance() metric recording."""
 
-import app.services.rebalance_service as _svc
+from decimal import Decimal
 from unittest.mock import MagicMock
 
 import pytest
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import InMemoryMetricReader
-
-from app.market_data.provider_registry import ProviderRegistry
-from app.schemas.request import AssetIn, RebalanceRequest
 from opentelemetry.sdk.trace import TracerProvider as SdkTracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
+import app.services.rebalance_service as _svc
+from app.market_data.provider_registry import ProviderRegistry
+from app.schemas.request import AssetIn, RebalanceRequest
 from tests.helpers import make_quotes
 
 
@@ -32,14 +33,14 @@ def _points(reader, name):
 
 
 def _simple_request(n_assets: int = 2, optimal: bool = False) -> RebalanceRequest:
-    pct = 100.0 / n_assets
+    pct = (Decimal(100) / n_assets).quantize(Decimal("0.000001"))
     return RebalanceRequest(
         only_buy=True,
         increment=1000.0,
         base_currency="EUR",
         optimal_redistribute=optimal,
         assets=[
-            AssetIn(ticker=f"T{i}", desired_percentage=pct, shares=0.0, fees=0.0)
+            AssetIn(ticker=f"T{i}", desired_percentage=(pct if i < n_assets - 1 else 100 - pct * (n_assets - 1)), shares=0.0, fees=0.0)
             for i in range(n_assets)
         ],
     )
@@ -47,8 +48,8 @@ def _simple_request(n_assets: int = 2, optimal: bool = False) -> RebalanceReques
 
 def _run(request, mp):
     mock = MagicMock(spec=ProviderRegistry)
-    mock.get_quotes_for_assets.return_value = make_quotes(
-        {f"T{i}": 10.0 for i in range(len(request.assets))})
+    mock.get_quotes_for_assets.return_value = list((make_quotes(
+        {f"T{i}": 10.0 for i in range(len(request.assets))})).values())
     return _svc.run_rebalance(request, mock, meter_provider=mp)
 
 
@@ -103,7 +104,7 @@ def test_rebalance_compute_creates_span_with_attributes():
     tp.add_span_processor(SimpleSpanProcessor(exporter))
     _, mp = _make_otel()
     mock = MagicMock(spec=ProviderRegistry)
-    mock.get_quotes_for_assets.return_value = make_quotes({"T0": 10.0, "T1": 10.0})
+    mock.get_quotes_for_assets.return_value = list((make_quotes({"T0": 10.0, "T1": 10.0})).values())
     _svc.run_rebalance(
         _simple_request(optimal=False),
         mock,

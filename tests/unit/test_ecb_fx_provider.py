@@ -123,13 +123,13 @@ def test_stale_or_future_observations_fail_closed(mock_get):
         _provider(max_age_days=7).get_rates({"USD"}, "EUR")
 
 
-@patch("app.fx.ecb_provider.time.sleep")
+@patch("app.core.http.time.sleep")
 @patch("app.fx.ecb_provider.httpx.get")
-def test_malformed_csv_retries_then_raises_market_data_error(mock_get, mock_sleep):
+def test_malformed_csv_fails_without_retry_market_data_error(mock_get, mock_sleep):
     mock_get.return_value = _response("not,the,expected,header\n")
 
-    with pytest.raises(MarketDataError, match="after 3 attempts"):
+    with pytest.raises(MarketDataError, match="after 1 attempts"):
         _provider().get_rates({"USD"}, "EUR")
 
-    assert mock_get.call_count == 3
-    assert mock_sleep.call_count == 2
+    assert mock_get.call_count == 1
+    assert mock_sleep.call_count == 0

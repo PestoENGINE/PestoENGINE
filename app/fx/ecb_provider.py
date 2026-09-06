@@ -4,7 +4,6 @@ import csv
 import io
 import logging
 import threading
-import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
@@ -12,7 +11,8 @@ from decimal import Decimal, InvalidOperation
 
 import httpx
 
-from app.core.exceptions import MarketDataError
+from app.core.exceptions import MarketDataError, ProviderDeadlineError
+from app.core.http import provider_get, remaining_budget, retry_pause, retryable, safe_error
 from app.market_data.cache import AbstractCache
 from app.market_data.quote import normalize_currency
 
@@ -41,9 +41,11 @@ class EcbReferenceRate:
             raise ValueError("EUR is implicit in ECB reference rates")
         if not isinstance(self.units_per_eur, Decimal):
             raise TypeError("ECB reference rate must be a Decimal")
-        if not self.units_per_eur.is_finite() or self.units_per_eur <= 0:
+        if not self.units_per_eur.is_finite() or not Decimal(
+            "1e-12"
+        ) <= self.units_per_eur <= Decimal("1e12"):
             raise ValueError("ECB reference rate must be finite and positive")
-        if not isinstance(self.as_of, date):
+        if type(self.as_of) is not date:
             raise TypeError("ECB observation date must be a date")
         object.__setattr__(self, "currency", currency)
 
@@ -57,7 +59,9 @@ class EcbReferenceRate:
     @classmethod
     def from_cache_dict(cls, value: object) -> "EcbReferenceRate":
         try:
-            return cls(  # type: ignore[index]
+            if not isinstance(value, dict):
+                raise ValueError("Expected an object")
+            return cls(
                 currency=value["currency"],
                 units_per_eur=Decimal(value["units_per_eur"]),
                 as_of=date.fromisoformat(value["as_of"]),
@@ -73,6 +77,14 @@ def _major_unit(currency: str) -> tuple[str, Decimal]:
     return normalized, _ONE
 
 
+class FxRates(dict[str, Decimal]):
+    """Conversion rates sharing one ECB reference date (None for unit-only FX)."""
+
+    def __init__(self, *, as_of: date | None = None) -> None:
+        super().__init__()
+        self.as_of = as_of
+
+
 class EcbFxProvider:
     """Build source-to-target rates from daily ECB EUR reference rates."""
 
@@ -82,10 +94,14 @@ class EcbFxProvider:
         *,
         max_age_days: int = 7,
         today: Callable[[], date] | None = None,
+        client: httpx.Client | None = None,
+        timeout: float = 10,
     ) -> None:
         if max_age_days < 0:
             raise ValueError("max_age_days cannot be negative")
         self._cache = cache
+        self._client = client
+        self._timeout = timeout
         self._max_age_days = max_age_days
         self._today = today or (lambda: datetime.now(UTC).date())
         self._fetch_lock = threading.Lock()
@@ -102,9 +118,7 @@ class EcbFxProvider:
 
         source_units = {source: _major_unit(source) for source in sources}
         required = {
-            major
-            for major, _factor in source_units.values()
-            if major not in {_EUR, target}
+            major for major, _factor in source_units.values() if major not in {_EUR, target}
         }
         if target != _EUR and any(major != target for major, _ in source_units.values()):
             required.add(target)
@@ -117,20 +131,14 @@ class EcbFxProvider:
                 + f"; cannot convert to {target}."
             )
 
-        rates: dict[str, Decimal] = {}
+        rates = FxRates(as_of=next(iter(references.values())).as_of if references else None)
         for source in sorted(sources):
             source_major, source_factor = source_units[source]
             if source_major != target:
                 source_per_eur = (
-                    _ONE
-                    if source_major == _EUR
-                    else references[source_major].units_per_eur
+                    _ONE if source_major == _EUR else references[source_major].units_per_eur
                 )
-                target_per_eur = (
-                    _ONE
-                    if target == _EUR
-                    else references[target].units_per_eur
-                )
+                target_per_eur = _ONE if target == _EUR else references[target].units_per_eur
                 major_rate = target_per_eur / source_per_eur
             else:
                 major_rate = _ONE
@@ -144,27 +152,39 @@ class EcbFxProvider:
         if not currencies:
             return {}
 
-        # Avoid duplicate ECB fetches inside one worker.
-        with self._fetch_lock:
-            references: dict[str, EcbReferenceRate] = {}
-            missing: set[str] = set()
+        # A batch must use one reference date. A partial hit or mixed dates
+        # refreshes the whole required set, not only the missing currencies.
+        remaining = remaining_budget()
+        if not self._fetch_lock.acquire(timeout=remaining if remaining is not None else -1):
+            raise ProviderDeadlineError("ECB request deadline exceeded waiting for refresh")
+        try:
+            references = {}
             for currency in currencies:
+                remaining_budget()
                 cached = self._cache.get(f"{_CACHE_PREFIX}:{currency}")
                 if (
                     cached is not None
+                    and cached.currency == currency
                     and 0 <= (self._today() - cached.as_of).days <= self._max_age_days
                 ):
                     references[currency] = cached
-                else:
-                    missing.add(currency)
-
-            if missing:
-                fetched = self._fetch_reference_rates(missing)
-                for currency, reference in fetched.items():
-                    self._assert_fresh(reference)
-                    self._cache.set(f"{_CACHE_PREFIX}:{currency}", reference)
-                    references[currency] = reference
-            return references
+            if (
+                len(references) == len(currencies)
+                and len({r.as_of for r in references.values()}) == 1
+            ):
+                return references
+            fetched = self._fetch_reference_rates(currencies)
+            for reference in fetched.values():
+                self._assert_fresh(reference)
+            if len({r.as_of for r in fetched.values()}) > 1:
+                raise MarketDataError("ECB returned inconsistent observation dates")
+            if currencies.issubset(fetched):
+                for currency in currencies:
+                    remaining_budget()
+                    self._cache.set(f"{_CACHE_PREFIX}:{currency}", fetched[currency])
+            return fetched
+        finally:
+            self._fetch_lock.release()
 
     def _assert_fresh(self, reference: EcbReferenceRate) -> None:
         age_days = (self._today() - reference.as_of).days
@@ -188,7 +208,8 @@ class EcbFxProvider:
         last_error = "unknown error"
         for attempt in range(1, _RETRIES + 1):
             try:
-                response = httpx.get(
+                response = provider_get(
+                    self._client,
                     f"{_BASE_URL}/{series}",
                     params={
                         "lastNObservations": 1,
@@ -196,25 +217,28 @@ class EcbFxProvider:
                         "format": "csvdata",
                     },
                     headers={"Accept": "text/csv"},
-                    timeout=_TIMEOUT_SECONDS,
+                    timeout=self._timeout,
                 )
                 if response.status_code == 404:
                     return {}
                 response.raise_for_status()
                 return self._parse_csv(response.text, currencies)
-            except (csv.Error, httpx.HTTPError, InvalidOperation, KeyError,
-                    TypeError, ValueError) as exc:
-                if isinstance(exc, httpx.HTTPStatusError):
-                    last_error = f"HTTP {exc.response.status_code}"
-                else:
-                    last_error = type(exc).__name__
-                logger.warning("ECB FX fetch attempt %d/%d failed: %s",
-                               attempt, _RETRIES, last_error)
-                if attempt < _RETRIES:
-                    time.sleep(_RETRY_DELAY)
-        raise MarketDataError(
-            f"Could not fetch ECB rates after {_RETRIES} attempts: {last_error}."
-        )
+            except (
+                csv.Error,
+                httpx.HTTPError,
+                InvalidOperation,
+                KeyError,
+                TypeError,
+                ValueError,
+            ) as exc:
+                last_error = safe_error(exc)
+                logger.warning(
+                    "ECB FX fetch attempt %d/%d failed: %s", attempt, _RETRIES, last_error
+                )
+                if not retryable(exc) or attempt == _RETRIES:
+                    break
+                retry_pause(_RETRY_DELAY)
+        raise MarketDataError(f"Could not fetch ECB rates after {attempt} attempts: {last_error}.")
 
     @staticmethod
     def _parse_csv(
@@ -237,9 +261,6 @@ class EcbFxProvider:
                 units_per_eur=Decimal(row["OBS_VALUE"]),
                 as_of=date.fromisoformat(row["TIME_PERIOD"]),
             )
-            if (
-                (current := parsed.get(currency)) is None
-                or candidate.as_of > current.as_of
-            ):
+            if (current := parsed.get(currency)) is None or candidate.as_of > current.as_of:
                 parsed[currency] = candidate
         return parsed

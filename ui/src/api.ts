@@ -65,8 +65,10 @@ function mapValidationError(d: PydanticError): UiErrorItem {
     case 'percentage_fee_cap':
       if (assetIndex !== null) return { key: 'errors.invalid.feeCap', params: { n: assetIndex + 1 } };
       break;
-    case 'greater_than_equal':
     case 'less_than_equal':
+      if (field === 'desired_percentage') return { key: 'errors.invalid.percentageRange' };
+      break;
+    case 'greater_than_equal':
       if (field === 'desired_percentage') return { key: 'errors.invalid.percentageRange' };
       if (field === 'shares') return { key: 'errors.invalid.sharesNegative' };
       if (field === 'fees') return { key: 'errors.invalid.feeNegative' };

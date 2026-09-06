@@ -1,7 +1,7 @@
 """Unit tests for ProviderRegistry."""
 
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import pytest
 from opentelemetry.sdk.metrics import MeterProvider
@@ -52,7 +52,7 @@ def _make_registry(yahoo_prices=None, av_prices=None, *, meter_provider=None):
 def test_explicit_provider_routes_to_correct_provider():
     registry, yahoo, alpha = _make_registry(yahoo_prices={"AAPL": 150})
     result = registry.get_quotes_for_assets([_asset("AAPL", provider="yahoo")])
-    assert result["AAPL"].price == 150
+    assert result[0].price == 150
     yahoo.get_quotes.assert_called_once_with(["AAPL"], currency_hints={})
     alpha.get_quotes.assert_not_called()
 
@@ -63,10 +63,10 @@ def test_explicit_provider_batches_tickers_and_currency_hints():
         _asset("A", provider="yahoo", currency="EUR"),
         _asset("B", provider="yahoo"),
     ]
-    assert set(registry.get_quotes_for_assets(assets)) == {"A", "B"}
-    yahoo.get_quotes.assert_called_once_with(
-        ["A", "B"], currency_hints={"A": "EUR"},
-    )
+    assert [q.price for q in registry.get_quotes_for_assets(assets)] == [1, 2]
+    yahoo.get_quotes.assert_has_calls([
+        call(["A"], currency_hints={"A": "EUR"}), call(["B"], currency_hints={}),
+    ])
 
 
 def test_explicit_unknown_provider_raises():
@@ -85,7 +85,7 @@ def test_explicit_provider_error_wraps_with_prefix():
 
 def test_fallback_uses_first_provider_that_succeeds():
     registry, yahoo, alpha = _make_registry(yahoo_prices={"AAPL": 150})
-    assert registry.get_quotes_for_assets([_asset("AAPL")])["AAPL"].price == 150
+    assert registry.get_quotes_for_assets([_asset("AAPL")])[0].price == 150
     yahoo.get_quotes.assert_called_once_with(["AAPL"], currency_hints={})
     alpha.get_quotes.assert_not_called()
 
@@ -98,7 +98,7 @@ def test_fallback_falls_through_and_forwards_currency_hint():
         {"yahoo": yahoo, "alphavantage": alpha}, ["yahoo", "alphavantage"],
     )
     result = registry.get_quotes_for_assets([_asset("AAPL", currency="USD")])
-    assert result["AAPL"].price == 150
+    assert result[0].price == 150
     for provider in (yahoo, alpha):
         provider.get_quotes.assert_called_once_with(
             ["AAPL"], currency_hints={"AAPL": "USD"},
@@ -118,7 +118,7 @@ def test_fallback_is_resolved_per_ticker():
     registry = ProviderRegistry(
         {"yahoo": yahoo, "alphavantage": alpha}, ["yahoo", "alphavantage"],
     )
-    assert set(registry.get_quotes_for_assets([_asset("A"), _asset("B")])) == {"A", "B"}
+    assert [q.price for q in registry.get_quotes_for_assets([_asset("A"), _asset("B")])] == [1, 2]
     alpha.get_quotes.assert_called_once_with(["B"], currency_hints={})
 
 
@@ -145,7 +145,7 @@ def test_mix_of_explicit_and_fallback_assets():
         _asset("IBM", provider="alphavantage", currency="USD"),
         _asset("MSFT"),
     ]
-    assert set(registry.get_quotes_for_assets(assets)) == {"AAPL", "IBM", "MSFT"}
+    assert [q.price for q in registry.get_quotes_for_assets(assets)] == [150, 130, 300]
 
 
 def test_explicit_error_increments_counter_with_explicit_type():

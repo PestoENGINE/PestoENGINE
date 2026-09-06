@@ -1,7 +1,7 @@
 """Orchestration of the DCA rebalancing flow."""
 
 import time
-from decimal import Decimal
+from decimal import Decimal, localcontext
 from functools import lru_cache
 
 from opentelemetry import metrics as _otel_metrics
@@ -9,59 +9,14 @@ from opentelemetry import trace as _otel_trace
 
 from app import rebalance
 from app.core.exceptions import MarketDataError
-from app.core.formatting import truncate
 from app.fx.ecb_provider import EcbFxProvider
 from app.market_data.provider_registry import ProviderRegistry
+from app.rebalance.orders import plan_orders
 from app.schemas.request import RebalanceRequest
 from app.schemas.result import RebalanceResponse
 
-# Decimal places kept for a fractional share quantity. Finer than any broker;
-# truncating down keeps the residual unspent cash below a cent.
-_FRACTIONAL_PLACES = 6
 _ZERO = Decimal(0)
-_ONE = Decimal(1)
 _HUNDRED = Decimal(100)
-
-
-def _apply_fee(
-    rebalance_amount: Decimal,
-    fee: Decimal,
-    percentage_fee: bool,
-) -> tuple[Decimal, Decimal]:
-    """Return (qty_target, effective_fee) for a single transaction.
-
-    qty_target is divided by price (floor) to obtain the share count.
-    effective_fee is 0 for percentage-fee transactions - it is recomputed after
-    the share count is known, because the fee must apply to the actual transaction value.
-
-    - buy  flat fee (r > 0):   qty_target = r - fee          (fee reduces budget; 0 if fee >= r)
-    - buy  pct fee  (r > 0):   qty_target = r / (1 + fee%)   (deflated so that
-                                qty * price * (1 + fee%) ≈ r, total spend ≈ target)
-    - sell flat fee (r < 0):   qty_target = r + fee          (flat cost reduces net proceeds)
-    - sell pct fee  (r < 0):   qty_target = r / (1 - fee%)   (inflated so that
-                                qty * price * (1 - fee%) ≈ r, net proceeds ≈ target)
-    """
-    if rebalance_amount == _ZERO:
-        return _ZERO, _ZERO
-
-    if rebalance_amount > _ZERO:
-        if not percentage_fee:
-            net = rebalance_amount - fee
-            return (_ZERO, _ZERO) if net <= _ZERO else (net, fee)
-        # pct buy: deflate target so qty * price * (1 + fee%) ≈ r
-        return (
-            rebalance_amount / (_ONE + fee / _HUNDRED),
-            _ZERO,
-        )  # fee recomputed after qty
-
-    # sell
-    if percentage_fee:
-        factor = _ONE - fee / _HUNDRED
-        if factor <= _ZERO:
-            return _ZERO, _ZERO
-        return rebalance_amount / factor, _ZERO  # fee recomputed after qty
-    net = rebalance_amount + fee
-    return (_ZERO, _ZERO) if net >= _ZERO else (net, fee)
 
 
 @lru_cache(maxsize=1)
@@ -96,43 +51,46 @@ def run_rebalance(
     tracer_provider: _otel_trace.TracerProvider | None = None,
 ) -> RebalanceResponse:
     dur_hist, ticker_hist = _rebalance_instruments(meter_provider)
-    algorithm = "dp" if request.optimal_redistribute else "greedy"
+    algorithm = (
+        "fractional"
+        if request.fractional_shares
+        else ("dp" if request.optimal_redistribute else "greedy")
+    )
     _start = time.perf_counter()
     tracer = (
         tracer_provider.get_tracer("pestoengine.rebalance")
         if tracer_provider is not None
         else _tracer
     )
-    with tracer.start_as_current_span(
-        "rebalance_compute",
-        attributes={
-            "rebalance.algorithm": algorithm,
-            "rebalance.tickers.count": len(request.assets),
-            "rebalance.only_buy": request.only_buy,
-            "rebalance.increment": float(request.increment),
-        },
+    with (
+        localcontext() as context,
+        tracer.start_as_current_span(
+            "rebalance_compute",
+            attributes={
+                "rebalance.algorithm": algorithm,
+                "rebalance.tickers.count": len(request.assets),
+                "rebalance.only_buy": request.only_buy,
+                "rebalance.increment": float(request.increment),
+            },
+        ),
     ):
+        context.prec = 128
         try:
             tickers = [a.ticker for a in request.assets]
             desired_pcts = [a.desired_percentage for a in request.assets]
             shares = [a.shares for a in request.assets]
 
-            quotes_by_ticker = registry.get_quotes_for_assets(request.assets)
-            quotes = [quotes_by_ticker[ticker] for ticker in tickers]
+            quotes = registry.get_quotes_for_assets(request.assets)
 
             base_currency = request.base_currency
 
             currencies_to_convert = {
-                quote.currency
-                for quote in quotes
-                if quote.currency != base_currency
+                quote.currency for quote in quotes if quote.currency != base_currency
             }
             fx_rates: dict[str, Decimal] = {}
             if currencies_to_convert:
                 if fx_provider is None:
-                    raise MarketDataError(
-                        "ECB FX provider is not configured for this rebalance."
-                    )
+                    raise MarketDataError("ECB FX provider is not configured for this rebalance.")
                 fx_rates = fx_provider.get_rates(
                     currencies_to_convert,
                     base_currency,
@@ -152,66 +110,21 @@ def run_rebalance(
                 request.only_buy, request.increment, values, desired_pcts
             )
 
-            qty_targets, effective_fees_raw = zip(
-                *[_apply_fee(r, a.fees, a.percentage_fee) for a, r in zip(request.assets, rebalance_amounts)]
+            plan = plan_orders(
+                gaps=rebalance_amounts,
+                prices=ticker_prices,
+                shares=shares,
+                fees=[a.fees for a in request.assets],
+                percentage_fees=[a.percentage_fee for a in request.assets],
+                increment=request.increment,
+                current_percentages=current_pcts,
+                desired_percentages=desired_pcts,
+                only_buy=request.only_buy,
+                fractional=request.fractional_shares,
+                optimal=request.optimal_redistribute,
             )
-
-            # Fractional mode buys the exact quantity each budget affords, so every
-            # asset lands on its target precisely. Whole-share mode floors to integer
-            # share counts and relies on the redistribution step to place the leftover.
-            if request.fractional_shares:
-                buy_quantities = [truncate(t / p, _FRACTIONAL_PLACES) for t, p in zip(qty_targets, ticker_prices)]
-            else:
-                buy_quantities = [int(t // p) for t, p in zip(qty_targets, ticker_prices)]
-
-            def transaction_state(quantities):
-                fees = [
-                    abs(b * p) * a.fees / _HUNDRED
-                    if (b and a.percentage_fee)
-                    else ef
-                    for ef, a, b, p in zip(
-                        effective_fees_raw, request.assets, quantities, ticker_prices
-                    )
-                ]
-                buy_costs = sum(
-                    b * p for b, p in zip(quantities, ticker_prices) if b > 0
-                )
-                sell_proceeds = sum(
-                    -b * p for b, p in zip(quantities, ticker_prices) if b < 0
-                )
-                buy_fees = sum(ef for ef, b in zip(fees, quantities) if b > 0)
-                sell_fees = sum(ef for ef, b in zip(fees, quantities) if b < 0)
-                change = (
-                    request.increment + sell_proceeds - sell_fees
-                ) - (buy_costs + buy_fees)
-                return fees, buy_fees + sell_fees, change
-
-            effective_fees, total_fees, change = transaction_state(buy_quantities)
-
-            # Fractional mode already spent the budget exactly, so there is no
-            # integer leftover to place: the redistribution step is skipped entirely
-            # (and optimal_redistribute has no effect under fractional shares).
-            if not request.fractional_shares:
-                # Include percentage fees in the cost of each extra share.
-                redistribute_prices = [
-                    p * (_ONE + a.fees / _HUNDRED)
-                    if a.percentage_fee
-                    else p
-                    for p, a in zip(ticker_prices, request.assets)
-                ]
-                if request.optimal_redistribute:
-                    buy_quantities, _ = rebalance.redistribute_change_optimal(
-                        request.only_buy,
-                        buy_quantities, redistribute_prices,
-                        current_pcts, desired_pcts, change,
-                    )
-                else:
-                    buy_quantities, _ = rebalance.redistribute_change(
-                        buy_quantities, redistribute_prices,
-                        current_pcts, desired_pcts, change
-                    )
-
-                effective_fees, total_fees, change = transaction_state(buy_quantities)
+            buy_quantities, effective_fees, change = plan.quantities, plan.fees, plan.change
+            total_fees = sum(effective_fees, _ZERO)
 
             results = [
                 {
@@ -222,9 +135,8 @@ def run_rebalance(
                     "shares": shares[i],
                     "allocated": buy_quantities[i] * ticker_prices[i],
                     "ticker_price": ticker_prices[i],
-                    "fees": (
-                        effective_fees[i] if buy_quantities[i] else _ZERO
-                    ),
+                    "quote_as_of": quotes[i].as_of,
+                    "fees": (effective_fees[i] if buy_quantities[i] else _ZERO),
                     "buy": buy_quantities[i],
                 }
                 for i in range(len(tickers))
@@ -234,6 +146,8 @@ def run_rebalance(
                 results=results,
                 total_fees=total_fees,
                 change=change,
+                base_currency=base_currency,
+                fx_as_of=getattr(fx_rates, "as_of", None),
             )
         finally:
             dur_hist.record(time.perf_counter() - _start, {"algorithm": algorithm})

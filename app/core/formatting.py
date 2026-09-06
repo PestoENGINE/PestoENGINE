@@ -1,6 +1,6 @@
 """Shared numeric formatting helpers."""
 
-from decimal import ROUND_DOWN, Decimal
+from decimal import ROUND_DOWN, Decimal, localcontext
 
 DecimalInput = Decimal | int | float | str
 
@@ -13,7 +13,12 @@ def as_decimal(v: DecimalInput) -> Decimal:
 def truncate(v: DecimalInput, places: int = 2) -> Decimal:
     """Truncate to ``places`` decimals using ROUND_DOWN."""
     quantum = Decimal(1).scaleb(-places)  # 10**-places, e.g. 0.01 or 0.000001
-    return as_decimal(v).quantize(quantum, rounding=ROUND_DOWN)
+    value = as_decimal(v)
+    with localcontext() as context:
+        context.prec = max(
+            context.prec, value.adjusted() + places + 2, len(value.as_tuple().digits)
+        )
+        return value.quantize(quantum, rounding=ROUND_DOWN)
 
 
 def truncate2(v: DecimalInput) -> Decimal:

@@ -2,8 +2,10 @@
 
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 
+from app.core.exceptions import MarketDataError
 from app.market_data.alpha_vantage_search_provider import AlphaVantageSearchProvider
 
 
@@ -73,21 +75,24 @@ def test_provider_field_is_alphavantage(mock_get):
 
 
 @patch("app.market_data.alpha_vantage_search_provider.httpx.get")
-def test_rate_limit_note_returns_empty(mock_get):
+def test_rate_limit_note_raises(mock_get):
     mock_get.return_value = _resp({"Note": "Thank you for using Alpha Vantage..."})
     provider = AlphaVantageSearchProvider("key")
-    assert provider.search("IBM") == []
+    with pytest.raises(MarketDataError):
+        provider.search("IBM")
 
 
 @patch("app.market_data.alpha_vantage_search_provider.httpx.get")
-def test_missing_best_matches_returns_empty(mock_get):
+def test_missing_best_matches_raises(mock_get):
     mock_get.return_value = _resp({})
     provider = AlphaVantageSearchProvider("key")
-    assert provider.search("XXXX") == []
+    with pytest.raises(MarketDataError):
+        provider.search("XXXX")
 
 
 @patch("app.market_data.alpha_vantage_search_provider.httpx.get")
-def test_http_error_returns_empty(mock_get):
-    mock_get.side_effect = Exception("connection refused")
+def test_http_error_raises(mock_get):
+    mock_get.side_effect = httpx.ConnectError("connection refused")
     provider = AlphaVantageSearchProvider("key")
-    assert provider.search("IBM") == []
+    with pytest.raises(MarketDataError):
+        provider.search("IBM")

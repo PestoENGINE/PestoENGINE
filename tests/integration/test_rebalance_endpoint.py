@@ -33,7 +33,7 @@ def test_200_single_asset_fee(client, mock_registry):
     increment=500, price=100, fee=10
     net=490, buy=4, total_fees=10, change=90
     """
-    mock_registry.get_quotes_for_assets.return_value = make_quotes({"A": 100.0})
+    mock_registry.get_quotes_for_assets.return_value = list((make_quotes({"A": 100.0})).values())
     resp = client.post("/v1/rebalance", json=_SINGLE_ASSET_PAYLOAD)
     assert resp.status_code == 200
     body = resp.json()
@@ -46,7 +46,7 @@ def test_200_single_asset_fee(client, mock_registry):
 
 def test_200_two_assets(client, mock_registry):
     """POST /v1/rebalance returns correct totals for two assets with fees."""
-    mock_registry.get_quotes_for_assets.return_value = make_quotes({"A": 50.0, "B": 100.0})
+    mock_registry.get_quotes_for_assets.return_value = list((make_quotes({"A": 50.0, "B": 100.0})).values())
     resp = client.post("/v1/rebalance", json=_TWO_ASSET_PAYLOAD)
     assert resp.status_code == 200
     body = resp.json()
@@ -129,7 +129,7 @@ def test_422_percentage_fee_over_100(client):
 
 def test_optimal_redistribute_flag_wired(client, mock_registry):
     """optimal_redistribute=True flag is passed through to the service."""
-    mock_registry.get_quotes_for_assets.return_value = make_quotes({"A": 60.0, "B": 45.0})
+    mock_registry.get_quotes_for_assets.return_value = list((make_quotes({"A": 60.0, "B": 45.0})).values())
     payload = {
         "only_buy": True,
         "increment": 200.0,
@@ -151,7 +151,7 @@ def test_fractional_shares_flag_wired(client, mock_registry):
     increment=1000, price=300, 100 % target
         buy = 1000/300 = 3.333333 (not a whole number), change = 0
     """
-    mock_registry.get_quotes_for_assets.return_value = make_quotes({"A": 300.0})
+    mock_registry.get_quotes_for_assets.return_value = list((make_quotes({"A": 300.0})).values())
     payload = {
         "only_buy": True,
         "increment": 1000.0,
@@ -184,7 +184,7 @@ def test_502_on_market_data_error(client, mock_registry):
 
 def test_legacy_payload_without_provider_field_succeeds(client, mock_registry):
     """Payload without 'provider' field (legacy localStorage) succeeds via fallback chain."""
-    mock_registry.get_quotes_for_assets.return_value = make_quotes({"A": 100.0})
+    mock_registry.get_quotes_for_assets.return_value = list((make_quotes({"A": 100.0})).values())
     payload = {
         "only_buy": True,
         "increment": 100.0,
@@ -200,9 +200,9 @@ def test_explicit_base_currency_converts_incompatible_live_quote(
     mock_registry,
     mock_fx_provider,
 ):
-    mock_registry.get_quotes_for_assets.return_value = {
+    mock_registry.get_quotes_for_assets.return_value = list(({
         "A": make_quote(100, currency="USD"),
-    }
+    }).values())
     mock_fx_provider.get_rates.return_value = {
         "USD": Decimal("0.8"),
     }
@@ -247,10 +247,10 @@ def test_unsupported_base_currency_is_rejected(client, mock_registry):
     mock_registry.get_quotes_for_assets.assert_not_called()
 
 
-def test_response_limits_ticker_price_to_two_decimals(client, mock_registry):
-    mock_registry.get_quotes_for_assets.return_value = {
+def test_response_preserves_ticker_price_precision(client, mock_registry):
+    mock_registry.get_quotes_for_assets.return_value = list(({
         "A": make_quote("1.239", currency="EUR"),
-    }
+    }).values())
     payload = {
         "only_buy": True,
         "increment": 1,
@@ -270,4 +270,4 @@ def test_response_limits_ticker_price_to_two_decimals(client, mock_registry):
 
     assert resp.status_code == 200
     result = resp.json()["results"][0]
-    assert result["ticker_price"] == 1.23
+    assert result["ticker_price"] == 1.239

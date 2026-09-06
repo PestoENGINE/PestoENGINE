@@ -1,12 +1,14 @@
 """Yahoo Finance market data provider using direct HTTP calls (no yfinance)."""
 
 import logging
-import time
-from decimal import Decimal
+from datetime import UTC, datetime
+from decimal import Decimal, InvalidOperation
+from urllib.parse import quote
 
 import httpx
 
 from app.core.exceptions import MarketDataError
+from app.core.http import provider_get, retry_pause, retryable, safe_error
 from app.market_data.base import AbstractMarketDataProvider
 from app.market_data.quote import MarketQuote
 
@@ -19,47 +21,62 @@ _RETRIES = 3
 _DELAY = 1.0
 
 
-def _fetch_single(ticker: str) -> MarketQuote:
-    last_error: str | None = None
+def _fetch_single(
+    ticker: str, *, client: httpx.Client | None = None, max_age_days: int = 7, timeout: float = 10
+) -> MarketQuote:
     for attempt in range(1, _RETRIES + 1):
         try:
-            r = httpx.get(
-                _URL.format(ticker=ticker),
+            response = provider_get(
+                client,
+                _URL.format(ticker=quote(ticker, safe="")),
                 params=_PARAMS,
                 headers=_HEADERS,
-                timeout=10,
+                timeout=timeout,
             )
-            r.raise_for_status()
-            # Parse JSON numbers directly as Decimal so provider precision is
-            # not routed through a binary float before entering MarketQuote.
-            result = r.json(parse_float=Decimal)["chart"]["result"][0]
-            meta = result.get("meta") or {}
-            currency = meta.get("currency")
+            response.raise_for_status()
+            result = response.json(parse_float=Decimal)["chart"]["result"][0]
+            currency = result["meta"].get("currency")
             if not currency:
-                raise ValueError(f"Currency missing from Yahoo quote for '{ticker}'.")
+                raise ValueError("Currency missing from Yahoo quote")
             closes = result["indicators"]["quote"][0]["close"]
-            closes = [c for c in closes if c is not None]
-            if closes:
-                return MarketQuote(
-                    price=Decimal(str(closes[-1])),
-                    currency=str(currency),
-                )
-            last_error = f"Empty close data for '{ticker}'."
-        except Exception as exc:
-            last_error = str(exc)
+            index = next((i for i in range(len(closes) - 1, -1, -1) if closes[i] is not None), None)
+            if index is None:
+                raise ValueError("Empty close data")
+            observation = datetime.fromtimestamp(float(result["timestamp"][index]), UTC).date()
+            market_quote = MarketQuote(Decimal(str(closes[index])), currency, observation)
+            market_quote.assert_fresh(max_age_days)
+            return market_quote
+        except (
+            httpx.HTTPError,
+            InvalidOperation,
+            ValueError,
+            KeyError,
+            IndexError,
+            TypeError,
+            AttributeError,
+            OverflowError,
+            OSError,
+        ) as exc:
+            error = safe_error(exc)
             logger.warning(
-                "Attempt %d/%d failed for '%s': %s",
-                attempt, _RETRIES, ticker, exc,
+                "Yahoo fetch attempt %d/%d failed for '%s': %s", attempt, _RETRIES, ticker, error
             )
-        if attempt < _RETRIES:
-            time.sleep(_DELAY)
+            if not retryable(exc) or attempt == _RETRIES:
+                break
+            retry_pause(_DELAY)
     raise MarketDataError(
-        f"Could not fetch price for '{ticker}' after {_RETRIES} attempts. "
-        f"Last error: {last_error}"
+        f"Could not fetch price for '{ticker}' after {attempt} attempts. Last error: {error}"
     )
 
 
 class YahooFinanceProvider(AbstractMarketDataProvider):
+    def __init__(
+        self, *, client: httpx.Client | None = None, max_age_days: int = 7, timeout: float = 10
+    ) -> None:
+        self._client = client
+        self._max_age_days = max_age_days
+        self._timeout = timeout
+
     def get_quotes(
         self,
         tickers: list[str],
@@ -69,6 +86,11 @@ class YahooFinanceProvider(AbstractMarketDataProvider):
         if not tickers:
             raise ValueError("Ticker list cannot be empty.")
         logger.info("Fetching quotes for: %s", tickers)
-        quotes = {ticker: _fetch_single(ticker) for ticker in tickers}
+        quotes = {
+            ticker: _fetch_single(
+                ticker, client=self._client, max_age_days=self._max_age_days, timeout=self._timeout
+            )
+            for ticker in dict.fromkeys(tickers)
+        }
         logger.info("Quotes fetched for: %s", list(quotes))
         return quotes

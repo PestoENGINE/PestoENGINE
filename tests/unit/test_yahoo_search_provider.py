@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from app.core.exceptions import MarketDataError
 from app.market_data.yahoo_search_provider import YahooTickerSearchProvider
 
 
@@ -70,13 +71,14 @@ def test_filters_out_disallowed_types(mock_get):
 
 
 @patch("app.market_data.yahoo_search_provider.httpx.get")
-def test_missing_quotes_key_returns_empty_list(mock_get):
+def test_missing_quotes_key_raises(mock_get):
     m = MagicMock()
     m.raise_for_status.return_value = None
     m.json.return_value = {}
     mock_get.return_value = m
     provider = YahooTickerSearchProvider()
-    assert provider.search("XXXX") == []
+    with pytest.raises(MarketDataError):
+        provider.search("XXXX")
 
 
 @patch("app.market_data.yahoo_search_provider.httpx.get")

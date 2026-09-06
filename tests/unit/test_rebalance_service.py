@@ -1,8 +1,9 @@
 """Unit tests for run_rebalance() - market provider mocked out."""
 
 from decimal import Decimal
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 
 from app.market_data.provider_registry import ProviderRegistry
 from app.schemas.request import AssetIn, RebalanceRequest
@@ -39,7 +40,7 @@ def _request(
 
 def _run(request: RebalanceRequest, prices: dict[str, float]) -> RebalanceResponse:
     registry = MagicMock(spec=ProviderRegistry)
-    registry.get_quotes_for_assets.return_value = make_quotes(prices)
+    registry.get_quotes_for_assets.return_value = list((make_quotes(prices)).values())
     return run_rebalance(request, registry)
 
 

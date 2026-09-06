@@ -52,6 +52,7 @@ pytest                    # all tests
 pytest tests/unit         # unit only
 pytest tests/integration  # integration only
 pytest -q --tb=short      # CI style
+ruff check app tests      # imports and basic correctness lint
 ```
 
 On Windows, run pytest through the venv interpreter to guarantee project deps:
@@ -68,7 +69,7 @@ npm run check    # svelte-check + tsc; runs in CI as test-frontend
 npm run build    # production build to ui/dist/
 ```
 
-CI runs both jobs on every push and PR (`.github/workflows/ci.yml`).
+Backend CI verifies the universal locks on Linux (Python 3.11/3.12) and Windows (Python 3.12). CI runs backend and frontend jobs on every push and PR (`.github/workflows/ci.yml`).
 
 ## Code conventions
 
@@ -77,7 +78,7 @@ CI runs both jobs on every push and PR (`.github/workflows/ci.yml`).
 - Type hints on all public functions.
 - Pydantic v2 schemas at the HTTP boundary only. Do not add validation in service or algorithm layers when schema and service errors are already readable.
 - Pure functions in `app/rebalance/` stay pure: no logging, no I/O, no global state.
-- Use `httpx` (sync) for outbound HTTP. Wrap blocking calls in `loop.run_in_executor` from async routes.
+- Use `httpx` (sync) for outbound HTTP. Use `app.api.work.run_provider_work` from provider routes to copy request/trace context and enforce concurrency/deadlines. Application resources belong to the lifespan.
 - Use the standard `logging` module; pass structured fields via `extra={...}` so the JSON formatter (`app/core/log_config.py`) picks them up. OTel `trace_id` and `span_id` are injected automatically when a span is active.
 - Custom OTel spans live in the layer that owns the operation. Follow the existing naming: `rebalance_compute`, `cache_lookup`, `market_fetch`.
 

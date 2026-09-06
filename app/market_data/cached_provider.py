@@ -3,11 +3,13 @@
 from opentelemetry import metrics as _metrics
 from opentelemetry import trace as _otel_trace
 
+from app.core.exceptions import MarketDataError
+from app.core.http import remaining_budget
 from app.market_data.base import AbstractMarketDataProvider
 from app.market_data.cache import AbstractCache
 from app.market_data.quote import MarketQuote
 
-_KEY_PREFIX = "market:quote:v2:"
+_KEY_PREFIX = "market:quote:v3:"
 
 
 class CachedMarketDataProvider(AbstractMarketDataProvider):
@@ -27,10 +29,12 @@ class CachedMarketDataProvider(AbstractMarketDataProvider):
         cache: AbstractCache[MarketQuote],
         *,
         provider_id: str,
+        max_age_days: int = 7,
         meter_provider: _metrics.MeterProvider | None = None,
         tracer_provider: _otel_trace.TracerProvider | None = None,
     ) -> None:
         self._provider = provider
+        self._max_age_days = max_age_days
         self._cache = cache
         self._key_prefix = f"{_KEY_PREFIX}{provider_id}:"
         self._backend = type(cache).__name__.removesuffix("Cache").lower()
@@ -53,6 +57,7 @@ class CachedMarketDataProvider(AbstractMarketDataProvider):
         *,
         currency_hints: dict[str, str] | None = None,
     ) -> dict[str, MarketQuote]:
+        tickers = list(dict.fromkeys(tickers))
         hints = currency_hints or {}
         with self._tracer.start_as_current_span(
             "cache_lookup",
@@ -64,10 +69,16 @@ class CachedMarketDataProvider(AbstractMarketDataProvider):
         ) as span:
             quotes: dict[str, MarketQuote] = {}
             misses: list[str] = []
-            for ticker in tickers:
+            for ticker in dict.fromkeys(tickers):
+                remaining_budget()
                 hint = hints.get(ticker)
                 cache_key = self._key_prefix + ticker + ":" + (hint or "_")
                 cached = self._cache.get(cache_key)
+                if cached is not None:
+                    try:
+                        cached.assert_fresh(self._max_age_days)
+                    except MarketDataError:
+                        cached = None
                 if cached is not None:
                     quotes[ticker] = cached
                     self._cache_ops.add(1, {"backend": self._backend, "result": "hit"})
@@ -79,13 +90,14 @@ class CachedMarketDataProvider(AbstractMarketDataProvider):
             if misses:
                 fresh = self._provider.get_quotes(
                     misses,
-                    currency_hints={
-                        ticker: hints[ticker]
-                        for ticker in misses
-                        if ticker in hints
-                    },
+                    currency_hints={ticker: hints[ticker] for ticker in misses if ticker in hints},
                 )
-                for ticker, quote in fresh.items():
+                if any(ticker not in fresh for ticker in misses):
+                    raise MarketDataError("Provider returned incomplete quotes")
+                for ticker in misses:
+                    quote = fresh[ticker]
+                    quote.assert_fresh(self._max_age_days)
+                    remaining_budget()
                     hint = hints.get(ticker)
                     cache_key = self._key_prefix + ticker + ":" + (hint or "_")
                     self._cache.set(cache_key, quote)

@@ -73,4 +73,6 @@ class InstrumentedMarketDataProvider(AbstractMarketDataProvider):
             finally:
                 elapsed = time.perf_counter() - start
                 self._fetch_duration.record(elapsed, {"provider": self._provider_id})
-                self._fetch_total.add(len(tickers), {"outcome": outcome, "provider": self._provider_id})
+                self._fetch_total.add(
+                    len(tickers), {"outcome": outcome, "provider": self._provider_id}
+                )

@@ -207,3 +207,14 @@ describe('searchTickers', () => {
     await expect(searchTickers('vo', fetchFn as typeof fetch)).rejects.toThrow('offline');
   });
 });
+
+
+it('does not describe an upper-bound violation as a negative value', async () => {
+  const response = new Response(JSON.stringify({ detail: [{
+    type: 'less_than_equal', loc: ['body', 'assets', 0, 'shares'],
+    msg: 'Input should be less than or equal to 1000000000000',
+  }] }), { status: 422 });
+  expect(await rebalanceError(response)).toEqual({ kind: 'validation', items: [{
+    key: 'errors.validation', params: { detail: 'Input should be less than or equal to 1000000000000' },
+  }] });
+});

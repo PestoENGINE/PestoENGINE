@@ -1,2 +1,5 @@
 -r requirements.in
 pytest>=9.0
+httpx2>=2
+fakeredis[lua]>=2
+ruff>=0.16
