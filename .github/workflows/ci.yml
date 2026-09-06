@@ -44,9 +44,8 @@ jobs:
           cache-dependency-glob: "requirements*.txt"
 
       - name: Install dev dependencies
-        run: |
-          uv venv
-          uv pip sync requirements-dev.txt
+        # setup-uv creates and activates .venv when python-version is set.
+        run: uv pip sync requirements-dev.txt
 
       - name: Lint backend and tests
         run: uv run ruff check app tests
