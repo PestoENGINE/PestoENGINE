@@ -151,12 +151,13 @@ npm run preview     # serve dist/ locally for verification
 npm run check
 ```
 
-Runs `svelte-check` (using `tsconfig.app.json`) plus `tsc -p tsconfig.node.json`. Part of CI (`.github/workflows/ci.yml`, job `test-frontend`).
+Runs `svelte-check` (using `tsconfig.app.json`) plus `tsc -p tsconfig.node.json`.
+Run this locally before submitting UI changes; CI runs backend checks only.
 
 ## Tests
 
 ```bash
-npm run test         # run once (CI)
+npm run test         # run once
 npm run test:watch   # watch mode
 ```
 
@@ -164,7 +165,7 @@ Vitest unit tests cover the framework-agnostic logic extracted from `App.svelte`
 `api.ts` (request body mapping and HTTP error-message mapping) and `portfolio-io.ts`
 (import validation and the export round-trip). The component keeps only state and
 event wiring, so the testable logic lives in plain `.ts` modules (`*.test.ts`
-alongside them). Also part of CI.
+alongside them). Run these tests locally before submitting UI changes.
 
 ## Deployment
 

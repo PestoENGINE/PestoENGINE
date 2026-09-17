@@ -338,7 +338,7 @@ Fixtures in `tests/conftest.py`:
 - `mock_fx_provider`: `MagicMock(spec=EcbFxProvider)`
 - `client`: `TestClient(app)` with both data dependencies overridden
 
-Tests disable the personal `.env` and reject unmocked provider HTTP. Regression tests cover financial invariants, exhaustive small knapsack cases, atomic Redis behavior with fakeredis/Lua, middleware order, lifespan cleanup, timeouts and trace context. CI installs the universal lock files on Linux (Python 3.11/3.12) and Windows (Python 3.12).
+Tests disable the personal `.env` and reject unmocked provider HTTP. Regression tests cover financial invariants, exhaustive small knapsack cases, atomic Redis behavior with fakeredis/Lua, middleware order, lifespan cleanup, timeouts and trace context. CI installs the locked development dependencies and runs lint and tests on Linux with Python 3.12, matching the Docker runtime.
 
 ## Calling the API
 
