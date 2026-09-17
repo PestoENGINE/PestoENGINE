@@ -65,11 +65,21 @@ Frontend (TypeScript / Svelte):
 
 ```bash
 cd ui
-npm run check    # svelte-check + tsc; runs in CI as test-frontend
+npm run check    # svelte-check + tsc
+npm run test     # frontend unit tests
 npm run build    # production build to ui/dist/
 ```
 
-Backend CI verifies the universal locks on Linux (Python 3.11/3.12) and Windows (Python 3.12). CI runs backend and frontend jobs on every push and PR (`.github/workflows/ci.yml`).
+CI runs only backend lint and tests on Linux with Python 3.12, matching the
+Docker runtime (`.github/workflows/ci.yml`). Run the frontend checks locally
+before submitting UI changes. After successful backend tests, pushes to `master`
+or `v*` tags build and publish the Docker image, including the frontend bundle.
+Manual runs test the selected ref; publishing additionally requires `master`
+and the `publish` input.
+
+Dependabot opens update PRs for manual review and merge; no workflow
+automatically merges or refreshes their branches. Configure the `master` ruleset
+to require only the `test-backend` status check.
 
 ## Code conventions
 
