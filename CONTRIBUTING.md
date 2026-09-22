@@ -70,16 +70,17 @@ npm run test     # frontend unit tests
 npm run build    # production build to ui/dist/
 ```
 
-CI runs only backend lint and tests on Linux with Python 3.12, matching the
-Docker runtime (`.github/workflows/ci.yml`). Run the frontend checks locally
-before submitting UI changes. After successful backend tests, pushes to `master`
-or `v*` tags build and publish the Docker image, including the frontend bundle.
-Manual runs test the selected ref; publishing additionally requires `master`
-and the `publish` input.
+CI runs backend lint and tests on Linux with Python 3.12, matching the Docker
+runtime, plus frontend typecheck, unit tests, and build with Node.js 22
+(`.github/workflows/ci.yml`). Pull requests and manual runs without publishing
+also build the Docker image without pushing it. After successful backend and
+frontend checks, pushes to `master` or `v*` tags build and publish the Docker
+image. Manual runs test the selected ref; publishing additionally requires
+`master` and the `publish` input.
 
 Dependabot opens update PRs for manual review and merge; no workflow
 automatically merges or refreshes their branches. Configure the `master` ruleset
-to require only the `test-backend` status check.
+to require both the `test-backend` and `test-frontend` status checks.
 
 ## Code conventions
 

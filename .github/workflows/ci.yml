@@ -44,12 +44,59 @@ jobs:
       - name: Run tests
         run: uv run pytest --tb=short -q
 
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ui
+        run: npm ci
+
+      - name: Type check
+        working-directory: ui
+        run: npm run check
+
+      - name: Test
+        working-directory: ui
+        run: npm run test
+
+      - name: Build
+        working-directory: ui
+        run: npm run build
+
+      - uses: docker/setup-buildx-action@v3
+        if: >-
+          github.event_name == 'pull_request' ||
+          (github.event_name == 'workflow_dispatch' && inputs.publish != true)
+
+      - name: Build Docker image
+        if: >-
+          github.event_name == 'pull_request' ||
+          (github.event_name == 'workflow_dispatch' && inputs.publish != true)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          pull: true
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   build-and-push:
     if: >-
       github.event_name == 'push' ||
       (github.event_name == 'workflow_dispatch' &&
        github.ref == 'refs/heads/master' && inputs.publish == true)
-    needs: test-backend
+    needs: [test-backend, test-frontend]
     runs-on: ubuntu-latest
     permissions:
       contents: read

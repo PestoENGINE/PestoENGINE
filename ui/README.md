@@ -152,7 +152,8 @@ npm run check
 ```
 
 Runs `svelte-check` (using `tsconfig.app.json`) plus `tsc -p tsconfig.node.json`.
-Run this locally before submitting UI changes; CI runs backend checks only.
+Run this locally before submitting UI changes; CI also runs it in `test-frontend`
+with Node.js 22, followed by unit tests and a production build.
 
 ## Tests
 
@@ -165,7 +166,8 @@ Vitest unit tests cover the framework-agnostic logic extracted from `App.svelte`
 `api.ts` (request body mapping and HTTP error-message mapping) and `portfolio-io.ts`
 (import validation and the export round-trip). The component keeps only state and
 event wiring, so the testable logic lives in plain `.ts` modules (`*.test.ts`
-alongside them). Run these tests locally before submitting UI changes.
+alongside them). Run these tests locally before submitting UI changes; CI also
+runs them in `test-frontend`.
 
 ## Deployment
 
