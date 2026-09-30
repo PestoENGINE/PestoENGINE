@@ -34,13 +34,13 @@ h11==0.16.0
     #   uvicorn
 httpcore==1.0.9
     # via httpx
-httpcore2==2.13.0
+httpcore2==2.13.1
     # via httpx2
 httptools==0.8.0
     # via uvicorn
 httpx==0.28.1
     # via -r requirements.in
-httpx2==2.13.0
+httpx2==2.13.1
     # via -r requirements-dev.in
 idna==3.18
     # via
@@ -130,7 +130,7 @@ redis==8.1.0
     #   fakeredis
 requests==2.34.2
     # via opentelemetry-exporter-otlp-proto-http
-ruff==0.16.8
+ruff==0.16.9
     # via -r requirements-dev.in
 sortedcontainers==2.4.0
     # via fakeredis
@@ -157,7 +157,7 @@ typing-inspection==0.4.2
     #   pydantic-settings
 urllib3==2.7.0
     # via requests
-uvicorn[standard]==0.53.0
+uvicorn[standard]==0.54.0
     # via -r requirements.in
 uvloop==0.22.1
     # via uvicorn
