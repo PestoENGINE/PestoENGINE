@@ -21,9 +21,9 @@ charset-normalizer==3.4.9
     # via requests
 click==8.4.2
     # via uvicorn
-fakeredis[lua]==2.38.0
+fakeredis[lua]==2.39.0
     # via -r requirements-dev.in
-fastapi==0.141.1
+fastapi==0.142.2
     # via -r requirements.in
 googleapis-common-protos==1.75.0
     # via opentelemetry-exporter-otlp-proto-http
@@ -54,6 +54,7 @@ lupa==2.8
     # via fakeredis
 opentelemetry-api==1.44.0
     # via
+    #   fastapi
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-instrumentation
     #   opentelemetry-instrumentation-asgi
@@ -130,7 +131,7 @@ redis==8.1.0
     #   fakeredis
 requests==2.34.2
     # via opentelemetry-exporter-otlp-proto-http
-ruff==0.16.9
+ruff==0.16.10
     # via -r requirements-dev.in
 sortedcontainers==2.4.0
     # via fakeredis

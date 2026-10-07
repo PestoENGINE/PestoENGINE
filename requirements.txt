@@ -20,7 +20,7 @@ charset-normalizer==3.4.9
     # via requests
 click==8.4.2
     # via uvicorn
-fastapi==0.141.1
+fastapi==0.142.2
     # via -r requirements.in
 googleapis-common-protos==1.75.0
     # via opentelemetry-exporter-otlp-proto-http
@@ -41,6 +41,7 @@ idna==3.18
     #   requests
 opentelemetry-api==1.44.0
     # via
+    #   fastapi
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-instrumentation
     #   opentelemetry-instrumentation-asgi
