@@ -2,10 +2,10 @@
   import type { Asset } from '../types';
   import { createEventDispatcher } from 'svelte';
   import TickerAutocomplete from './TickerAutocomplete.svelte';
-  import { inputChecked } from '../util';
   import { t } from '../i18n';
 
   export let asset: Asset;
+  export let baseCurrency: string;
 
   const dispatch = createEventDispatcher<{ update: Partial<Asset>; remove: void }>();
 
@@ -44,7 +44,7 @@
 </script>
 
 <tr>
-  <td class="ticker-cell" data-label={$t('portfolio.colTicker')}>
+  <td class="cell ticker-cell">
     <TickerAutocomplete
       id="ticker-{asset.id}"
       value={asset.ticker}
@@ -57,7 +57,7 @@
       invalid={tickerInvalid}
     />
   </td>
-  <td data-label={$t('portfolio.colTarget')}>
+  <td class="cell">
     <input
       type="text"
       inputmode="decimal"
@@ -65,12 +65,12 @@
       value={targetValue}
       on:input={e => { targetValue = (e.target as HTMLInputElement).value; dispatch('update', { desiredPercentage: parseInputValue(targetValue) }); }}
       on:blur={() => normalizeEmpty('target')}
-      class="cell-input"
+      class="cell-input num"
       aria-label={$t('assetRow.targetAria')}
       aria-invalid={targetInvalid ? 'true' : undefined}
     />
   </td>
-  <td data-label={$t('portfolio.colShares')}>
+  <td class="cell">
     <input
       type="text"
       inputmode="decimal"
@@ -78,77 +78,70 @@
       value={sharesValue}
       on:input={e => { sharesValue = (e.target as HTMLInputElement).value; dispatch('update', { shares: parseInputValue(sharesValue) }); }}
       on:blur={() => normalizeEmpty('shares')}
-      class="cell-input"
+      class="cell-input num"
       aria-label={$t('assetRow.sharesAria')}
       aria-invalid={sharesInvalid ? 'true' : undefined}
     />
   </td>
-  <td data-label={$t('portfolio.colFee')}>
-    <div class="fee-cell">
-      <input
-        type="text"
-        inputmode="decimal"
-        autocomplete="off"
-        value={feesValue}
-        on:input={e => { feesValue = (e.target as HTMLInputElement).value; dispatch('update', { fees: parseInputValue(feesValue) }); }}
-        on:blur={() => normalizeEmpty('fees')}
-        class="cell-input"
-        aria-label={$t('assetRow.feeAria')}
-        aria-invalid={feeInvalid ? 'true' : undefined}
-      />
-      <label class="fee-toggle" title={$t('assetRow.percentageFeeTitle')}>
-        <input
-          type="checkbox"
-          checked={asset.percentageFee}
-          on:change={e => dispatch('update', { percentageFee: inputChecked(e) })}
-        />
-        <span class="fee-pct">%</span>
-      </label>
-    </div>
+  <td class="cell">
+    <input
+      type="text"
+      inputmode="decimal"
+      autocomplete="off"
+      value={feesValue}
+      on:input={e => { feesValue = (e.target as HTMLInputElement).value; dispatch('update', { fees: parseInputValue(feesValue) }); }}
+      on:blur={() => normalizeEmpty('fees')}
+      class="cell-input num"
+      aria-label={$t('assetRow.feeAria')}
+      aria-invalid={feeInvalid ? 'true' : undefined}
+    />
   </td>
-  <td data-label={$t('portfolio.colActions')}>
-    <div class="asset-actions">
-      <button
-        type="button"
-        class="remove-btn"
-        on:click={() => dispatch('remove')}
-        aria-label={$t('assetRow.removeAria')}
-        title={$t('assetRow.removeAria')}
-      >×</button>
-    </div>
+  <td class="cell">
+    <button
+      type="button"
+      class="fee-unit"
+      aria-pressed={asset.percentageFee}
+      aria-label={$t('assetRow.percentageFeeTitle')}
+      title={$t('assetRow.percentageFeeTitle')}
+      on:click={() => dispatch('update', { percentageFee: !asset.percentageFee })}
+    >{asset.percentageFee ? '%' : baseCurrency}</button>
+  </td>
+  <td class="cell">
+    <button
+      type="button"
+      class="remove-btn"
+      on:click={() => dispatch('remove')}
+      aria-label={$t('assetRow.removeAria')}
+      title={$t('assetRow.removeAria')}
+    >
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
   </td>
 </tr>
 
 <style>
-  .ticker-cell { min-width: 0; overflow: visible; position: relative; }
+  .ticker-cell { position: relative; }
 
-  .asset-actions {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
+  /* Unit of the fee: the portfolio currency (flat) or % (of the order). */
+  .fee-unit {
+    display: block;
+    width: 100%;
+    height: 2.5rem;
+    background: var(--paper-2);
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--ink-2);
   }
-
-  .fee-cell { display: flex; align-items: center; gap: 0.375rem; }
-  .fee-cell .cell-input { width: 3.75rem; flex: 0 0 3.75rem; }
-  .fee-toggle { cursor: pointer; display: flex; align-items: center; gap: 0.2rem; }
-  .fee-toggle input[type='checkbox'] { width: 12px; height: 12px; margin: 0; }
-  .fee-pct { font-family: var(--mono); font-size: 0.6875rem; color: var(--text-3); }
+  .fee-unit:hover { color: var(--ink); background: var(--rule); }
+  .fee-unit:focus-visible { outline-offset: -2px; }
 
   .remove-btn {
-    width: 1.65rem;
-    height: 1.65rem;
     display: grid;
     place-items: center;
-    border: 1px solid transparent;
-    color: var(--text-3);
-    font-size: 1.15rem;
-    padding: 0;
-    line-height: 1;
-    border-radius: 999px;
+    width: 100%;
+    height: 2.5rem;
+    color: var(--ink-3);
   }
-  .remove-btn:hover { color: var(--error); background: var(--error-bg); border-color: var(--error-border); }
-  :global(.cell-input[aria-invalid='true']) { color: var(--error); }
-  @media (max-width: 700px) {
-    .fee-cell .cell-input { width: 100%; flex: 1 1 auto; }
-  }
+  .remove-btn:hover { color: var(--red); background: var(--red-wash); }
+  .remove-btn:focus-visible { outline-offset: -2px; }
 </style>

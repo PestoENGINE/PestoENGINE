@@ -5,128 +5,131 @@
 
   export let result: RebalanceResponse | null;
   export let settings: Settings;
+
+  $: modes = [
+    ...(settings.onlyBuy ? [$t('results.badgeOnlyBuy')] : []),
+    ...(settings.optimalRedistribute ? [$t('results.badgeKnapsack')] : []),
+  ];
 </script>
 
-<div class="panel result-panel" id="results">
-  <div class="panel-head">
-    <span class="panel-title">{$t('results.title')}</span>
-    {#if result}
-      <div class="results-badges">
-        {#if settings.onlyBuy}<span class="solver-badge">{$t('results.badgeOnlyBuy')}</span>{/if}
-        {#if settings.optimalRedistribute}<span class="solver-badge">{$t('results.badgeKnapsack')}</span>{/if}
-      </div>
+<section class="orders" id="results" aria-labelledby="orders-title">
+  <div class="orders-head">
+    <h2 id="orders-title" class="orders-title">{$t('results.title')}</h2>
+    {#if result && modes.length > 0}
+      <span class="orders-mode">{modes.join(', ')}</span>
     {/if}
   </div>
 
-  <div class="panel-body tight-x">
-    {#if result}
-      <div class="result-list">
-        <div class="result-list-head result-grid">
-          <span>{$t('results.colTicker')}</span>
-          <span>{$t('results.colBuy')}</span>
-          <span>{$t('results.colResult')}</span>
-        </div>
+  {#if result}
+    <table class="sheet orders-sheet">
+      <thead>
+        <tr>
+          <th scope="col">{$t('results.colOrder')}</th>
+          <th scope="col" class="num">{$t('results.colShares')}</th>
+          <th scope="col">{$t('results.colTicker')}</th>
+          <th scope="col" class="num">{$t('results.colWeight')}</th>
+          <th scope="col" class="num">{$t('results.colAmount')} ({settings.baseCurrency})</th>
+        </tr>
+      </thead>
+      <tbody>
         {#each result.results as asset (asset.id)}
           <AssetResult {asset} />
         {/each}
-      </div>
-
-      <div class="results-summary">
-        <div>
-          <div class="stat-label">{$t('results.allocated')}</div>
-          <div class="stat-val">{result.results.reduce((sum, asset) => sum + asset.allocated, 0).toFixed(2)}</div>
-        </div>
-        <div>
-          <div class="stat-label">{$t('results.totalFees')}</div>
-          <div class="stat-val">{result.total_fees.toFixed(2)}</div>
-        </div>
-        <div>
-          <div class="stat-label">{$t('results.change')}</div>
-          <div class="stat-val">{result.change.toFixed(2)}</div>
-        </div>
-        <div>
-          <div class="stat-label">{$t('results.currency')}</div>
-          <div class="stat-val">{settings.baseCurrency}</div>
-        </div>
-      </div>
-    {:else}
-      <div class="result-empty">{$t('results.empty')}</div>
-    {/if}
-  </div>
-</div>
+      </tbody>
+      <tfoot>
+        <tr>
+          <th scope="row" colspan="4">{$t('results.allocated')}</th>
+          <td class="num">{result.results.reduce((sum, asset) => sum + asset.allocated, 0).toFixed(2)}</td>
+        </tr>
+        <tr>
+          <th scope="row" colspan="4">{$t('results.totalFees')}</th>
+          <td class="num">{result.total_fees.toFixed(2)}</td>
+        </tr>
+        <tr>
+          <th scope="row" colspan="4">{$t('results.change')}</th>
+          <td class="num">{result.change.toFixed(2)}</td>
+        </tr>
+      </tfoot>
+    </table>
+  {:else}
+    <div class="orders-empty">{$t('results.empty')}</div>
+  {/if}
+</section>
 
 <style>
-  .result-panel {
-    grid-column: 1 / -1;
-    scroll-margin-top: calc(var(--nav-height) + var(--panel-gap));
+  .orders {
+    margin-top: 2.5rem;
+    padding-bottom: clamp(3rem, 6vw, 4.5rem);
+    scroll-margin-top: calc(var(--nav-height) + 1rem);
   }
-  @media (max-width: 700px) {
-    .result-panel { grid-column: auto; }
-  }
-
-  .solver-badge {
-    font-size: 0.6875rem;
-    background: var(--teal-light);
-    color: var(--teal);
-    border-radius: 100px;
-    padding: 0.5rem 0.5rem;
-    font-family: var(--mono);
-    line-height: 1;
-    white-space: nowrap;
-  }
-  .results-badges {
+  .orders-head {
     display: flex;
-    gap: 0.375rem;
+    align-items: baseline;
+    justify-content: space-between;
     flex-wrap: wrap;
-    justify-content: flex-end;
-    min-width: 0;
+    gap: 0.25rem 1rem;
+    margin-bottom: 0.625rem;
   }
+  .orders-title { font-size: 1.125rem; font-weight: 600; }
+  .orders-mode { font-size: 0.875rem; color: var(--ink-3); }
 
-  .result-list { width: 100%; min-width: 0; }
-  .result-list-head {
-    padding: 0 0 0.625rem;
-    font-size: 0.6875rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-3);
-  }
+  .orders-sheet tfoot th { font-weight: 500; color: var(--ink-2); }
+  .orders-sheet tfoot tr:last-child > * { color: var(--ink); font-weight: 600; }
 
-  .results-summary {
-    border-top: 1px solid var(--border);
+  .orders-empty {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0.5rem;
-    padding: 0.875rem 0 0;
-    margin-top: 0.5rem;
-  }
-  .stat-label {
-    font-size: 0.6875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    color: var(--text-3);
-    margin-bottom: 0.2rem;
-  }
-  .stat-val {
-    font-family: var(--mono);
-    font-size: 1rem;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
+    place-items: center;
+    min-height: 6rem;
+    padding: 1rem;
+    border: 1px dashed var(--rule-strong);
+    color: var(--ink-3);
+    font-size: 0.9375rem;
+    text-align: center;
   }
 
-  .result-empty {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.875rem;
-    color: var(--text-3);
+  @media (max-width: 600px) {
+    .orders-sheet { font-size: 0.8125rem; }
   }
-  @media (max-width: 480px) {
-    .stat-val { font-size: 0.875rem; }
-    .results-summary {
-      gap: 0.75rem 0.5rem;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  /* Phones: each order reads as two lines, like an order slip:
+     "VWCE.DE ... 529.60" over "Buy 4 ... 58.4% → 60.0%". */
+  @media (max-width: 520px) {
+    .orders-sheet,
+    .orders-sheet thead,
+    .orders-sheet tbody,
+    .orders-sheet tfoot { display: block; }
+    .orders-sheet :global(thead tr),
+    .orders-sheet :global(tbody tr) {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-areas:
+        "ticker ticker amount"
+        "side qty weight";
     }
+    /* Grid items ignore vertical-align: centre single-line cells by line height. */
+    .orders-sheet :global(tr > *) {
+      height: 2rem;
+      line-height: 2rem;
+      white-space: nowrap;
+      border-right: 0;
+      border-bottom: 0;
+    }
+    .orders-sheet :global(tfoot tr > *) { height: 2.5rem; line-height: 2.5rem; }
+    .orders-sheet :global(tr > :nth-child(1)) { grid-area: side; padding-right: 0.25rem; }
+    .orders-sheet :global(tr > :nth-child(2)) { grid-area: qty; text-align: left; padding-left: 0.25rem; }
+    .orders-sheet :global(tr > :nth-child(3)) { grid-area: ticker; }
+    .orders-sheet :global(tr > :nth-child(4)) { grid-area: weight; }
+    .orders-sheet :global(tr > :nth-child(5)) { grid-area: amount; }
+    .orders-sheet :global(thead tr) { border-bottom: 1px solid var(--rule-strong); }
+    .orders-sheet :global(tbody tr) { padding-block: 0.25rem; }
+    .orders-sheet :global(tbody tr + tr) { border-top: 1px solid var(--rule); }
+
+    .orders-sheet :global(tfoot tr) {
+      display: flex;
+      justify-content: space-between;
+      border-top: 1px solid var(--rule);
+    }
+    .orders-sheet :global(tfoot tr:first-child) { border-top-color: var(--rule-strong); }
+    .orders-sheet :global(tfoot th) { flex: 1; }
   }
 </style>

@@ -13,7 +13,6 @@
   import GlobalSettings from './components/GlobalSettings.svelte';
   import PortfolioEditor from './components/PortfolioEditor.svelte';
   import ResultsPanel from './components/ResultsPanel.svelte';
-  import TrustRail from './components/TrustRail.svelte';
   import HowItWorks from './components/HowItWorks.svelte';
   import AlgoSection from './components/AlgoSection.svelte';
   import OssSection from './components/OssSection.svelte';
@@ -174,11 +173,11 @@
 />
 
 <main id="main" tabindex="-1">
-  <Hero />
+  <div class="container">
+    <Hero />
 
-  <div class="tool-section">
     {#if error}
-      <div class="error-box" role="alert">
+      <div class="notice error-box" role="alert">
         {#if error.kind === 'validation'}
           {error.items.map((i) => $t(i.key, i.params)).join(' · ')}
         {:else if error.kind === 'key'}
@@ -189,60 +188,41 @@
       </div>
     {/if}
 
-    <div class="tool-grid">
+    <GlobalSettings
+      increment={settings.increment}
+      baseCurrency={settings.baseCurrency}
+      {baseCurrencies}
+      onlyBuy={settings.onlyBuy}
+      optimalRedistribute={settings.optimalRedistribute}
+      fractionalShares={settings.fractionalShares}
+      on:update={e => updateSettings(e.detail)}
+    />
+    <PortfolioEditor
+      {assets}
+      {loading}
+      baseCurrency={settings.baseCurrency}
+      on:addAsset={addAsset}
+      on:removeAsset={e => removeAsset(e.detail)}
+      on:updateAsset={e => updateAsset(e.detail.id, e.detail.patch)}
+      on:run={runRebalance}
+    />
 
-      <div class="panel">
-        <div class="panel-head">
-          <span class="panel-title">{$t('panel.settings')}</span>
-        </div>
-        <div class="panel-body">
-          <GlobalSettings
-            increment={settings.increment}
-            baseCurrency={settings.baseCurrency}
-            {baseCurrencies}
-            onlyBuy={settings.onlyBuy}
-            optimalRedistribute={settings.optimalRedistribute}
-            fractionalShares={settings.fractionalShares}
-            on:update={e => updateSettings(e.detail)}
-          />
-        </div>
-      </div>
-
-      <div class="panel">
-        <div class="panel-head">
-          <span class="panel-title">{$t('panel.assets')}</span>
-          <button type="button" class="add-asset-btn" on:click={addAsset}>{$t('assets.add')}</button>
-        </div>
-        <div class="panel-body tight">
-          <PortfolioEditor
-            {assets}
-            {loading}
-            on:removeAsset={e => removeAsset(e.detail)}
-            on:updateAsset={e => updateAsset(e.detail.id, e.detail.patch)}
-            on:run={runRebalance}
-          />
-        </div>
-      </div>
-
-      <ResultsPanel result={lastResult} settings={resultSettings} />
-
-    </div>
+    <ResultsPanel result={lastResult} settings={resultSettings} />
   </div>
 
-  <TrustRail />
   <HowItWorks />
   <AlgoSection />
   <OssSection />
 </main>
 
 <footer>
-  <span>{$t('footer.brand')}</span>
-  <div class="footer-links">
-    <a href="https://github.com/PestoENGINE/PestoENGINE" target="_blank" rel="noopener noreferrer">{$t('footer.github')}</a>
-    <span class="footer-sep">·</span>
-    <span>{$t('footer.license')}</span>
-    <span class="footer-sep">·</span>
-    <span>{$t('footer.noAnalytics')}</span>
+  <div class="container footer-inner">
+    <span>{$t('footer.brand')}</span>
+    <div class="footer-links">
+      <a href="https://github.com/PestoENGINE/PestoENGINE" target="_blank" rel="noopener noreferrer">{$t('footer.github')}</a>
+      <span>{$t('footer.license')}</span>
+      <span>{$t('footer.noAnalytics')}</span>
+    </div>
   </div>
 </footer>
 
@@ -255,15 +235,14 @@
     transform: translateY(-150%);
     opacity: 0;
     pointer-events: none;
-    background: var(--surface);
-    border: 1px solid var(--teal);
+    background: var(--paper);
+    border: 1px solid var(--frame);
     border-radius: var(--r);
-    color: var(--teal);
+    color: var(--ink);
     padding: 0.45rem 0.7rem;
     font-size: 0.875rem;
     font-weight: 600;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.18);
-    transition: transform 0.15s, opacity 0.15s;
+    text-decoration: none;
   }
   .skip-link:focus-visible {
     transform: translateY(0);
@@ -273,70 +252,29 @@
   .skip-link:focus:not(:focus-visible) { transform: translateY(-150%); opacity: 0; }
   main:focus { outline: none; }
 
-  .add-asset-btn {
-    font-size: 0.75rem;
-    color: var(--teal);
-    border: 1px solid color-mix(in srgb, var(--teal) 35%, transparent);
-    border-radius: var(--r);
-    padding: 0.2rem 0.55rem;
-    white-space: nowrap;
-    transition: border-color 0.15s, background 0.15s;
-  }
-  .add-asset-btn:hover { border-color: var(--teal); background: var(--teal-light); }
-
-  .tool-section {
-    padding: clamp(1rem, 3vw, 1.5rem) clamp(1rem, 4vw, 2rem);
-    max-width: 1000px;
-    margin: 0 auto;
-  }
-  .tool-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
-    gap: 1rem;
-    align-items: stretch;
-  }
-  @media (max-width: 700px) {
-    .tool-grid { grid-template-columns: 1fr; }
-  }
-
-  .error-box {
-    background: var(--error-bg);
-    border: 1px solid var(--error-border);
-    border-radius: var(--r);
-    padding: 0.75rem 1rem;
-    font-size: 0.875rem;
-    color: var(--error);
-  }
-  .tool-section > .error-box { margin-bottom: 1rem; }
+  .error-box { margin-bottom: 1rem; }
 
   footer {
-    background: var(--hero-bg);
-    border-top: 1px solid var(--hero-border);
-    padding: 1.25rem clamp(1rem, 4vw, 2rem);
+    background: var(--nav);
+    color: var(--on-nav-2);
+    font-size: 0.8125rem;
+  }
+  /* Baseline alignment: the GitHub link carries extra padding for a larger
+     tap target, which must not push its text below the plain labels. */
+  .footer-inner {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: baseline;
     flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-  footer span {
-    font-family: var(--mono);
-    font-size: 0.6875rem;
-    color: var(--hero-sub);
+    gap: 0.5rem 1.5rem;
+    padding-block: 1.25rem;
   }
   .footer-links {
     display: flex;
-    gap: 1.25rem;
-    align-items: center;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
   }
-  footer a {
-    font-size: 0.6875rem;
-    color: rgba(240,237,232,0.62);
-  }
-  footer a:hover { color: var(--teal-on-dark); }
-  .footer-sep { color: rgba(240,237,232,0.25); }
-  @media (max-width: 560px) {
-    footer { align-items: flex-start; }
-    .footer-links { gap: 0.75rem; flex-wrap: wrap; }
-  }
+  footer a { display: inline-block; padding-block: 0.25rem; color: var(--on-nav); text-underline-offset: 3px; }
+  footer a:hover { color: var(--green); }
 </style>

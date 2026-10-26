@@ -8,7 +8,7 @@ Single-page application that consumes the backend runtime configuration, `POST /
 |-------|---------|---------|
 | UI framework | Svelte | `^5.56.3` (components use the Svelte 4 compatible API: `$:` reactive statements, `createEventDispatcher`, `on:event` directives; no runes) |
 | Language | TypeScript | `~6.0.3` |
-| Styling | Hand-written CSS | Global `src/app.css` holds only cross-component concerns (reset, design tokens, shared primitives, the two table systems); each component owns its single-use styles in a scoped `<style>` block |
+| Styling | Hand-written CSS | Global `src/app.css` holds only cross-component concerns (reset, design tokens, shared primitives, the `.sheet` table system); each component owns its single-use styles in a scoped `<style>` block |
 | Build tool | Vite | `^8.1.0` |
 | Svelte plugin | `@sveltejs/vite-plugin-svelte` | `^7.1.2` |
 | Typecheck | `svelte-check` + `tsc` | `^4.7.0` / `~6.0.3` |
@@ -24,7 +24,7 @@ ui/
 ├── src/
 │   ├── main.ts        # Mounts <App />
 │   ├── App.svelte     # Root: state, API call, import/export, dark mode
-│   ├── app.css        # reset, design tokens, shared primitives, table systems
+│   ├── app.css        # reset, design tokens, shared primitives, sheet tables
 │   ├── storage.ts     # localStorage I/O (versioned, validated)
 │   ├── types.ts       # Asset, Settings, RebalanceResponse, PortfolioExport, UiError
 │   ├── i18n/          # Hand-rolled i18n: locale store, t/tx, en.json + it.json
@@ -111,16 +111,19 @@ both base and per-asset quote currency.
 
 ## Design tokens
 
-Defined in `src/app.css` under `:root` (light) and `html.dark` (dark). Components reference them via `var(--token)`. Categories:
+The page is designed as an order sheet: the tool comes first, holdings and orders are spreadsheet-like tables, surfaces are flat (1px frames and grid rules, no shadows except floating menus, no gradients). In light mode the sheets read as green-ruled ledger paper: deep basil frame, nav and footer, pale green grid rules and header rows. Tokens are defined in `src/app.css` under `:root` (light) and `html.dark` (dark); components reference them via `var(--token)`.
 
-- Background / surface: `--bg`, `--surface`
-- Border: `--border`
-- Text: `--text`, `--text-2`, `--text-3`
-- Brand teal: `--teal`, `--teal-hover`, `--teal-light`
-- Error: `--error`, `--error-bg`, `--error-border`
-- Hero dark surface: `--hero-bg`, `--hero-text`, `--hero-sub`, `--hero-border`
-- Layout: `--nav-height`, `--panel-gap`
-- Typography: `--sans` (Geist), `--mono` (Geist Mono); loaded from Google Fonts in `index.html`
+- Surfaces: `--bg` (page), `--paper` (sheets, inputs), `--paper-2` (sheet header and footer rows, toolbar)
+- Ink: `--ink`, `--ink-2`, `--ink-3` (text, from primary to labels and placeholders)
+- Lines: `--rule` (grid inside sheets), `--rule-strong` (inputs, header separators; at least 3:1 against paper), `--frame` (sheet outline)
+- Brand green, the ENGINE green of the logo: `--green` (primary button fill, checked boxes), `--green-hover`, `--green-ink` (green as text: buys, valid totals), `--green-wash`, `--on-green`
+- Red for sells and errors: `--red`, `--red-wash`
+- Nav and footer bar: `--nav`, `--on-nav`, `--on-nav-2`
+- Floating menus only: `--float-shadow`
+- Layout: `--container`, `--gutter` (shared by `.container`), `--nav-height`; radius `--r`
+- Typography: `--sans` (IBM Plex Sans), `--mono` (IBM Plex Mono, for tickers, figures and code); loaded from Google Fonts in `index.html`
+
+Shared primitives in `app.css`: `.sheet` (table frame, grid rules, `.num` right-aligned tabular figures, `.cell` + `.cell-input` for editable cells), `.field`, `.notice`, `.page-section` / `.page-columns`, `.code-block`.
 
 ## Setup
 

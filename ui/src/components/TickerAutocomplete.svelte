@@ -167,17 +167,18 @@
 
   .autocomplete-dropdown {
     position: absolute;
-    top: calc(100% + 2px);
+    top: 100%;
     left: 0;
     z-index: 10;
-    padding: 2px 0;
-    background: var(--surface);
-    border: 1px solid var(--border);
+    padding: 0.25rem 0;
+    background: var(--paper);
+    border: 1px solid var(--frame);
     border-radius: var(--r);
-    max-height: 220px;
+    box-shadow: var(--float-shadow);
+    max-height: 240px;
     width: max-content;
     min-width: 100%;
-    max-width: 420px;
+    max-width: min(420px, calc(100vw - 2rem));
     overflow-y: auto;
     scrollbar-width: none;
   }
@@ -189,38 +190,33 @@
   .autocomplete-item {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 4px 10px;
+    padding: 0.375rem 0.75rem;
     cursor: pointer;
   }
 
   .autocomplete-item:hover,
   .autocomplete-item.active {
-    background: var(--bg);
+    background: var(--green-wash);
   }
 
   .autocomplete-ticker {
     font-family: var(--mono);
-    font-size: 0.75rem;
-    color: var(--text);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--ink);
   }
 
   .autocomplete-name {
-    font-size: 0.6875rem;
-    font-style: italic;
-    color: var(--text-2);
+    font-size: 0.75rem;
+    color: var(--ink-3);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .autocomplete-item + .autocomplete-item {
-    border-top: 1px solid var(--border);
-  }
-
   .autocomplete-empty {
-    padding: 6px 10px;
+    padding: 0.375rem 0.75rem;
     font-size: 0.8125rem;
-    color: var(--text-3);
+    color: var(--ink-3);
   }
 </style>

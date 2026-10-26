@@ -1,69 +1,93 @@
 /* Minimal style reset */
 * { margin: 0; }
-button { font: inherit; color: inherit; background: none; border: none; }
+button { font: inherit; color: inherit; background: none; border: none; padding: 0; }
 input, select { font: inherit; }
-a { color: inherit; text-decoration: none; }
+a { color: inherit; }
 img, svg { display: block; max-width: 100%; }
-ul { list-style: none; padding: 0; }
+ul, ol { padding: 0; }
+ul { list-style: none; }
 button:not(:disabled) { cursor: pointer; }
-button:focus-visible,
-a:focus-visible,
-input:focus-visible {
-  outline: 2px solid var(--teal);
-  outline-offset: 3px;
+:focus-visible {
+  outline: 2px solid var(--green-ink);
+  outline-offset: 2px;
 }
 
-/* Design tokens */
+/* Design tokens
+   The page is an order sheet: paper surfaces, ink text and frames, grid rules,
+   one brand green (the ENGINE green of the logo) for the action and for buys,
+   one red for sells and errors. Flat: no shadows except on floating menus.
+   In light mode the sheets read as green-ruled ledger paper: deep basil frame
+   and bars, pale green grid rules and header rows. */
 :root {
-  --nav-height: 64px;
-  --panel-gap: 1rem;
+  color-scheme: light;
 
-  --bg:         #f5f4f1;
-  --surface:    #ffffff;
-  --border:     #e0ddd8;
-  --text:       #1a1714;
-  --text-2:     #5f5a53;
-  --text-3:     #76716a;
+  --nav-height: 56px;
+  --container: 960px;
+  --gutter: clamp(1rem, 4vw, 2rem);
+  /* One horizontal inset for sheet headers, cell values, inputs and the
+     toolbar above the holdings sheet, so every text edge in a column lines up. */
+  --cell-x: 0.625rem;
 
-  --teal:       #01696f;
-  --teal-hover: #015a5f;
-  --teal-light: #e6f4f4;
-  --teal-on-dark: #35c8cf;
+  --bg:          #eef2ef;
+  --paper:       #ffffff;
+  --paper-2:     #ebf5ee;
+  --ink:         #14201a;
+  --ink-2:       #465a4f;
+  --ink-3:       #5c6f64;
+  --rule:        #d3e6d9;
+  --rule-strong: #6a967e;
+  --frame:       #0f3d2b;
 
-  --error:        #881414;
-  --error-bg:     #fdf3f3;
-  --error-border: #ecc8c8;
+  --green:       #10b981;
+  --green-hover: #0ea371;
+  --green-ink:   #047857;
+  --green-wash:  #dcf2e5;
+  --on-green:    #08130e;
 
-  --hero-bg:    #0c1e1e;
-  --hero-text:  #f0ede8;
-  --hero-sub:   rgba(240,237,232,0.72);
-  --hero-border: rgba(255,255,255,0.06);
+  --red:      #b42318;
+  --red-wash: #fdf1ef;
 
-  --sans: 'Geist', system-ui, sans-serif;
-  --mono: 'Geist Mono', ui-monospace, monospace;
+  --nav:      #0f3d2b;
+  --on-nav:   #eef6f1;
+  --on-nav-2: #b7d3c3;
 
-  --r: 4px;
+  --float-shadow: 0 6px 18px rgba(15,61,43,0.16);
+
+  --sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --r: 3px;
+}
+
+@media (max-width: 600px) {
+  :root { --cell-x: 0.5rem; }
 }
 
 html.dark {
-  --bg:         #141412;
-  --surface:    #1e1d1b;
-  --border:     #2e2c28;
-  --text:       #f0ede8;
-  --text-2:     #b8b3aa;
-  --text-3:     #918b80;
+  color-scheme: dark;
 
-  --teal:       #35c8cf;
-  --teal-hover: #2fb2b9;
-  --teal-light: rgba(53,200,207,0.14);
-  --teal-on-dark: #35c8cf;
+  --bg:          #191b19;
+  --paper:       #212421;
+  --paper-2:     #272a27;
+  --ink:         #e9ebe7;
+  --ink-2:       #b3b8b1;
+  --ink-3:       #979c95;
+  --rule:        #353935;
+  --rule-strong: #4b504a;
+  --frame:       #6a7069;
 
-  --error:        #e35b5b;
-  --error-bg:     #2a1515;
-  --error-border: #5a2828;
+  --green-hover: #34d399;
+  --green-ink:   #34d399;
+  --green-wash:  rgba(16,185,129,0.15);
 
-  --hero-bg:    #0f2424;
-  --hero-border: rgba(26,156,163,0.12);
+  --red:      #f0786b;
+  --red-wash: rgba(240,120,107,0.12);
+
+  --nav:      #0f110f;
+  --on-nav:   #f0f1ee;
+  --on-nav-2: #b9beb6;
+
+  --float-shadow: 0 6px 18px rgba(0,0,0,0.5);
 }
 
 /* Base elements */
@@ -72,319 +96,168 @@ html { font-size: 16px; }
 body {
   font-family: var(--sans);
   background: var(--bg);
-  color: var(--text);
+  color: var(--ink);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition: background 0.2s, color 0.2s;
 }
 
-/* Panel shell (App + ResultsPanel) */
-.panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  min-height: 300px;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  transition: background 0.2s, border-color 0.2s;
-}
-.panel-head {
-  padding: 0.625rem 1rem;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.625rem;
-  min-height: 36px;
-}
-.panel-title {
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-2);
-  padding-top: 0.15rem;
-}
-.panel-body {
-  padding: 1rem;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-.panel-body.tight   { padding: 0.625rem 1rem 1rem; }
-.panel-body.tight-x { padding: 0.625rem 0.875rem 1rem; }
-@media (max-width: 480px) {
-  .panel-body { padding: 0.75rem; }
-}
-
-/* Form primitives (shared across inputs) */
-.field {
-  font-size: 0.9375rem;
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  padding: 0.5rem 0.75rem;
+.container {
   width: 100%;
+  max-width: calc(var(--container) + 2 * var(--gutter));
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+/* Sheet: the table system shared by the holdings editor, the orders and the
+   algorithm comparison. Separate borders so the outer frame keeps its own
+   colour while the inner grid uses the lighter rule. */
+.sheet {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--paper);
+  border: 1px solid var(--frame);
+  font-size: 0.875rem;
+}
+.sheet th,
+.sheet td {
+  height: 2.5rem;
+  padding: 0 var(--cell-x);
+  text-align: left;
+  vertical-align: middle;
+  border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+.sheet tr > :last-child { border-right: 0; }
+.sheet > :last-child > tr:last-child > * { border-bottom: 0; }
+.sheet thead th {
+  background: var(--paper-2);
+  border-bottom-color: var(--rule-strong);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+.sheet tfoot th,
+.sheet tfoot td {
+  background: var(--paper-2);
+  font-weight: 600;
+}
+.sheet tbody:not(:last-child) > tr:last-child > * { border-bottom-color: var(--rule-strong); }
+.sheet .num { text-align: right; }
+.sheet td.num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.sheet .cell { padding: 0; }
+@media (max-width: 600px) {
+  .sheet thead th { font-size: 0.75rem; }
+}
+
+/* Inputs that fill a sheet cell, spreadsheet style: plain text until hovered,
+   a green inset frame when the cell is being edited. */
+.cell-input {
+  display: block;
+  width: 100%;
+  height: 2.5rem;
+  padding: 0 var(--cell-x);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
   outline: none;
-  transition: border-color 0.15s;
+}
+.cell-input:hover { background: var(--paper-2); }
+.cell-input:focus { background: var(--paper); box-shadow: inset 0 0 0 2px var(--green); }
+.cell-input.num { text-align: right; }
+.cell-input.ticker { font-weight: 500; }
+.cell-input::placeholder { color: var(--ink-3); font-weight: 400; text-transform: none; }
+.cell-input[aria-invalid='true'] { color: var(--red); background: var(--red-wash); }
+.ticker-input { text-transform: uppercase; }
+
+/* Standalone field (cash to deploy) */
+.field {
+  height: 2.5rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 0.9375rem;
+  outline: none;
   appearance: none;
 }
-.field:focus        { border-color: var(--teal); }
-.field:focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, var(--teal) 20%, transparent); }
-.field:out-of-range,
-.field[aria-invalid='true'] { color: var(--error); border-color: var(--error-border); }
-.field::placeholder { color: var(--text-3); }
+.field:focus { border-color: var(--green-ink); box-shadow: 0 0 0 1px var(--green-ink); }
+.field:out-of-range { color: var(--red); border-color: var(--red); }
 .field.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
 input[type='number']::-webkit-inner-spin-button,
 input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
 
-input[type='checkbox'] {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-  border: 1.5px solid var(--border);
-  border-radius: 2px;
-  background: var(--surface);
-  cursor: pointer;
-  position: relative;
-  margin-top: 2px;
-  transition: background 0.12s, border-color 0.12s;
-}
-input[type='checkbox']:checked {
-  background: var(--teal);
-  border-color: var(--teal);
-}
-input[type='checkbox']:checked::after {
-  content: '';
-  position: absolute;
-  left: 3px;
-  top: 1px;
-  width: 5px;
-  height: 8.5px;
-  border: 1.5px solid #fff;
-  border-top: none;
-  border-left: none;
-  transform: rotate(45deg);
-}
-
-/* Assets table (PortfolioEditor header + AssetRow rows) */
-.asset-table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-bottom: 0.75rem; }
-.asset-col-ticker { width: 28%; }
-.asset-col-target,
-.asset-col-shares { width: 17%; }
-.asset-col-fee { width: 26%; }
-.asset-col-actions { width: 2.5rem; }
-.asset-table th {
-  font-size: 0.6875rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-3);
-  padding: 0 0.5rem 0.625rem;
-  text-align: left;
-  white-space: nowrap;
-}
-.asset-table td {
-  padding: 0.35rem 0.5rem;
-  border-top: 1px solid var(--border);
+/* Error and validation messages */
+.notice {
+  padding: 0.625rem 0.875rem;
+  border: 1px solid color-mix(in srgb, var(--red) 40%, transparent);
+  border-radius: var(--r);
+  background: var(--red-wash);
+  color: var(--red);
   font-size: 0.875rem;
 }
-.asset-table tbody tr:first-child td { border-top: none; }
-@media (max-width: 700px) {
-  .asset-table,
-  .asset-table colgroup,
-  .asset-table tbody,
-  .asset-table tr,
-  .asset-table td { display: block; }
-  .asset-table { table-layout: auto; border-collapse: separate; border-spacing: 0; }
-  .asset-table thead { display: none; }
-  .asset-table tbody { display: grid; gap: 0.75rem; }
-  .asset-table tr {
-    --asset-action-col: 1.65rem;
-    --asset-card-gap-x: 0.55rem;
-    position: relative;
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) var(--asset-action-col);
-    gap: 0.65rem var(--asset-card-gap-x);
-    padding: 0.85rem 0.75rem;
-    border: 1px solid var(--border);
-    border-radius: var(--r);
-    background: color-mix(in srgb, var(--surface) 92%, var(--bg));
-  }
-  .asset-table td {
-    border-top: none;
-    padding: 0;
-    min-width: 0;
-  }
-  .asset-table td::before {
-    content: attr(data-label);
-    display: block;
-    margin-bottom: 0.25rem;
-    font-size: 0.625rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--text-3);
-    white-space: nowrap;
-  }
-  .asset-table td:first-child {
-    grid-column: 1 / 4;
-    padding-right: 0;
-  }
-  .asset-table td:nth-child(2) { grid-column: 1; }
-  .asset-table td:nth-child(3) { grid-column: 2; }
-  .asset-table td:nth-child(4) {
-    grid-column: 3 / 5;
-    padding-right: 0;
-  }
-  .asset-table td:last-child {
-    grid-column: 4;
-    grid-row: 1;
-    align-self: start;
-    justify-self: center;
-    width: var(--asset-action-col);
-    height: 1.65rem;
-  }
-  .asset-table td:last-child::before { content: ''; display: none; }
-  .asset-table .cell-input {
-    border: 1px solid var(--border);
-    border-radius: var(--r);
-    background: var(--surface);
-    padding: 0.45rem 0.55rem;
-    min-height: 2.25rem;
-  }
-  .asset-table .fee-cell.fee-cell {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) var(--asset-action-col);
-    align-items: center;
-    gap: var(--asset-card-gap-x);
-  }
-  .asset-table .fee-cell.fee-cell .cell-input.cell-input {
-    width: 100%;
-    flex: initial;
-  }
-  .asset-table .fee-cell.fee-cell .fee-toggle.fee-toggle {
-    position: relative;
-    width: var(--asset-action-col);
-    height: 1.65rem;
-    flex: 0 0 var(--asset-action-col);
-    justify-self: center;
-    justify-content: center;
-    gap: 0;
-  }
-  .asset-table .fee-pct {
-    position: absolute;
-    left: calc(50% + 0.45rem);
-    top: 50%;
-    transform: translateY(-50%);
-  }
-}
-@media (max-width: 300px) {
-  .asset-table tr { grid-template-columns: repeat(2, minmax(0, 1fr)) var(--asset-action-col); }
-  .asset-table td:first-child { grid-column: 1 / 3; }
-  .asset-table td:nth-child(4) { grid-column: 1 / 4; }
-  .asset-table td:last-child {
-    grid-column: 3;
-  }
-}
-@media (max-width: 280px) {
-  .asset-table tr { grid-template-columns: minmax(0, 1fr); }
-  .asset-table td:first-child,
-  .asset-table td:nth-child(2),
-  .asset-table td:nth-child(3),
-  .asset-table td:nth-child(4) {
-    grid-column: 1 / -1;
-    padding-right: 2.25rem;
-  }
-  .asset-table td:last-child {
-    position: absolute;
-    top: 0.7rem;
-    right: 0.7rem;
-    grid-column: auto;
-  }
-  .asset-table .fee-cell.fee-cell {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
-  }
-  .asset-table .fee-cell.fee-cell .fee-toggle.fee-toggle {
-    position: absolute;
-    right: 0.7rem;
-    bottom: 1.6rem;
-    width: 1.65rem;
-    height: 1.65rem;
-  }
-}
-.ticker-input { text-transform: uppercase; }
 
-/* Inline cell inputs (AssetRow + TickerAutocomplete) - transparent, styled like text */
-.cell-input {
-  background: transparent;
-  border: none;
-  outline: none;
-  font-family: var(--mono);
-  font-size: 0.875rem;
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-  width: 100%;
-  padding: 0;
+/* Page sections below the tool (HowItWorks, AlgoSection, OssSection) */
+.page-section {
+  padding-block: clamp(3rem, 6vw, 4.5rem);
+  border-top: 1px solid var(--rule);
 }
-.cell-input.ticker { font-weight: 600; }
-.cell-input::placeholder { color: var(--text-3); font-weight: 400; text-transform: none; }
-
-/* Results grid contract (ResultsPanel head + AssetResult rows)
-   The two components live in separate files but render one table. The only
-   thing they must agree on is the column tracks and the gap at each
-   breakpoint, expressed once here as tokens that both consume, so the head
-   and the rows can never drift out of alignment. */
-:root {
-  --result-cols: 6rem 5.75rem minmax(0, 1fr);
-  --result-gap: 0.625rem;
-}
-@media (max-width: 980px) {
-  :root { --result-cols: 5.5rem 5.75rem minmax(0, 1fr); }
-}
-@media (max-width: 700px) {
-  :root { --result-cols: 5.2rem 5.75rem minmax(0, 1fr); --result-gap: 0.5rem; }
-}
-@media (max-width: 480px) {
-  :root { --result-cols: 3.75rem 5rem minmax(0, 1fr); --result-gap: 0.3rem; }
-}
-.result-grid {
-  display: grid;
-  grid-template-columns: var(--result-cols);
-  gap: var(--result-gap);
-}
-
-/* Page sections (HowItWorks + AlgoSection) */
-.section-divider { border-top: 1px solid var(--border); }
-.content-section {
-  padding: clamp(3rem, 6vw, 5rem) clamp(1rem, 4vw, 2rem);
-  max-width: 960px;
-  margin: 0 auto;
-}
-.section-kicker {
-  font-family: var(--mono);
-  font-size: 0.6875rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--teal);
-  margin-bottom: 0.75rem;
-}
-.section-headline {
-  font-size: clamp(1.25rem, 3vw, 1.5rem);
-  font-weight: 500;
+.section-title {
+  font-size: clamp(1.375rem, 2.6vw, 1.625rem);
+  font-weight: 600;
+  line-height: 1.25;
   letter-spacing: -0.01em;
-  margin-bottom: 2.5rem;
-  color: var(--text);
-  line-height: 1.3;
+}
+.section-lead {
+  max-width: 40rem;
+  margin-top: 0.375rem;
+  font-size: 1.0625rem;
+  color: var(--ink-2);
+}
+
+/* Two columns (text beside a code sample), stacked on narrow screens */
+.page-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(2rem, 5vw, 3.5rem);
+  align-items: start;
+}
+@media (max-width: 760px) {
+  .page-columns { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Code sample (request body, quick start) */
+.code-block {
+  min-width: 0;
+  border: 1px solid var(--rule-strong);
+  background: var(--paper);
+}
+.code-block figcaption {
+  padding: 0.5rem 0.875rem;
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper-2);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--ink-2);
+}
+.code-block pre {
+  padding: 0.875rem;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  color: var(--ink);
 }
 
 /* Utilities */

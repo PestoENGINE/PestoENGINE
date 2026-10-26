@@ -9,7 +9,6 @@
     "skipToMain": "Skip to main content"
   },
   "hero": {
-    "kicker": "Rebalancing execution engine",
     "headlineLine1": "You know your allocation.",
     "headlineLine2": "Now know exactly what to buy.",
     "sub": "Enter your ETF allocations, current holdings, and monthly cash. PestoENGINE returns the exact number of shares to buy, with your broker's fee structure already priced in."
@@ -48,6 +47,7 @@
     "colTarget": "Target %",
     "colShares": "Shares",
     "colFee": "Fee",
+    "colFeeUnit": "Fee unit",
     "colActions": "Actions",
     "calculating": "Calculating…",
     "calculate": "Calculate buy order",
@@ -79,16 +79,20 @@
     "noResults": "No results"
   },
   "results": {
-    "title": "Result",
+    "title": "Orders",
     "badgeOnlyBuy": "Only buy",
     "badgeKnapsack": "Knapsack DP",
     "colTicker": "Ticker",
-    "colBuy": "Buy",
-    "colResult": "Result",
+    "colOrder": "Order",
+    "colShares": "Shares",
+    "colWeight": "Weight → target",
+    "colAmount": "Amount",
+    "buy": "Buy",
+    "sell": "Sell",
+    "hold": "Hold",
     "allocated": "Allocated",
     "totalFees": "Fees",
     "change": "Change",
-    "currency": "Currency",
     "empty": "Run the calculator to see results."
   },
   "trust": {

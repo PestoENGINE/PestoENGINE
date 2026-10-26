@@ -96,9 +96,9 @@ describe('t store / setLocale', () => {
   it('reflects the active locale reactively once loaded', async () => {
     await loadLocale('it');
     setLocale('it');
-    expect(get(t)('results.title')).toBe('Risultato');
+    expect(get(t)('results.title')).toBe('Ordini');
     setLocale('en');
-    expect(get(t)('results.title')).toBe('Result');
+    expect(get(t)('results.title')).toBe('Orders');
   });
 
   it('updates the locale store', () => {

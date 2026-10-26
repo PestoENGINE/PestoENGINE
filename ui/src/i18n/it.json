@@ -9,7 +9,6 @@
     "skipToMain": "Vai al contenuto principale"
   },
   "hero": {
-    "kicker": "Motore di esecuzione del ribilanciamento",
     "headlineLine1": "Conosci la tua allocazione.",
     "headlineLine2": "Ora sai esattamente cosa comprare.",
     "sub": "Inserisci le tue allocazioni di ETF, le posizioni attuali e la liquidità mensile. PestoENGINE restituisce il numero esatto di quote da comprare, con la struttura commissionale del tuo broker già inclusa."
@@ -48,6 +47,7 @@
     "colTarget": "Target %",
     "colShares": "Quote",
     "colFee": "Fee",
+    "colFeeUnit": "Unità commissione",
     "colActions": "Azioni",
     "calculating": "Calcolo…",
     "calculate": "Calcola ordine d'acquisto",
@@ -79,16 +79,20 @@
     "noResults": "Nessun risultato"
   },
   "results": {
-    "title": "Risultato",
+    "title": "Ordini",
     "badgeOnlyBuy": "Solo acquisti",
     "badgeKnapsack": "Knapsack DP",
     "colTicker": "Ticker",
-    "colBuy": "Acquista",
-    "colResult": "Risultato",
+    "colOrder": "Ordine",
+    "colShares": "Quote",
+    "colWeight": "Peso → target",
+    "colAmount": "Importo",
+    "buy": "Compra",
+    "sell": "Vendi",
+    "hold": "Mantieni",
     "allocated": "Allocato",
     "totalFees": "Fees",
     "change": "Resto",
-    "currency": "Valuta",
     "empty": "Esegui il calcolo per vedere i risultati."
   },
   "trust": {
