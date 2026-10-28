@@ -1,19 +1,28 @@
-import type { Asset, Settings, RebalanceResponse, TickerResult, UiError, UiErrorItem } from './types';
+import type {
+  Asset, Settings, QuotesResponse, RebalanceEngine, RebalanceResponse, TickerResult, UiError, UiErrorItem,
+} from './types';
+import { computeRebalance } from './rebalance';
+
+export interface RuntimeConfig {
+  baseCurrencies: string[];
+  rebalanceEngine: RebalanceEngine;
+}
 
 /** Load and validate the backend-owned runtime configuration. */
-export async function loadBaseCurrencies(
+export async function loadConfig(
   fetchFn: typeof fetch = fetch,
-): Promise<string[]> {
+): Promise<RuntimeConfig> {
   const res = await fetchFn('/v1/config');
   if (!res.ok) throw new Error(`Configuration request failed with ${res.status}`);
 
-  const { base_currencies: baseCurrencies } = await res.json() as {
+  const { base_currencies: baseCurrencies, rebalance_engine: engine } = await res.json() as {
     base_currencies?: string[];
+    rebalance_engine?: string;
   };
   if (!Array.isArray(baseCurrencies) || baseCurrencies.length === 0) {
     throw new Error('Invalid supported base currencies');
   }
-  return baseCurrencies;
+  return { baseCurrencies, rebalanceEngine: engine === 'frontend' ? 'frontend' : 'backend' };
 }
 
 /** Maps the camelCase UI model to the snake_case backend payload. */
@@ -144,6 +153,34 @@ export async function runRebalance(
     return { ok: true, data: await res.json() as RebalanceResponse };
   }
   return { ok: false, error: await rebalanceError(res) };
+}
+
+/**
+ * REBALANCE_ENGINE=frontend: fetches base-currency prices from POST /v1/quotes,
+ * sending only each asset's identity, and computes the orders in the browser.
+ * Same outcome shape and error mapping as runRebalance.
+ */
+export async function runRebalanceInBrowser(
+  settings: Settings,
+  assets: Asset[],
+  fetchFn: typeof fetch = fetch,
+): Promise<RebalanceOutcome> {
+  // The editor validates the assets; the cash check is otherwise left to the
+  // backend's 422, and /v1/quotes never sees the amount.
+  if (settings.increment < 0) {
+    return { ok: false, error: { kind: 'validation', items: [{ key: 'errors.invalid.incrementNegative' }] } };
+  }
+  const res = await fetchFn('/v1/quotes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      base_currency: settings.baseCurrency,
+      assets: assets.map(a => ({ ticker: a.ticker, provider: a.provider ?? null, currency: a.currency })),
+    }),
+  });
+  if (!res.ok) return { ok: false, error: await rebalanceError(res) };
+  const quotes = await res.json() as QuotesResponse;
+  return { ok: true, data: computeRebalance(settings, assets, quotes) };
 }
 
 type TickerSearchOutcome =

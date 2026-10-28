@@ -65,6 +65,16 @@ export interface RebalanceResponse {
   fx_as_of?: string | null;
 }
 
+/** Where orders are computed, from the backend's REBALANCE_ENGINE setting. */
+export type RebalanceEngine = 'backend' | 'frontend';
+
+/** POST /v1/quotes: prices already converted to the portfolio currency. */
+export interface QuotesResponse {
+  quotes: { ticker: string; price: number; quote_as_of?: string | null }[];
+  base_currency: string;
+  fx_as_of?: string | null;
+}
+
 export interface PortfolioExport {
   version: 2;
   exportedAt: string;

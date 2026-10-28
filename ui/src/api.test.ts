@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildRebalanceBody, loadBaseCurrencies, rebalanceError, runRebalance, searchTickers } from './api';
+import { buildRebalanceBody, loadConfig, rebalanceError, runRebalance, runRebalanceInBrowser, searchTickers } from './api';
 import type { Asset, Settings, RebalanceResponse } from './types';
 
 const settings: Settings = {
@@ -20,14 +20,22 @@ function jsonResponse(body: unknown, init: ResponseInit): Response {
   });
 }
 
-describe('loadBaseCurrencies', () => {
+describe('loadConfig', () => {
   it('maps the backend runtime currency contract', async () => {
     const fetchFn = async () => jsonResponse({
       base_currencies: ['CHF', 'USD', 'EUR'],
+      rebalance_engine: 'frontend',
     }, { status: 200 });
 
-    await expect(loadBaseCurrencies(fetchFn as typeof fetch))
-      .resolves.toEqual(['CHF', 'USD', 'EUR']);
+    await expect(loadConfig(fetchFn as typeof fetch))
+      .resolves.toEqual({ baseCurrencies: ['CHF', 'USD', 'EUR'], rebalanceEngine: 'frontend' });
+  });
+
+  it('computes on the backend unless the browser engine is selected', async () => {
+    for (const engine of [undefined, 'backend', 'something-else']) {
+      const fetchFn = async () => jsonResponse({ base_currencies: ['EUR'], rebalance_engine: engine }, { status: 200 });
+      expect((await loadConfig(fetchFn as typeof fetch)).rebalanceEngine).toBe('backend');
+    }
   });
 
   it('rejects an invalid or unavailable runtime currency contract', async () => {
@@ -36,9 +44,9 @@ describe('loadBaseCurrencies', () => {
     }, { status: 200 });
     const unavailable = async () => jsonResponse({}, { status: 503 });
 
-    await expect(loadBaseCurrencies(invalid as typeof fetch))
+    await expect(loadConfig(invalid as typeof fetch))
       .rejects.toThrow('Invalid supported base currencies');
-    await expect(loadBaseCurrencies(unavailable as typeof fetch))
+    await expect(loadConfig(unavailable as typeof fetch))
       .rejects.toThrow('Configuration request failed with 503');
   });
 });
@@ -170,6 +178,42 @@ describe('runRebalance', () => {
   it('propagates a network failure', async () => {
     const fetchFn = async () => { throw new Error('offline'); };
     await expect(runRebalance(settings, assets, fetchFn as typeof fetch)).rejects.toThrow('offline');
+  });
+});
+
+describe('runRebalanceInBrowser', () => {
+  it('sends only asset identity to /v1/quotes and computes the orders locally', async () => {
+    let sent: { url: string; body: unknown } | null = null;
+    const fetchFn = async (url: string, init?: RequestInit) => {
+      sent = { url, body: JSON.parse(String(init?.body)) };
+      return jsonResponse({ base_currency: 'USD', fx_as_of: null, quotes: [{ ticker: 'VOO', price: 100, quote_as_of: '2026-10-27' }] }, { status: 200 });
+    };
+    const single = [{ ...assets[0], desiredPercentage: 100, fees: 0 }];
+
+    const r = await runRebalanceInBrowser(settings, single, fetchFn as typeof fetch);
+
+    expect(sent).toEqual({ url: '/v1/quotes', body: { base_currency: 'USD', assets: [{ ticker: 'VOO', provider: 'yahoo', currency: 'USD' }] } });
+    expect(r.ok && r.data.results[0]).toMatchObject({ ticker: 'VOO', buy: 10, allocated: 1000, quote_as_of: '2026-10-27' });
+    expect(r.ok && r.data.change).toBe(0);
+  });
+
+  it('rejects negative cash before requesting quotes, as the backend would', async () => {
+    let called = false;
+    const fetchFn = async () => { called = true; return jsonResponse({}, { status: 200 }); };
+    const r = await runRebalanceInBrowser({ ...settings, increment: -50 }, assets, fetchFn as typeof fetch);
+    expect(r).toEqual({ ok: false, error: { kind: 'validation', items: [{ key: 'errors.invalid.incrementNegative' }] } });
+    expect(called).toBe(false);
+  });
+
+  it('maps quote errors like the backend engine', async () => {
+    const fetchFn = async () => jsonResponse({ detail: 'Market data unavailable' }, { status: 502 });
+    const r = await runRebalanceInBrowser(settings, assets, fetchFn as typeof fetch);
+    expect(r).toEqual({ ok: false, error: { kind: 'key', key: 'errors.marketData' } });
+  });
+
+  it('propagates a network failure', async () => {
+    const fetchFn = async () => { throw new Error('offline'); };
+    await expect(runRebalanceInBrowser(settings, assets, fetchFn as typeof fetch)).rejects.toThrow('offline');
   });
 });
 

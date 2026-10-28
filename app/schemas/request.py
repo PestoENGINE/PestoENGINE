@@ -9,14 +9,25 @@ from app.core.config import ProviderId, get_validation_settings
 from app.market_data.quote import normalize_currency
 
 
-class AssetIn(BaseModel):
+def _normalize_base_currency(value: object) -> object:
+    allowed = get_validation_settings().base_currency
+    if not isinstance(value, str):
+        return value
+    try:
+        normalized = normalize_currency(value)
+    except ValueError:
+        normalized = ""
+    if normalized not in allowed:
+        raise ValueError("base_currency must be one of: " + ", ".join(allowed))
+    return normalized
+
+
+class AssetRef(BaseModel):
+    """What identifies a priced asset: ticker, optional provider and quote currency."""
+
     ticker: str = Field(min_length=1, max_length=64)
     provider: ProviderId | None = None
     currency: str | None = None
-    desired_percentage: Decimal = Field(ge=0, le=100, max_digits=9, decimal_places=6)
-    shares: Decimal = Field(ge=0, le=Decimal("1e12"), max_digits=19, decimal_places=6)
-    fees: Decimal = Field(ge=0, le=Decimal("1e12"), max_digits=19, decimal_places=6)
-    percentage_fee: bool = False
 
     @field_validator("ticker", mode="before")
     @classmethod
@@ -41,6 +52,13 @@ class AssetIn(BaseModel):
             raise ValueError("currency must be a string")
         return normalize_currency(value)
 
+
+class AssetIn(AssetRef):
+    desired_percentage: Decimal = Field(ge=0, le=100, max_digits=9, decimal_places=6)
+    shares: Decimal = Field(ge=0, le=Decimal("1e12"), max_digits=19, decimal_places=6)
+    fees: Decimal = Field(ge=0, le=Decimal("1e12"), max_digits=19, decimal_places=6)
+    percentage_fee: bool = False
+
     @model_validator(mode="after")
     def check_percentage_fee_cap(self) -> "AssetIn":
         if self.percentage_fee and self.fees > 100:
@@ -64,16 +82,7 @@ class RebalanceRequest(BaseModel):
     @field_validator("base_currency", mode="before")
     @classmethod
     def normalize_base_currency(cls, value: object) -> object:
-        allowed = get_validation_settings().base_currency
-        if not isinstance(value, str):
-            return value
-        try:
-            normalized = normalize_currency(value)
-        except ValueError:
-            normalized = ""
-        if normalized not in allowed:
-            raise ValueError("base_currency must be one of: " + ", ".join(allowed))
-        return normalized
+        return _normalize_base_currency(value)
 
     @model_validator(mode="after")
     def check_percentages_sum(self) -> "RebalanceRequest":
@@ -86,3 +95,15 @@ class RebalanceRequest(BaseModel):
                 {"total": float(total)},
             )
         return self
+
+
+class QuotesRequest(BaseModel):
+    """Prices for the browser engine: same asset identity and limits as a rebalance."""
+
+    base_currency: str
+    assets: list[AssetRef] = Field(min_length=1, max_length=100)
+
+    @field_validator("base_currency", mode="before")
+    @classmethod
+    def normalize_base_currency(cls, value: object) -> object:
+        return _normalize_base_currency(value)

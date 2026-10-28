@@ -111,6 +111,10 @@ HTTP request
       → RebalanceResponse
 ```
 
+With `REBALANCE_ENGINE=frontend` the UI calls `POST /v1/quotes`, which runs
+only the pricing step (`price_assets()`: quotes and ECB conversion), and computes
+the orders with the light engine in `ui/src/rebalance.ts`.
+
 ## HTTP API
 
 ### `POST /v1/rebalance`
@@ -223,18 +227,44 @@ Errors:
 - `422`: `q` absent, too short/long or containing control characters
 - `503`: all configured search providers failed (including quota errors); genuine empty matches return 200
 
-### `GET /v1/config`
+### `POST /v1/quotes`
 
-Returns the backend-owned currency policy consumed by the frontend at startup:
+Prices for the browser engine (`REBALANCE_ENGINE=frontend`), converted to the
+portfolio currency exactly as `POST /v1/rebalance` does. The request carries only
+asset identity, no holdings or amounts:
 
 ```json
 {
-  "base_currencies": ["EUR", "USD", "GBP", "CHF", "JPY", "CAD", "AUD"]
+  "base_currency": "EUR",
+  "assets": [{ "ticker": "VWCE.DE", "provider": "yahoo", "currency": "EUR" }]
+}
+```
+
+```json
+{
+  "quotes": [{ "ticker": "VWCE.DE", "price": 132.4, "quote_as_of": "2026-10-27" }],
+  "base_currency": "EUR",
+  "fx_as_of": null
+}
+```
+
+Same asset validation, limits (up to 100 assets), rate limit and error codes as
+`POST /v1/rebalance` (`422`, `429`, `502`, `503`). Quotes are returned in request order.
+
+### `GET /v1/config`
+
+Returns the backend-owned runtime policy consumed by the frontend at startup:
+
+```json
+{
+  "base_currencies": ["EUR", "USD", "GBP", "CHF", "JPY", "CAD", "AUD"],
+  "rebalance_engine": "backend"
 }
 ```
 
 `BASE_CURRENCY` is an ordered JSON list; the frontend uses its first item as the
-initial selection and renders the full list.
+initial selection and renders the full list. `rebalance_engine` tells the UI
+where to compute the orders (see `REBALANCE_ENGINE`).
 
 ### `GET /v1/health`, `GET /v1/ready`
 
@@ -263,7 +293,8 @@ Read from `.env` (see [`.env.example`](../.env.example)):
 | `CORS_ORIGINS` | unset | Comma-separated list; only needed when the frontend is on a different origin |
 | `MARKET_DATA_PROVIDERS` | `["yahoo"]` | JSON list of provider IDs, in fallback order |
 | `ALPHA_VANTAGE_API_KEY` | unset | Required when `alphavantage` is configured |
-| `RATE_LIMIT_PROVIDERS_PER_MIN` | unset | Requests per IP per minute on `/v1/rebalance` and `/v1/tickers/search`; unset = disabled. With multiple uvicorn workers (`--workers N`) the limit is per-worker; use `CACHE_BACKEND=redis` for a shared counter |
+| `REBALANCE_ENGINE` | `backend` | Where the UI computes orders. `backend`: `POST /v1/rebalance`. `frontend`: the browser fetches prices from `POST /v1/quotes` and runs a simplified engine (`ui/src/rebalance.ts`: same modes, float arithmetic, DP in cents), so holdings and amounts never reach the server. The JSON API keeps working in both modes |
+| `RATE_LIMIT_PROVIDERS_PER_MIN` | unset | Requests per IP per minute on `/v1/rebalance`, `/v1/quotes` and `/v1/tickers/search` (one shared bucket); unset = disabled. With multiple uvicorn workers (`--workers N`) the limit is per-worker; use `CACHE_BACKEND=redis` for a shared counter |
 | `TRUSTED_PROXIES` | unset | Comma-separated IPs trusted for `X-Forwarded-For`; `*` for Render/any upstream; unset = always use TCP source IP |
 | `FASTAPI_DOCS` | `true` | Set `false` in production to hide `/docs`, `/redoc`, and `/openapi.json` |
 | `OTEL_ENABLED` | `false` | Enables OTLP/HTTP export of metrics + traces + logs |
@@ -286,7 +317,7 @@ When `OTEL_ENABLED=true`, `app.core.telemetry.setup_telemetry` configures OTLP/H
 | `pestoengine_provider_errors_total` | counter | errors | `provider`, `error_type` (`explicit` / `fallback`) |
 | `pestoengine_rebalance_duration_seconds` | histogram | s | `algorithm` (`greedy` / `dp` / `fractional`) |
 | `pestoengine_rebalance_tickers` | histogram | tickers | (none) |
-| `pestoengine_rate_limit_total` | counter | requests | `outcome` (`allowed` / `denied`), `endpoint` (`rebalance` / `search`) |
+| `pestoengine_rate_limit_total` | counter | requests | `outcome` (`allowed` / `denied`), `endpoint` (`rebalance` / `quotes` / `search`) |
 
 `pestoengine_market_fetch_duration_seconds` uses explicit bucket boundaries `[0.025, 0.05, 0.1, 0.25, 0.5, 0.75, 1.0, 2.0, 5.0]` (set via a `View` in `telemetry.py`) for sub-100ms resolution.
 

@@ -1,6 +1,8 @@
 """Orchestration of the DCA rebalancing flow."""
 
 import time
+from collections.abc import Sequence
+from datetime import date
 from decimal import Decimal, localcontext
 from functools import lru_cache
 
@@ -10,10 +12,12 @@ from opentelemetry import trace as _otel_trace
 from app import rebalance
 from app.core.exceptions import MarketDataError
 from app.fx.ecb_provider import EcbFxProvider
+from app.market_data.base import AssetReference
 from app.market_data.provider_registry import ProviderRegistry
+from app.market_data.quote import MarketQuote
 from app.rebalance.orders import plan_orders
-from app.schemas.request import RebalanceRequest
-from app.schemas.result import RebalanceResponse
+from app.schemas.request import QuotesRequest, RebalanceRequest
+from app.schemas.result import QuotesResponse, RebalanceResponse
 
 _ZERO = Decimal(0)
 _HUNDRED = Decimal(100)
@@ -40,6 +44,30 @@ def _rebalance_instruments(
 
 
 _tracer = _otel_trace.get_tracer("pestoengine.rebalance")
+
+
+def price_assets(
+    assets: Sequence[AssetReference],
+    base_currency: str,
+    registry: ProviderRegistry,
+    fx_provider: EcbFxProvider | None,
+) -> tuple[list[MarketQuote], list[Decimal], date | None]:
+    """Fetch one quote per asset and convert its price into the base currency."""
+    quotes = registry.get_quotes_for_assets(assets)
+    currencies_to_convert = {quote.currency for quote in quotes if quote.currency != base_currency}
+    fx_rates: dict[str, Decimal] = {}
+    if currencies_to_convert:
+        if fx_provider is None:
+            raise MarketDataError("ECB FX provider is not configured for this rebalance.")
+        fx_rates = fx_provider.get_rates(
+            currencies_to_convert,
+            base_currency,
+        )
+    ticker_prices = [
+        quote.price if quote.currency == base_currency else quote.price * fx_rates[quote.currency]
+        for quote in quotes
+    ]
+    return quotes, ticker_prices, getattr(fx_rates, "as_of", None)
 
 
 def run_rebalance(
@@ -80,27 +108,9 @@ def run_rebalance(
             desired_pcts = [a.desired_percentage for a in request.assets]
             shares = [a.shares for a in request.assets]
 
-            quotes = registry.get_quotes_for_assets(request.assets)
-
-            base_currency = request.base_currency
-
-            currencies_to_convert = {
-                quote.currency for quote in quotes if quote.currency != base_currency
-            }
-            fx_rates: dict[str, Decimal] = {}
-            if currencies_to_convert:
-                if fx_provider is None:
-                    raise MarketDataError("ECB FX provider is not configured for this rebalance.")
-                fx_rates = fx_provider.get_rates(
-                    currencies_to_convert,
-                    base_currency,
-                )
-            ticker_prices = [
-                quote.price
-                if quote.currency == base_currency
-                else quote.price * fx_rates[quote.currency]
-                for quote in quotes
-            ]
+            quotes, ticker_prices, fx_as_of = price_assets(
+                request.assets, request.base_currency, registry, fx_provider
+            )
 
             values = [s * p for s, p in zip(shares, ticker_prices)]
             total_value = sum(values)
@@ -146,9 +156,30 @@ def run_rebalance(
                 results=results,
                 total_fees=total_fees,
                 change=change,
-                base_currency=base_currency,
-                fx_as_of=getattr(fx_rates, "as_of", None),
+                base_currency=request.base_currency,
+                fx_as_of=fx_as_of,
             )
         finally:
             dur_hist.record(time.perf_counter() - _start, {"algorithm": algorithm})
             ticker_hist.record(len(request.assets))
+
+
+def run_quotes(
+    request: QuotesRequest,
+    registry: ProviderRegistry,
+    fx_provider: EcbFxProvider | None = None,
+) -> QuotesResponse:
+    """Base-currency prices for the browser engine; holdings are never sent."""
+    with localcontext() as context:
+        context.prec = 128
+        quotes, ticker_prices, fx_as_of = price_assets(
+            request.assets, request.base_currency, registry, fx_provider
+        )
+        return QuotesResponse(
+            quotes=[
+                {"ticker": asset.ticker, "price": price, "quote_as_of": quote.as_of}
+                for asset, price, quote in zip(request.assets, ticker_prices, quotes)
+            ],
+            base_currency=request.base_currency,
+            fx_as_of=fx_as_of,
+        )

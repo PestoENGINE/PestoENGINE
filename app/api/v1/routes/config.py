@@ -9,5 +9,8 @@ router = APIRouter(tags=["config"])
 
 
 @router.get("/config")
-def runtime_config(settings: Settings = Depends(get_app_settings)) -> dict[str, list[str]]:
-    return {"base_currencies": settings.base_currency}
+def runtime_config(settings: Settings = Depends(get_app_settings)) -> dict[str, list[str] | str]:
+    return {
+        "base_currencies": settings.base_currency,
+        "rebalance_engine": settings.rebalance_engine,
+    }

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
-  import type { Asset, Settings, RebalanceResponse, UiError } from './types';
+  import type { Asset, Settings, RebalanceEngine, RebalanceResponse, UiError } from './types';
   import {
     loadSettings, loadAssets, loadDarkMode,
     saveSettings, saveAssets, saveDarkMode,
@@ -18,10 +18,11 @@
   import OssSection from './components/OssSection.svelte';
 
   import { uuid } from './util';
-  import { runRebalance as apiRunRebalance } from './api';
+  import { runRebalance as apiRunRebalance, runRebalanceInBrowser } from './api';
   import { parsePortfolio, buildExport } from './portfolio-io';
 
   export let baseCurrencies: string[];
+  export let rebalanceEngine: RebalanceEngine;
 
   const defaultSettings = createDefaultSettings(baseCurrencies[0]);
   let settings: Settings = defaultSettings;
@@ -85,7 +86,8 @@
     // known so a re-click just updates the message in place.
     try {
       const submittedSettings = { ...settings };
-      const r = await apiRunRebalance(submittedSettings, assets);
+      const run = rebalanceEngine === 'frontend' ? runRebalanceInBrowser : apiRunRebalance;
+      const r = await run(submittedSettings, assets);
       if (r.ok) {
         error = null;
         resultSettings = submittedSettings;

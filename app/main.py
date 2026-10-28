@@ -15,7 +15,7 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from app.api.resources import AppResources
-from app.api.v1.routes import config, health, rebalance, tickers
+from app.api.v1.routes import config, health, quotes, rebalance, tickers
 from app.core.config import Settings, get_settings, request_settings
 from app.core.exceptions import (
     CacheUnavailableError,
@@ -160,7 +160,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.add_middleware(_RuntimeContextMiddleware)
     application.add_exception_handler(MarketDataError, market_data_error_handler)
     application.add_exception_handler(CacheUnavailableError, cache_unavailable_handler)
-    for module in (config, health, rebalance, tickers):
+    for module in (config, health, quotes, rebalance, tickers):
         application.include_router(module.router, prefix="/v1")
     _mount_ui(application, Path(__file__).resolve().parent.parent / "ui" / "dist")
     return application

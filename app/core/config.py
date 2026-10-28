@@ -38,6 +38,11 @@ class Settings(BaseSettings):
     rate_limit_providers_per_min: int | None = None
     trusted_proxies: str | None = None
     fastapi_docs: bool = True
+    # Where the UI computes orders: "backend" posts to /v1/rebalance; "frontend"
+    # fetches converted prices from /v1/quotes and runs a light version of the
+    # algorithm in the browser (ui/src/rebalance.ts), so holdings never leave
+    # the device.
+    rebalance_engine: Literal["backend", "frontend"] = "backend"
 
     @field_validator(
         "redis_url",

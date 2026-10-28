@@ -153,7 +153,10 @@ def test_request_validation_uses_each_apps_settings():
         )
         assert eur_client.post("/v1/rebalance", json=PAYLOAD).status_code == 200
         assert usd_client.post("/v1/rebalance", json=PAYLOAD).status_code == 422
-        assert usd_client.get("/v1/config").json() == {"base_currencies": ["USD"]}
+        assert usd_client.get("/v1/config").json() == {
+            "base_currencies": ["USD"],
+            "rebalance_engine": "backend",
+        }
 
 
 def test_rebalance_compute_keeps_http_parent_span_and_restarts_sdk(monkeypatch):

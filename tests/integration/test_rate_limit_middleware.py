@@ -38,6 +38,10 @@ def rate_limited_client(store):
     def fake_search():
         return {"ok": True}
 
+    @test_app.post("/v1/quotes")
+    def fake_quotes():
+        return {"ok": True}
+
     @test_app.get("/v1/health")
     def fake_health():
         return {"ok": True}
@@ -170,3 +174,11 @@ def test_xff_ip_used_when_proxy_trusted(store):
             headers={"X-Forwarded-For": "5.6.7.8"},
         )
         assert r.status_code == 200
+
+
+def test_quotes_endpoint_shares_bucket_with_rebalance(rate_limited_client):
+    """The browser engine's price endpoint counts against the same per-IP quota."""
+    rate_limited_client.post("/v1/rebalance", json=_REBALANCE_PAYLOAD)
+    rate_limited_client.post("/v1/quotes", json={})
+    r = rate_limited_client.post("/v1/quotes", json={})
+    assert r.status_code == 429

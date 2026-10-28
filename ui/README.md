@@ -25,6 +25,7 @@ ui/
 │   ├── main.ts        # Mounts <App />
 │   ├── App.svelte     # Root: state, API call, import/export, dark mode
 │   ├── app.css        # reset, design tokens, shared primitives, sheet tables
+│   ├── rebalance.ts   # Light browser engine (REBALANCE_ENGINE=frontend)
 │   ├── storage.ts     # localStorage I/O (versioned, validated)
 │   ├── types.ts       # Asset, Settings, RebalanceResponse, PortfolioExport, UiError
 │   ├── i18n/          # Hand-rolled i18n: locale store, t/tx, en.json + it.json
@@ -63,9 +64,25 @@ UI strings are translated with a small hand-rolled module in `src/i18n/` (no lib
 
 | Endpoint | Method | Triggered by |
 |----------|--------|--------------|
-| `/v1/config` | `GET` | Before mounting the SPA; supplies the ordered base-currency list |
-| `/v1/rebalance` | `POST` | "Calculate buy order" button in `PortfolioEditor` |
+| `/v1/config` | `GET` | Before mounting the SPA; supplies the ordered base-currency list and the rebalance engine |
+| `/v1/rebalance` | `POST` | "Calculate buy order" button in `PortfolioEditor` (`REBALANCE_ENGINE=backend`, the default) |
+| `/v1/quotes` | `POST` | Same button with `REBALANCE_ENGINE=frontend`: fetches base-currency prices, then `rebalance.ts` computes the orders in the browser |
 | `/v1/tickers/search?q=` | `GET` | Live as the user types in `TickerAutocomplete` |
+
+### Rebalance engine
+
+`REBALANCE_ENGINE` on the backend decides where orders are computed; the UI
+reads it from `/v1/config` (`api.ts:loadConfig`). With `frontend`, only asset
+identity (ticker, provider, quote currency) is sent to `/v1/quotes`; holdings,
+targets, fees and cash stay in the browser. Both paths return the same
+`RebalanceResponse` shape, so `ResultsPanel` does not know which one ran.
+
+`rebalance.ts` is a simplified version of the backend calculation: same target
+gaps, capped sales, fees and proportional split of the cash, then leftover cash
+spent on whole shares, greedily or with the knapsack DP ("Optimal redistribute").
+It uses plain floats and a DP grid in cents, and the DP settles ties with the
+greedy priority (most underweight first) instead of a separate score, so results
+can differ slightly from the backend.
 
 Error mapping in `App.svelte:runRebalance`:
 
@@ -166,8 +183,8 @@ npm run test:watch   # watch mode
 ```
 
 Vitest unit tests cover the framework-agnostic logic extracted from `App.svelte`:
-`api.ts` (request body mapping and HTTP error-message mapping) and `portfolio-io.ts`
-(import validation and the export round-trip). The component keeps only state and
+`api.ts` (request body mapping and HTTP error-message mapping), `portfolio-io.ts`
+(import validation and the export round-trip) and the light engine in `rebalance.ts`. The component keeps only state and
 event wiring, so the testable logic lives in plain `.ts` modules (`*.test.ts`
 alongside them). Run these tests locally before submitting UI changes; CI also
 runs them in `test-frontend`.

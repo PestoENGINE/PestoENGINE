@@ -2,7 +2,7 @@ import { mount } from 'svelte'
 import { get } from 'svelte/store'
 import './app.css'
 import App from './App.svelte'
-import { loadBaseCurrencies } from './api'
+import { loadConfig } from './api'
 import { locale, loadLocale, tx } from './i18n'
 
 // Preload the active locale so a persisted non-default language renders on the
@@ -17,8 +17,8 @@ try {
 
 const target = document.getElementById('app')!
 try {
-  const baseCurrencies = await loadBaseCurrencies()
-  mount(App, { target, props: { baseCurrencies } })
+  const { baseCurrencies, rebalanceEngine } = await loadConfig()
+  mount(App, { target, props: { baseCurrencies, rebalanceEngine } })
 } catch {
   target.setAttribute('role', 'alert')
   target.textContent = tx('errors.requestFailed')

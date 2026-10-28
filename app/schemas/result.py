@@ -50,3 +50,20 @@ class RebalanceResponse(BaseModel):
     @field_serializer("total_fees", "change")
     def _fmt_totals(self, v: Decimal) -> float:
         return float(truncate2(v))
+
+
+class QuoteOut(BaseModel):
+    ticker: str
+    price: Decimal
+    quote_as_of: date | None = None
+
+    @field_serializer("price")
+    def _fmt_price(self, v: Decimal) -> float:
+        # Converted to the base currency; same precision as ticker_price above.
+        return float(v)
+
+
+class QuotesResponse(BaseModel):
+    quotes: list[QuoteOut]
+    base_currency: str
+    fx_as_of: date | None = None

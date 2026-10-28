@@ -13,7 +13,12 @@ from app.rate_limit.base import AbstractRateLimitStore
 
 _logger = logging.getLogger("pestoengine.rate_limit")
 
-_RATE_LIMITED_PATHS = frozenset({"/v1/rebalance", "/v1/tickers/search"})
+# Provider-heavy paths and the endpoint label they report in metrics.
+_RATE_LIMITED_PATHS = {
+    "/v1/rebalance": "rebalance",
+    "/v1/quotes": "quotes",
+    "/v1/tickers/search": "search",
+}
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -38,7 +43,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         )
 
     async def dispatch(self, request: Request, call_next) -> Response:
-        if request.url.path not in _RATE_LIMITED_PATHS or request.method == "OPTIONS":
+        endpoint = _RATE_LIMITED_PATHS.get(request.url.path)
+        if endpoint is None or request.method == "OPTIONS":
             return await call_next(request)
 
         resources = getattr(request.app.state, "resources", None)
@@ -55,7 +61,6 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         now = int(time.time())
         epoch_minute = now // 60
         key = f"rl:providers:{ip}:{epoch_minute}"
-        endpoint = "rebalance" if "/rebalance" in request.url.path else "search"
 
         try:
             count = await asyncio.to_thread(store.increment, key, window_seconds=60)
