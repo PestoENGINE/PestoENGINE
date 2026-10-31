@@ -14,8 +14,13 @@ const MAX_DP_WORK = 1_000_000;
 
 const sum = (values: number[]): number => values.reduce((s, v) => s + v, 0);
 const round2 = (x: number): number => Math.round(x * 100) / 100;
-// Round a quantity down; the epsilon keeps 0.29 * 100 at 29 shares, not 28.
-const floorTo = (x: number, places: number): number => Math.floor(x * 10 ** places + 1e-9) / 10 ** places;
+// Correct only float-sized noise: a fixed epsilon can buy unaffordable shares
+// when a high share price amplifies that seemingly small quantity difference.
+const floorTo = (x: number, places: number): number => {
+  const scale = 10 ** places;
+  const scaled = x * scale;
+  return (Number.isInteger(scaled) ? scaled : Math.floor(scaled + Math.abs(scaled) * Number.EPSILON)) / scale;
+};
 
 /** An underweight asset that can receive extra whole shares from leftover cash. */
 interface Extra {

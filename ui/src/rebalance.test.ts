@@ -66,4 +66,23 @@ describe('light rebalance engine', () => {
     expect(r.results.map(x => x.buy)).toEqual([-5, 5]);
     expect(r.change).toBe(0);
   });
+
+  it.each([
+    [false, 999999999500],
+    [true, 999999999999.9995],
+  ])('keeps quantity rounding within available cash (fractional: %s)', (fractionalShares, increment) => {
+    const r = computeRebalance(
+      settings({ increment, fractionalShares }),
+      [asset('A', 100, 0, 0)],
+      quotes(1e12),
+    );
+    expect(r.results[0].buy * r.results[0].ticker_price + r.total_fees).toBeLessThanOrEqual(increment);
+    expect(r.change).toBeGreaterThanOrEqual(0);
+  });
+
+  it('retains affordable shares at a floating-point division boundary', () => {
+    const r = computeRebalance(settings({ increment: 0.3 }), [asset('A', 100, 0, 0)], quotes(0.1));
+    expect(r.results[0].buy).toBe(3);
+    expect(r.change).toBeCloseTo(0);
+  });
 });
