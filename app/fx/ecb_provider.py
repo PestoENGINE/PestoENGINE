@@ -152,26 +152,17 @@ class EcbFxProvider:
         if not currencies:
             return {}
 
+        if references := self._cached_reference_rates(currencies):
+            return references
+
         # A batch must use one reference date. A partial hit or mixed dates
         # refreshes the whole required set, not only the missing currencies.
         remaining = remaining_budget()
         if not self._fetch_lock.acquire(timeout=remaining if remaining is not None else -1):
             raise ProviderDeadlineError("ECB request deadline exceeded waiting for refresh")
         try:
-            references = {}
-            for currency in currencies:
-                remaining_budget()
-                cached = self._cache.get(f"{_CACHE_PREFIX}:{currency}")
-                if (
-                    cached is not None
-                    and cached.currency == currency
-                    and 0 <= (self._today() - cached.as_of).days <= self._max_age_days
-                ):
-                    references[currency] = cached
-            if (
-                len(references) == len(currencies)
-                and len({r.as_of for r in references.values()}) == 1
-            ):
+            # Another worker may have populated the cache while we waited.
+            if references := self._cached_reference_rates(currencies):
                 return references
             fetched = self._fetch_reference_rates(currencies)
             for reference in fetched.values():
@@ -185,6 +176,21 @@ class EcbFxProvider:
             return fetched
         finally:
             self._fetch_lock.release()
+
+    def _cached_reference_rates(self, currencies: set[str]) -> dict[str, EcbReferenceRate]:
+        references = {}
+        today = self._today()
+        for currency in currencies:
+            remaining_budget()
+            cached = self._cache.get(f"{_CACHE_PREFIX}:{currency}")
+            if (
+                cached is None
+                or cached.currency != currency
+                or not 0 <= (today - cached.as_of).days <= self._max_age_days
+            ):
+                return {}
+            references[currency] = cached
+        return references if len({r.as_of for r in references.values()}) == 1 else {}
 
     def _assert_fresh(self, reference: EcbReferenceRate) -> None:
         age_days = (self._today() - reference.as_of).days

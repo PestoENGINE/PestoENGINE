@@ -1,13 +1,16 @@
 """ECB Data Portal parsing, triangulation, cache and staleness tests."""
 
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from decimal import Decimal
+from threading import Event
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from app.core.exceptions import MarketDataError
-from app.fx.ecb_provider import EcbFxProvider
+from app.core.http import provider_budget
+from app.fx.ecb_provider import EcbFxProvider, EcbReferenceRate
 from app.market_data.cache import LocalCache
 
 _HEADER = (
@@ -97,6 +100,32 @@ def test_fresh_cache_hit_avoids_second_network_call(mock_get):
 
     assert first == second == Decimal("1") / Decimal("1.142600")
     assert mock_get.call_count == 1
+
+
+def test_cached_currency_does_not_wait_for_an_unrelated_refresh():
+    today = date(2026, 7, 20)
+    cache = LocalCache(ttl_seconds=3600)
+    cache.set("fx:ecb:reference:v1:USD", EcbReferenceRate("USD", Decimal("1.25"), today))
+    provider = EcbFxProvider(cache, today=lambda: today)
+    started, release = Event(), Event()
+
+    def fetch(currencies):
+        started.set()
+        assert release.wait(5)
+        return {c: EcbReferenceRate(c, Decimal(160), today) for c in currencies}
+
+    provider._fetch_reference_rates = fetch
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        refresh = executor.submit(provider.get_rates, {"JPY"}, "EUR")
+        try:
+            assert started.wait(2)
+            with provider_budget(0.2):
+                rates = provider.get_rates({"USD"}, "EUR")
+            assert rates["USD"] == Decimal("0.8")
+            assert rates.as_of == today
+        finally:
+            release.set()
+        refresh.result(timeout=2)
 
 
 @patch("app.fx.ecb_provider.httpx.get")
