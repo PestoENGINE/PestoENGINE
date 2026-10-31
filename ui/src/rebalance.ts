@@ -146,10 +146,10 @@ export function computeRebalance(settings: Settings, assets: Asset[], quotes: Qu
     const ratio = (i: number) => current[i] / (assets[i].desiredPercentage + 0.01);
     const extras: Extra[] = assets
       .map((a, i) => ({ i, unit: unitCost(i), opening: quantities[i] === 0 && !a.percentageFee ? a.fees : 0 }))
-      .filter(e => gaps[e.i] > 0)
+      .filter(e => gaps[e.i] > 0 && e.unit + e.opening <= cash)
       .sort((x, y) => ratio(x.i) - ratio(y.i));
     let picked = greedyExtras(extras, cash);
-    if (settings.optimalRedistribute) {
+    if (settings.optimalRedistribute && extras.length > 1) {
       // Like the backend: keep the DP only if it leaves no more cash than greedy.
       const dp = knapsackExtras(extras, cash);
       if (dp && dp.cash <= picked.cash + 1e-9) picked = dp;

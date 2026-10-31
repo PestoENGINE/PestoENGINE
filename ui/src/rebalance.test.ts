@@ -85,4 +85,27 @@ describe('light rebalance engine', () => {
     expect(r.results[0].buy).toBe(3);
     expect(r.change).toBeCloseTo(0);
   });
+
+  it('optimizes affordable shares without counting unaffordable assets toward DP work', () => {
+    const portfolio = Array.from({ length: 100 }, (_, i) => asset(`A${i}`, 1, 0, i < 2 ? 5 : 0));
+    const r = computeRebalance(
+      settings({ increment: 100, optimalRedistribute: true }),
+      portfolio,
+      quotes(60, 45, ...Array(98).fill(200)),
+    );
+    expect(r.results.map(x => x.buy)).toEqual([0, 2, ...Array(98).fill(0)]);
+    expect(r.total_fees).toBe(5);
+    expect(r.change).toBe(5);
+  });
+
+  it('skips redistribution when no target has a positive gap', () => {
+    const portfolio = Array.from({ length: 100 }, (_, i) => asset(`A${i}`, 1, 1e12, 0));
+    const r = computeRebalance(
+      settings({ increment: 1e9, optimalRedistribute: true }),
+      portfolio,
+      quotes(...Array(100).fill(1e12)),
+    );
+    expect(r.results.every(x => x.buy === 0)).toBe(true);
+    expect(r.change).toBe(1e9);
+  });
 });
