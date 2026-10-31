@@ -2,6 +2,7 @@
 
 import asyncio
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from contextvars import ContextVar
 from unittest.mock import MagicMock
 
@@ -47,6 +48,8 @@ def test_lifespan_owns_reuses_and_closes_clients():
         assert first.search_providers[0]._client is first.client
         assert client.get("/v1/ready").status_code == 200
     assert first.client.is_closed
+    with pytest.raises(RuntimeError, match="shutdown"):
+        first.provider_executor.submit(lambda: None)
     assert app.state.resources is None
     with TestClient(app):
         assert app.state.resources is not first
@@ -222,6 +225,33 @@ def test_worker_timeout_and_cancellation_keep_slot_until_thread_finishes(cancel)
             await asyncio.gather(*resources.pending_work, return_exceptions=True)
             resources.close()
         assert not resources.semaphore.locked()
+
+    asyncio.run(scenario())
+
+
+def test_provider_work_does_not_exhaust_the_default_executor():
+    started, release = threading.Event(), threading.Event()
+
+    def blocking():
+        started.set()
+        assert release.wait(2)
+        return 42
+
+    async def scenario():
+        loop = asyncio.get_running_loop()
+        loop.set_default_executor(ThreadPoolExecutor(max_workers=1))
+        resources = AppResources(settings(provider_concurrency=1))
+        task = asyncio.create_task(run_provider_work(resources, blocking))
+        try:
+            # Poll the thread-safe event without borrowing the saturated pool.
+            async with asyncio.timeout(1):
+                while not started.is_set():
+                    await asyncio.sleep(0.001)
+            assert await asyncio.wait_for(asyncio.to_thread(lambda: "available"), 0.2) == "available"
+        finally:
+            release.set()
+            await task
+            resources.close()
 
     asyncio.run(scenario())
 

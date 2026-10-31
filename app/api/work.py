@@ -38,7 +38,7 @@ async def run_provider_work(
 
     loop = asyncio.get_running_loop()
     try:
-        future = loop.run_in_executor(None, partial(context.run, execute))
+        future = loop.run_in_executor(resources.provider_executor, partial(context.run, execute))
     except BaseException:
         resources.semaphore.release()
         raise

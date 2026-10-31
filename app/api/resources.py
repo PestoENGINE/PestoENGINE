@@ -1,6 +1,7 @@
 """Resources owned and closed by one application lifespan."""
 
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack
 
 import httpx
@@ -103,6 +104,13 @@ class AppResources:
                     if self.redis_client is not None
                     else LocalRateLimitStore(max_entries=settings.local_cache_max_entries)
                 )
+            # Register last so workers stop before their clients and telemetry.
+            self.provider_executor = self._stack.enter_context(
+                ThreadPoolExecutor(
+                    max_workers=settings.provider_concurrency,
+                    thread_name_prefix="pesto-provider",
+                )
+            )
         except BaseException:
             self._stack.close()
             raise
