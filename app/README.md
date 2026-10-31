@@ -41,7 +41,11 @@ ProviderRegistry
               └── YahooFinanceProvider | AlphaVantageProvider   # raw HTTP via httpx
 ```
 
-Only cache misses reach the instrumented layer. Cache entries contain a decimal
+Only cache misses reach the instrumented layer, one ticker at a time, so fetch
+durations and spans describe individual quote requests. Successful quotes are
+cached immediately even if a later ticker fails; the batch still fails as a
+whole, but retries reuse that progress instead of refetching every price.
+Cache entries contain a decimal
 price, currency and observation date. Versioned cache keys include provider, ticker and currency hint. Registry results follow input row order, so identical tickers cannot overwrite each other.
 
 `ProviderRegistry` routes assets in two modes:

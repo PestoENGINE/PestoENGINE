@@ -18,6 +18,8 @@ class CachedMarketDataProvider(AbstractMarketDataProvider):
     Semantica fail-fast: if one or more tickers are not in cache and the
     underlying provider raises, the exception propagates in full. A rebalance
     calculation requires all prices - a partial result would be silently wrong.
+    Successfully fetched quotes remain cached if a later ticker fails, so a
+    retry can make progress through a cold portfolio within the request budget.
 
     Stale data is never returned. If resilience is needed in the future, add
     an explicit ``stale_on_error`` flag rather than changing the default.
@@ -69,7 +71,7 @@ class CachedMarketDataProvider(AbstractMarketDataProvider):
         ) as span:
             quotes: dict[str, MarketQuote] = {}
             misses: list[str] = []
-            for ticker in dict.fromkeys(tickers):
+            for ticker in tickers:
                 remaining_budget()
                 hint = hints.get(ticker)
                 cache_key = self._key_prefix + ticker + ":" + (hint or "_")
@@ -87,19 +89,19 @@ class CachedMarketDataProvider(AbstractMarketDataProvider):
                     self._cache_ops.add(1, {"backend": self._backend, "result": "miss"})
             span.set_attribute("cache.hits", len(tickers) - len(misses))
             span.set_attribute("cache.misses", len(misses))
-            if misses:
+            for ticker in misses:
+                remaining_budget()
                 fresh = self._provider.get_quotes(
-                    misses,
-                    currency_hints={ticker: hints[ticker] for ticker in misses if ticker in hints},
+                    [ticker],
+                    currency_hints={ticker: hints[ticker]} if ticker in hints else {},
                 )
-                if any(ticker not in fresh for ticker in misses):
+                if ticker not in fresh:
                     raise MarketDataError("Provider returned incomplete quotes")
-                for ticker in misses:
-                    quote = fresh[ticker]
-                    quote.assert_fresh(self._max_age_days)
-                    remaining_budget()
-                    hint = hints.get(ticker)
-                    cache_key = self._key_prefix + ticker + ":" + (hint or "_")
-                    self._cache.set(cache_key, quote)
-                    quotes[ticker] = quote
+                quote = fresh[ticker]
+                quote.assert_fresh(self._max_age_days)
+                remaining_budget()
+                hint = hints.get(ticker)
+                cache_key = self._key_prefix + ticker + ":" + (hint or "_")
+                self._cache.set(cache_key, quote)
+                quotes[ticker] = quote
             return quotes

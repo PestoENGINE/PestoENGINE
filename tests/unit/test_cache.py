@@ -3,11 +3,13 @@
 import json
 from datetime import date
 from decimal import Decimal
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import pytest
 from opentelemetry.sdk.metrics import MeterProvider
 
+from app.core.exceptions import MarketDataError, ProviderDeadlineError
+from app.core.http import provider_budget
 from app.fx.ecb_provider import EcbReferenceRate
 from app.market_data.base import AbstractMarketDataProvider
 from app.market_data.cache import LocalCache
@@ -88,7 +90,9 @@ def test_overwrite_resets_ttl():
 def test_all_miss_calls_underlying_provider():
     provider, mock, _ = _make_provider({"A": 10, "B": 20})
     assert provider.get_quotes(["A", "B"]) == make_quotes({"A": 10, "B": 20})
-    mock.get_quotes.assert_called_once_with(["A", "B"], currency_hints={})
+    assert mock.get_quotes.call_args_list == [
+        call(["A"], currency_hints={}), call(["B"], currency_hints={}),
+    ]
 
 
 def test_all_hit_does_not_call_underlying_provider():
@@ -128,6 +132,51 @@ def test_provider_error_propagates():
     provider = CachedMarketDataProvider(mock, LocalCache(300), provider_id="test")
     with pytest.raises(RuntimeError, match="feed down"):
         provider.get_quotes(["A"])
+
+
+@pytest.mark.parametrize("error_type", [MarketDataError, ProviderDeadlineError])
+def test_successful_quotes_survive_a_later_batch_failure(error_type):
+    calls = []
+
+    def fetch(tickers, *, currency_hints):
+        result = {}
+        for ticker in tickers:
+            calls.append(ticker)
+            if ticker == "BAD":
+                raise error_type("failed")
+            result[ticker] = make_quote(10)
+        return result
+
+    underlying = MagicMock(spec=AbstractMarketDataProvider)
+    underlying.get_quotes.side_effect = fetch
+    provider = CachedMarketDataProvider(underlying, LocalCache(300), provider_id="test")
+    for _ in range(3):
+        with pytest.raises(error_type):
+            provider.get_quotes(["A", "B", "BAD"])
+    assert calls == ["A", "B", "BAD", "BAD", "BAD"]
+
+
+def test_retry_finishes_a_cold_batch_that_exceeds_one_request_budget(monkeypatch):
+    clock = [0.0]
+    calls = []
+    monkeypatch.setattr("app.core.http.time.monotonic", lambda: clock[0])
+
+    def fetch(tickers, *, currency_hints):
+        result = {}
+        for ticker in tickers:
+            calls.append(ticker)
+            clock[0] += 0.25
+            result[ticker] = make_quote(10)
+        return result
+
+    underlying = MagicMock(spec=AbstractMarketDataProvider)
+    underlying.get_quotes.side_effect = fetch
+    provider = CachedMarketDataProvider(underlying, LocalCache(300), provider_id="test")
+    with provider_budget(1), pytest.raises(ProviderDeadlineError):
+        provider.get_quotes(["A", "B", "C", "D", "E"])
+    with provider_budget(1):
+        assert len(provider.get_quotes(["A", "B", "C", "D", "E"])) == 5
+    assert calls == ["A", "B", "C", "D", "D", "E"]
 
 
 def test_providers_use_separate_cache_namespaces():
