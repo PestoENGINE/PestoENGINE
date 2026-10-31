@@ -22,6 +22,11 @@ const floorTo = (x: number, places: number): number => {
   return (Number.isInteger(scaled) ? scaled : Math.floor(scaled + Math.abs(scaled) * Number.EPSILON)) / scale;
 };
 
+// The tolerance is in currency, derived from cash flows, rather than shares or
+// unsold holdings. Clamp after adding it so repeated orders share one budget.
+const affordable = (cash: number, unit: number, places: number, slack: number): number =>
+  Math.floor((Math.max(0, cash + slack) / unit) * 10 ** places) / 10 ** places;
+
 /** An underweight asset that can receive extra whole shares from leftover cash. */
 interface Extra {
   i: number; // index in the portfolio
@@ -35,9 +40,9 @@ interface Picked {
 }
 
 /** In priority order, as many shares as the cash allows. */
-function greedyExtras(extras: Extra[], cash: number): Picked {
+function greedyExtras(extras: Extra[], cash: number, slack: number): Picked {
   const counts = extras.map(({ unit, opening }) => {
-    const count = floorTo(Math.max(0, cash - opening) / unit, 0);
+    const count = affordable(cash - opening, unit, 0, slack);
     if (count > 0) cash -= count * unit + opening;
     return count;
   });
@@ -50,8 +55,8 @@ function greedyExtras(extras: Extra[], cash: number): Picked {
  * priority order keeps the cash. Null when the grid is too large; the caller
  * then keeps the greedy result.
  */
-function knapsackExtras(extras: Extra[], cash: number): Picked | null {
-  const size = Math.floor(cash * 100 + 1e-9) + 1;
+function knapsackExtras(extras: Extra[], cash: number, slack: number): Picked | null {
+  const size = Math.floor((cash + slack) * 100) + 1;
   if (extras.length * size > MAX_DP_WORK) return null;
   // Round costs up, to at least a cent, so every pick is affordable in full precision.
   const cents = (x: number) => Math.max(1, Math.ceil(x * 100 - 1e-9));
@@ -112,6 +117,8 @@ export function computeRebalance(settings: Settings, assets: Asset[], quotes: Qu
   const gaps = assets.map((a, i) => (targetTotal * a.desiredPercentage) / 100 - values[i]);
   const quantities = assets.map(() => 0);
   let cash = settings.increment;
+  let moved = cash;
+  const slack = () => moved * Number.EPSILON;
 
   if (!settings.onlyBuy) {
     // Sell overweight positions, never more than is held, to fund the buys.
@@ -122,6 +129,7 @@ export function computeRebalance(settings: Settings, assets: Asset[], quotes: Qu
       if (sold > 0 && proceeds > 0) {
         quantities[i] = -sold;
         cash += proceeds;
+        moved += sold * prices[i] + fee(i, sold);
       }
     });
   }
@@ -133,10 +141,12 @@ export function computeRebalance(settings: Settings, assets: Asset[], quotes: Qu
     if (gap <= 0) return;
     const opening = assets[i].percentageFee ? 0 : assets[i].fees;
     const allowance = Math.min(cash, (budget * gap) / positive);
-    const bought = floorTo(Math.max(0, allowance - opening) / unitCost(i), places);
+    const bought = affordable(allowance - opening, unitCost(i), places, slack());
     if (bought > 0) {
       quantities[i] = bought;
-      cash -= bought * prices[i] + fee(i, bought);
+      const cost = bought * prices[i] + fee(i, bought);
+      cash -= cost;
+      moved += cost;
     }
   });
 
@@ -144,14 +154,15 @@ export function computeRebalance(settings: Settings, assets: Asset[], quotes: Qu
     // Spend the leftover on extra whole shares of the underweight assets, the
     // lowest current / target weight first (the backend's greedy priority).
     const ratio = (i: number) => current[i] / (assets[i].desiredPercentage + 0.01);
+    const tolerance = slack();
     const extras: Extra[] = assets
       .map((a, i) => ({ i, unit: unitCost(i), opening: quantities[i] === 0 && !a.percentageFee ? a.fees : 0 }))
-      .filter(e => gaps[e.i] > 0 && e.unit + e.opening <= cash)
+      .filter(e => gaps[e.i] > 0 && affordable(cash - e.opening, e.unit, 0, tolerance) >= 1)
       .sort((x, y) => ratio(x.i) - ratio(y.i));
-    let picked = greedyExtras(extras, cash);
+    let picked = greedyExtras(extras, cash, tolerance);
     if (settings.optimalRedistribute && extras.length > 1) {
       // Like the backend: keep the DP only if it leaves no more cash than greedy.
-      const dp = knapsackExtras(extras, cash);
+      const dp = knapsackExtras(extras, cash, tolerance);
       if (dp && dp.cash <= picked.cash + 1e-9) picked = dp;
     }
     picked.counts.forEach((count, m) => { quantities[extras[m].i] += count; });
@@ -175,7 +186,7 @@ export function computeRebalance(settings: Settings, assets: Asset[], quotes: Qu
   return {
     results,
     total_fees: round2(sum(fees)),
-    change: round2(cash),
+    change: round2(cash) + 0,
     base_currency: quotes.base_currency,
     fx_as_of: quotes.fx_as_of ?? null,
   };

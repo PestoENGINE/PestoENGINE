@@ -86,6 +86,26 @@ describe('light rebalance engine', () => {
     expect(r.change).toBeCloseTo(0);
   });
 
+  it('spends sale proceeds at an accumulated floating-point boundary', () => {
+    const r = computeRebalance(
+      settings({ increment: 333.33, onlyBuy: false }),
+      [asset('A', 49, 0, 1), asset('B', 34, 2, 2.5), asset('C', 10, 30, 1), asset('D', 7, 10, 1)],
+      quotes(148.35, 62.88, 13.7, 43.71),
+    );
+    expect(r.results.map(x => x.buy)).toEqual([4, 5, -20, -7]);
+    expect(r.change).toBe(0);
+  });
+
+  it('does not let unsold holdings inflate the cash rounding tolerance', () => {
+    const r = computeRebalance(
+      settings({ increment: 999999999500 }),
+      [asset('A', 0, 1e12, 0), asset('B', 100, 0, 0)],
+      quotes(1e12, 1e12),
+    );
+    expect(r.results.map(x => x.buy)).toEqual([0, 0]);
+    expect(r.change).toBe(999999999500);
+  });
+
   it('optimizes affordable shares without counting unaffordable assets toward DP work', () => {
     const portfolio = Array.from({ length: 100 }, (_, i) => asset(`A${i}`, 1, 0, i < 2 ? 5 : 0));
     const r = computeRebalance(
