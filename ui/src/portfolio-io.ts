@@ -34,7 +34,7 @@ export function parsePortfolio(
   if (!Array.isArray(d.assets) || d.assets.length === 0) return { ok: false, error: { kind: 'key', key: 'errors.io.assetsNotArray' } };
 
   const s = d.settings as Record<string, unknown>;
-  if (typeof s.increment !== 'number' || s.increment < 0) return { ok: false, error: { kind: 'key', key: 'errors.io.invalidIncrement' } };
+  if (typeof s.increment !== 'number' || !Number.isFinite(s.increment) || s.increment < 0) return { ok: false, error: { kind: 'key', key: 'errors.io.invalidIncrement' } };
   const baseCurrency = normalizeBaseCurrency(
     s.baseCurrency,
     supportedBaseCurrencies,
@@ -51,12 +51,12 @@ export function parsePortfolio(
   }
 
   for (let i = 0; i < d.assets.length; i++) {
-    const a = d.assets[i] as Record<string, unknown>;
+    const a = d.assets[i] as Record<string, unknown> | null;
     const n = i + 1;
-    if (typeof a.ticker !== 'string' || !a.ticker) return { ok: false, error: { kind: 'key', key: 'errors.io.assetMissingTicker', params: { n } } };
-    if (typeof a.desiredPercentage !== 'number' || a.desiredPercentage < 0) return { ok: false, error: { kind: 'key', key: 'errors.io.assetInvalidPercentage', params: { n } } };
-    if (typeof a.shares !== 'number' || a.shares < 0) return { ok: false, error: { kind: 'key', key: 'errors.io.assetInvalidShares', params: { n } } };
-    if (typeof a.fees !== 'number' || a.fees < 0) return { ok: false, error: { kind: 'key', key: 'errors.io.assetInvalidFees', params: { n } } };
+    if (a === null || typeof a.ticker !== 'string' || !a.ticker) return { ok: false, error: { kind: 'key', key: 'errors.io.assetMissingTicker', params: { n } } };
+    if (typeof a.desiredPercentage !== 'number' || !Number.isFinite(a.desiredPercentage) || a.desiredPercentage < 0) return { ok: false, error: { kind: 'key', key: 'errors.io.assetInvalidPercentage', params: { n } } };
+    if (typeof a.shares !== 'number' || !Number.isFinite(a.shares) || a.shares < 0) return { ok: false, error: { kind: 'key', key: 'errors.io.assetInvalidShares', params: { n } } };
+    if (typeof a.fees !== 'number' || !Number.isFinite(a.fees) || a.fees < 0) return { ok: false, error: { kind: 'key', key: 'errors.io.assetInvalidFees', params: { n } } };
     if (typeof a.percentageFee !== 'boolean') return { ok: false, error: { kind: 'key', key: 'errors.io.assetInvalidPercentageFee', params: { n } } };
   }
 

@@ -141,6 +141,25 @@ describe('parsePortfolio', () => {
     expect(r).toEqual({ ok: false, error: { kind: 'key', key: 'errors.io.assetMissingTicker', params: { n: 2 } } });
   });
 
+  it('reports a null asset without throwing during import', () => {
+    expect(parsePortfolio(fileWith({ assets: [null] }))).toEqual({
+      ok: false, error: { kind: 'key', key: 'errors.io.assetMissingTicker', params: { n: 1 } },
+    });
+  });
+
+  it.each([
+    ['increment', 'errors.io.invalidIncrement'],
+    ['desiredPercentage', 'errors.io.assetInvalidPercentage'],
+    ['shares', 'errors.io.assetInvalidShares'],
+    ['fees', 'errors.io.assetInvalidFees'],
+  ])('rejects a JSON number overflowing to infinity in %s', (field, key) => {
+    const text = fileWith().replace(new RegExp(`"${field}":[0-9.]+`), `"${field}":1e400`);
+    expect(parsePortfolio(text)).toEqual({
+      ok: false,
+      error: { kind: 'key', key, ...(field === 'increment' ? {} : { params: { n: 1 } }) },
+    });
+  });
+
   it('rejects negative shares', () => {
     const r = parsePortfolio(fileWith({
       assets: [{ ticker: 'VOO', provider: null, currency: null, desiredPercentage: 100, shares: -3, fees: 0, percentageFee: false }],
