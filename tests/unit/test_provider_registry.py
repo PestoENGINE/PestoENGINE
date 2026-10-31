@@ -122,6 +122,36 @@ def test_fallback_is_resolved_per_ticker():
     alpha.get_quotes.assert_called_once_with(["B"], currency_hints={})
 
 
+def test_duplicate_fallback_rows_share_one_provider_resolution():
+    yahoo = MagicMock(spec=AbstractMarketDataProvider)
+    yahoo.get_quotes.side_effect = MarketDataError("yahoo down")
+    alpha = _mock_provider({"AAPL": 150}, currency="USD")
+    registry = ProviderRegistry(
+        {"yahoo": yahoo, "alphavantage": alpha}, ["yahoo", "alphavantage"],
+    )
+    result = registry.get_quotes_for_assets([_asset("AAPL", currency="USD")] * 3)
+    assert [q.price for q in result] == [150, 150, 150]
+    for provider in (yahoo, alpha):
+        provider.get_quotes.assert_called_once_with(
+            ["AAPL"], currency_hints={"AAPL": "USD"},
+        )
+
+
+def test_duplicate_fallback_resolution_keeps_currency_hints_separate():
+    provider = MagicMock(spec=AbstractMarketDataProvider)
+    provider.get_quotes.side_effect = lambda tickers, currency_hints: make_quotes(
+        {"SAME": 10}, currency=currency_hints["SAME"],
+    )
+    registry = ProviderRegistry({"alphavantage": provider}, ["alphavantage"])
+    result = registry.get_quotes_for_assets([
+        _asset("SAME", currency="EUR"),
+        _asset("SAME", currency="USD"),
+        _asset("SAME", currency="EUR"),
+    ])
+    assert [q.currency for q in result] == ["EUR", "USD", "EUR"]
+    assert provider.get_quotes.call_count == 2
+
+
 def test_fallback_all_providers_fail_raises_with_ticker_name():
     yahoo = MagicMock(spec=AbstractMarketDataProvider)
     yahoo.get_quotes.side_effect = MarketDataError("down")

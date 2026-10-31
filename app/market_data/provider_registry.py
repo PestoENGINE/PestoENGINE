@@ -58,8 +58,13 @@ class ProviderRegistry:
             except MarketDataError as exc:
                 self._errors.add(1, {"provider": pid, "error_type": "explicit"})
                 raise MarketDataError(f"[{pid}] {exc}") from exc
+        fallback_quotes: dict[tuple[str, str | None], MarketQuote] = {}
         for i, asset in enumerate(assets):
             if asset.provider:
+                continue
+            key = (asset.ticker, asset.currency)
+            if key in fallback_quotes:
+                quotes[i] = fallback_quotes[key]
                 continue
             for pid in self._fallback_order:
                 try:
@@ -70,6 +75,7 @@ class ProviderRegistry:
                     if asset.ticker not in batch:
                         raise MarketDataError("Provider returned incomplete quotes")
                     quotes[i] = batch[asset.ticker]
+                    fallback_quotes[key] = quotes[i]
                     break
                 except ProviderDeadlineError:
                     raise
