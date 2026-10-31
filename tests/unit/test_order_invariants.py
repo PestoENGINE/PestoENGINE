@@ -168,6 +168,23 @@ def test_dp_fallback_preserves_mask_and_opening_fees():
     assert remaining == 0
 
 
+def test_dp_preserves_tie_scores_and_exact_unspendable_cash():
+    updated, remaining = redistribute_change_optimal(
+        True,
+        [0, 0],
+        [D(60), D(45)],
+        [0, 0],
+        [50, 50],
+        D("999.99"),
+        eligible=[True, True],
+        opening_fees=[D("1.5"), D("1.5")],
+    )
+    # Both positions pay one fee. Equal spend prefers more underweight shares;
+    # the leftover need not be a multiple of either share price or fee.
+    assert updated == [3, 18]
+    assert remaining == D("6.99")
+
+
 @pytest.mark.parametrize("fractional", [False, True])
 def test_large_valid_orders_serialize_without_decimal_overflow(fractional):
     result = calculate(

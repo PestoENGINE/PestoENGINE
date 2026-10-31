@@ -15,6 +15,7 @@ to the API boundary; the order planner supplies financially feasible inputs.
 
 from array import array
 from decimal import ROUND_CEILING, Decimal
+from math import gcd
 
 from app.core.formatting import as_decimal
 
@@ -352,6 +353,10 @@ def redistribute_change_optimal(
         spends more. The returned result therefore leaves no more cash than
         that baseline, but is not necessarily an exact full-precision optimum.
 
+        After applying those limits, divide integer costs and capacity by the
+        costs' greatest common divisor. Unreachable intermediate currency units
+        need no DP cells; spending, tie scores and exact remainders are unchanged.
+
     Complexity:
         Time O(n log n + m * W), including the greedy baseline.
         Space O(n + m * W): working score arrays need O(W), while saved counts
@@ -429,19 +434,23 @@ def redistribute_change_optimal(
     capacity = int(cash * scale)
     if capacity > cap:
         return greedy
+    costs = []
+    for i in candidates:
+        # Round both components upward; opening fees apply only to new orders.
+        price = int((prices[i] * scale).to_integral_value(rounding=ROUND_CEILING))
+        opening = fees[i] if buy_quantities[i] == 0 else _ZERO
+        first = price + int((opening * scale).to_integral_value(rounding=ROUND_CEILING))
+        costs.append((first, price))
+    divisor = gcd(*(cost for pair in costs for cost in pair))
+    capacity //= divisor
+    costs = [(first // divisor, price // divisor) for first, price in costs]
     # Previous-layer solutions initially spend zero at every capacity. Each
     # layer saves only counts for backtracking; score arrays can be replaced.
     size = capacity + 1
     spent = [0] * size
     tie = [_ZERO] * size
     layers = []
-    costs = []
-    for i in candidates:
-        # Round both cost components upward. Reserving the flat fee separately
-        # ensures it is charged once even when several extra shares are chosen.
-        price = int((prices[i] * scale).to_integral_value(rounding=ROUND_CEILING))
-        opening = fees[i] if buy_quantities[i] == 0 else _ZERO
-        first = price + int((opening * scale).to_integral_value(rounding=ROUND_CEILING))
+    for i, (first, price) in zip(candidates, costs):
         weight = desired[i] - current[i]
         # Active states must contain this asset. -1 distinguishes unreachable
         # states from a valid previous-layer solution that spends zero.
@@ -469,7 +478,6 @@ def redistribute_change_optimal(
                 next_spent[k], next_tie[k], selected[k] = best_spent, best_tie, count
         spent, tie = next_spent, next_tie
         layers.append(selected)
-        costs.append((first, price))
     # Follow saved counts backwards to the matching previous-layer capacity.
     updated = list(buy_quantities)
     k = capacity
