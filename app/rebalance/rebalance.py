@@ -409,7 +409,8 @@ def redistribute_change_optimal(
         and price > 0
         and price + (fees[i] if buy_quantities[i] == 0 else 0) <= cash
     ]
-    if cash <= 0 or not candidates:
+    # With one candidate, Greedy already buys the maximum affordable count.
+    if len(candidates) < 2:
         return greedy
     # Bound the product of candidate count and scaled capacity before creating
     # any DP arrays. More assets mean a smaller permitted capacity per layer.
