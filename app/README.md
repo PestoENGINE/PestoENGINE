@@ -80,8 +80,9 @@ Importing the application does not create clients or start telemetry exporters.
 
 Provider work has a configurable total budget (including queue time) and a
 per-application concurrency cap backed by a lifespan-owned thread pool of the
-same size. Provider work does not occupy the shared executor used by readiness
-and rate-limit storage. Executor work copies request/trace context. A
+same size. Provider work does not occupy asyncio's shared executor used by
+rate-limit storage and resource cleanup. Readiness uses the framework's separate
+thread pool. Executor work copies request/trace context. A
 request timeout or cancellation retains its slot until the actual thread exits.
 HTTP I/O checks the deadline between operations and response chunks, limits
 decoded bodies to 2 MiB, and retries transport errors and HTTP 5xx up to three
