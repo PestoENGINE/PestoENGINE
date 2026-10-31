@@ -106,16 +106,16 @@ describe('light rebalance engine', () => {
     expect(r.change).toBe(999999999500);
   });
 
-  it('optimizes affordable shares without counting unaffordable assets toward DP work', () => {
-    const portfolio = Array.from({ length: 100 }, (_, i) => asset(`A${i}`, 1, 0, i < 2 ? 5 : 0));
+  it.each([1, 100, 1e10])('optimizes affordable shares at currency scale %s without counting impossible candidates', scale => {
+    const portfolio = Array.from({ length: 100 }, (_, i) => asset(`A${i}`, 1, 0, i < 2 ? 5 * scale : 0));
     const r = computeRebalance(
-      settings({ increment: 100, optimalRedistribute: true }),
+      settings({ increment: 100 * scale, optimalRedistribute: true }),
       portfolio,
-      quotes(60, 45, ...Array(98).fill(200)),
+      quotes(60 * scale, 45 * scale, ...Array(98).fill(200 * scale)),
     );
     expect(r.results.map(x => x.buy)).toEqual([0, 2, ...Array(98).fill(0)]);
-    expect(r.total_fees).toBe(5);
-    expect(r.change).toBe(5);
+    expect(r.total_fees).toBe(5 * scale);
+    expect(r.change).toBe(5 * scale);
   });
 
   it('skips redistribution when no target has a positive gap', () => {

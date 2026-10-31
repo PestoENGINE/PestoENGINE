@@ -80,9 +80,12 @@ targets, fees and cash stay in the browser. Both paths return the same
 `rebalance.ts` is a simplified version of the backend calculation: same target
 gaps, capped sales, fees and proportional split of the cash, then leftover cash
 spent on whole shares, greedily or with the knapsack DP ("Optimal redistribute").
-It uses plain floats and a DP grid in cents, and the DP settles ties with the
+It uses plain floats and a DP grid starting in cents, coarsening for large
+nominal amounts to keep work bounded, and the DP settles ties with the
 greedy priority (most underweight first) instead of a separate score, so results
 can differ slightly from the backend.
+The grid is conservative: it can miss combinations affordable at full precision,
+so both engines keep Greedy whenever it leaves less cash.
 
 Error mapping in `App.svelte:runRebalance`:
 

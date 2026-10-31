@@ -4,7 +4,7 @@
  * A simplified version of the backend calculation (app/rebalance/): same target
  * gaps, capped sales, fees and proportional split of the cash, then leftover cash
  * spent on whole shares, greedily or with the knapsack DP. Plain float arithmetic,
- * a DP grid in cents and one priority order for both passes, so results can
+ * an adaptive DP grid starting in cents and one priority order for both passes, so results can
  * differ slightly from the backend.
  */
 import type { Asset, AssetResultOut, QuotesResponse, RebalanceResponse, Settings } from './types';
@@ -50,23 +50,31 @@ function greedyExtras(extras: Extra[], cash: number, slack: number): Picked {
 }
 
 /**
- * Unbounded knapsack in cents: the extra shares that spend the most cash, a flat
+ * Unbounded knapsack on a bounded grid: the extra shares that spend the most cash, a flat
  * fee charged once per opened position. On equal spend the asset earlier in
- * priority order keeps the cash. Null when the grid is too large; the caller
- * then keeps the greedy result.
+ * priority order keeps the cash. Start in cents and coarsen the grid for large
+ * nominal amounts; the caller keeps Greedy if it spends more at full precision.
  */
-function knapsackExtras(extras: Extra[], cash: number, slack: number): Picked | null {
-  const size = Math.floor((cash + slack) * 100) + 1;
-  if (extras.length * size > MAX_DP_WORK) return null;
-  // Round costs up, to at least a cent, so every pick is affordable in full precision.
-  const cents = (x: number) => Math.max(1, Math.ceil(x * 100 - 1e-9));
+function knapsackExtras(extras: Extra[], cash: number, slack: number): Picked {
+  let places = 2;
+  const units = (value: number) => places >= 0 ? value * 10 ** places : value / 10 ** -places;
+  let size = Math.floor(units(cash + slack)) + 1;
+  while (extras.length * size > MAX_DP_WORK) {
+    places--;
+    size = Math.floor(units(cash + slack)) + 1;
+  }
+  // Round costs up to grid units, correcting only representational float noise.
+  const gridCost = (value: number) => {
+    const scaled = units(value);
+    return Math.max(1, Math.ceil(scaled - Math.abs(scaled) * Number.EPSILON));
+  };
   const layers = extras.map(({ unit, opening }) => ({
-    unit: cents(unit),
-    first: cents(unit) + (opening ? cents(opening) : 0),
+    unit: gridCost(unit),
+    first: gridCost(unit) + (opening ? gridCost(opening) : 0),
     pick: new Int32Array(size), // shares of this asset in the best solution at each capacity
   }));
 
-  let best = new Int32Array(size); // most cents spent at each capacity by the assets so far
+  let best = new Int32Array(size); // most grid units spent at each capacity by the assets so far
   for (const { unit, first, pick } of layers) {
     // Best spend holding at least one share of this asset: open the position
     // here, fee included, or add a share to one opened below. Unreachable
@@ -163,7 +171,7 @@ export function computeRebalance(settings: Settings, assets: Asset[], quotes: Qu
     if (settings.optimalRedistribute && extras.length > 1) {
       // Like the backend: keep the DP only if it leaves no more cash than greedy.
       const dp = knapsackExtras(extras, cash, tolerance);
-      if (dp && dp.cash <= picked.cash + 1e-9) picked = dp;
+      if (dp.cash <= picked.cash + 1e-9) picked = dp;
     }
     picked.counts.forEach((count, m) => { quantities[extras[m].i] += count; });
     cash = picked.cash;
