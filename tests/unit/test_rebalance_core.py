@@ -379,15 +379,10 @@ class TestRedistributeChangeOptimalBuyOnly(unittest.TestCase):
         self.assertEqual(optimal_updated, greedy_updated)
         self.assertAlmostEqual(optimal_remaining, greedy_remaining, places=2)
 
-    # ----- safety cap fallback -----
+    # ----- bounded precision for large amounts -----
 
-    def test_fallback_to_greedy_above_safety_cap(self):
-        """change_cents > MAX_CENTS silently delegates to the greedy path.
-
-        With such a large change the DP would allocate ~1 MB+ of RAM per
-        array; the function short-circuits to :func:`redistribute_change`
-        instead.  The two outputs must therefore coincide.
-        """
+    def test_large_change_preserves_an_already_optimal_greedy_result(self):
+        """A coarser bounded grid keeps the exact greedy optimum and its tie score."""
         change = (MAX_CENTS / 100.0) + 5000.0  # 5000 above the cap
         buy = [1, 1]
         prices = [60.0, 45.0]

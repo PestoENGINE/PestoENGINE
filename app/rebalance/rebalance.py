@@ -298,7 +298,7 @@ def redistribute_change_optimal(
             only_buy=True:  q_i > 0 and current_i < desired_i
 
     Scaled problem formulation:
-        s   = 10**places, retaining at least two decimal places
+        s   = 10**places, adapting precision to fit the work budget
         W   = floor(change * s), the integer capacity
         P_i = ceil(p_i * s), the marginal cost per extra share
         F_i = ceil(f_i * s), the one-time opening fee
@@ -345,8 +345,9 @@ def redistribute_change_optimal(
 
     Precision and safety limits:
         For m candidates, cap = min(MAX_CENTS, MAX_DP_WORK // m).
-        Start with the precision of prices/fees and reduce it while necessary,
-        keeping at least two places. If W still exceeds cap, return Greedy.
+        Start with at least two places and the precision of prices/fees, then
+        reduce precision until W fits cap, including below cents for large
+        nominal amounts. Large-currency portfolios can therefore still use DP.
         Rounding costs up and cash down makes DP conservative: it can exclude
         combinations affordable at full precision. Compare its exact remainder
         against the same-mask, same-fee Greedy result and return Greedy if that
@@ -425,15 +426,13 @@ def redistribute_change_optimal(
         *(_decimal_places(prices[i]) for i in candidates),
         *(_decimal_places(fees[i]) for i in candidates),
     )
-    # Preserve sub-cent prices where affordable. The two-place minimum avoids
-    # silently reducing monetary precision to whole currency units.
+    # Preserve sub-cent prices where affordable; coarsen large nominal amounts
+    # instead of abandoning DP merely because the currency has smaller units.
     scale = Decimal(10) ** places
-    while places > 2 and cash * scale > cap:
+    while cash * scale > cap:
         places -= 1
         scale /= 10
     capacity = int(cash * scale)
-    if capacity > cap:
-        return greedy
     costs = []
     for i in candidates:
         # Round both components upward; opening fees apply only to new orders.

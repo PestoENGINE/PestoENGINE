@@ -38,7 +38,7 @@ PestoENGINE returns the exact number of shares to buy per asset. Deterministic, 
 | Mode | When to use |
 |------|-------------|
 | **Greedy** `O(n log n)` | Speed matters; some leftover tolerance is acceptable. |
-| **Knapsack DP** `O(n × W)` | Cash efficiency matters; maximises affordable spend at bounded precision, with a greedy fallback for large problems. |
+| **Knapsack DP** `O(n × W)` | Cash efficiency matters; maximises affordable spend on an adaptive bounded grid, retaining greedy when it spends more. |
 | **Buy-only** `O(n)` | Deploying cash without ever triggering a sale; set `only_buy: true`. |
 
 Buys are funded by cash and actual net sale proceeds. Fees and rounding can prevent exact target weights; sales never exceed holdings.

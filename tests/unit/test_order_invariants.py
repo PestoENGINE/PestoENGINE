@@ -185,6 +185,21 @@ def test_dp_preserves_tie_scores_and_exact_unspendable_cash():
     assert remaining == D("6.99")
 
 
+@pytest.mark.parametrize("scale", [D(1), D(100), D("1e10")])
+def test_dp_optimizes_equivalent_large_nominal_currency_amounts(scale):
+    updated, remaining = redistribute_change_optimal(
+        True,
+        [0, 0],
+        [D(60) * scale, D(50) * scale],
+        [0, 0],
+        [50, 50],
+        D(100) * scale,
+        eligible=[True, True],
+    )
+    assert updated == [0, 2]
+    assert remaining == 0
+
+
 @pytest.mark.parametrize("fractional", [False, True])
 def test_large_valid_orders_serialize_without_decimal_overflow(fractional):
     result = calculate(
