@@ -132,7 +132,11 @@ export function computeRebalance(settings: Settings, assets: Asset[], quotes: Qu
     // Sell overweight positions, never more than is held, to fund the buys.
     gaps.forEach((gap, i) => {
       if (gap >= 0) return;
-      const sold = floorTo(Math.min(-gap / prices[i], assets[i].shares), places);
+      // Gap arithmetic inherits portfolio-sized noise; the holdings cap stays separate.
+      const sold = Math.min(
+        affordable(-gap, prices[i], places, (targetTotal + values[i]) * Number.EPSILON),
+        floorTo(assets[i].shares, places),
+      );
       const proceeds = sold * prices[i] - fee(i, sold);
       if (sold > 0 && proceeds > 0) {
         quantities[i] = -sold;

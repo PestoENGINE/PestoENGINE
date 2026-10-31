@@ -96,6 +96,16 @@ describe('light rebalance engine', () => {
     expect(r.change).toBe(0);
   });
 
+  it('sells the whole target quantity at a floating-point gap boundary', () => {
+    const r = computeRebalance(
+      settings({ onlyBuy: false }),
+      [asset('A', 80, 30, 2.5), asset('B', 20, 0, 2.5)],
+      quotes(247.01, 158.58),
+    );
+    expect(r.results.map(x => x.buy)).toEqual([-6, 9]);
+    expect(r.change).toBe(49.84);
+  });
+
   it('does not let unsold holdings inflate the cash rounding tolerance', () => {
     const r = computeRebalance(
       settings({ increment: 999999999500 }),
