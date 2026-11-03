@@ -106,18 +106,18 @@ protobuf==7.35.1
     # via
     #   googleapis-common-protos
     #   opentelemetry-proto
-pydantic==2.14.1
+pydantic==2.14.2
     # via
     #   -r requirements.in
     #   fastapi
     #   pydantic-settings
-pydantic-core==2.50.1
+pydantic-core==2.50.2
     # via pydantic
-pydantic-settings==2.16.1
+pydantic-settings==2.16.2
     # via -r requirements.in
 pygments==2.20.0
     # via pytest
-pytest==9.1.1
+pytest==9.2.0
     # via -r requirements-dev.in
 python-dotenv==1.2.2
     # via
@@ -131,7 +131,7 @@ redis==8.1.0
     #   fakeredis
 requests==2.34.2
     # via opentelemetry-exporter-otlp-proto-http
-ruff==0.17.2
+ruff==0.17.3
     # via -r requirements-dev.in
 sortedcontainers==2.4.0
     # via fakeredis
