@@ -20,7 +20,7 @@ charset-normalizer==3.4.9
     # via requests
 click==8.4.2
     # via uvicorn
-fastapi==0.162.0
+fastapi==0.162.1
     # via -r requirements.in
 googleapis-common-protos==1.75.0
     # via opentelemetry-exporter-otlp-proto-http
@@ -89,14 +89,14 @@ protobuf==7.35.1
     # via
     #   googleapis-common-protos
     #   opentelemetry-proto
-pydantic==2.14.1
+pydantic==2.14.3
     # via
     #   -r requirements.in
     #   fastapi
     #   pydantic-settings
-pydantic-core==2.50.1
+pydantic-core==2.50.4
     # via pydantic
-pydantic-settings==2.16.1
+pydantic-settings==2.16.2
     # via -r requirements.in
 python-dotenv==1.2.2
     # via
